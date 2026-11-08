@@ -1,0 +1,7 @@
+.DS_Store
+.oto-runner/
+DerivedData/
+*.xcresult
+__pycache__/
+*.pyc
+

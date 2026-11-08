@@ -1,0 +1,36 @@
+{
+  "tasks": [
+    {
+      "id": "S1-001",
+      "title": "Tạo foundation iOS và iPadOS",
+      "status": "DRAFT",
+      "prompt": "Tạo Xcode project universal tối thiểu, local Swift package OtoCore, app shell Home và unit test nền tảng theo PROJECT_PLAN. Chưa tích hợp YouTube Music hoặc chạy thiết bị thật.",
+      "references": [
+        "AGENTS.md",
+        "PROJECT_PLAN.md",
+        "docs/PRODUCT_INPUTS.md"
+      ],
+      "acceptance_criteria": [
+        "Git root vẫn là thư mục Oto",
+        "Deployment target là iOS và iPadOS 17",
+        "App shell hiển thị Home và không tự phát nhạc",
+        "OtoCore không phụ thuộc AppKit hoặc WebKit",
+        "Các build và unit test được khai báo trong task đều pass"
+      ],
+      "allowed_paths": [
+        "Oto/**",
+        "Oto.xcodeproj/**",
+        "Packages/**",
+        "Tests/**",
+        "Scripts/**",
+        "docs/**",
+        "AGENTS.md",
+        "GEMINI.md",
+        "PROJECT_PLAN.md",
+        ".gitignore"
+      ],
+      "checks": [],
+      "commit_message": "feat: tạo nền tảng Oto cho iOS và iPadOS"
+    }
+  ]
+}

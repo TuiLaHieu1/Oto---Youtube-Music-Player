@@ -1,0 +1,12 @@
+{
+  "agy_path": "/Users/hieu/.local/bin/agy",
+  "codex_path": "/Users/hieu/.local/bin/codex",
+  "gemini_model": "gemini-3.8-flash-high",
+  "gemini_effort": "high",
+  "remote": "origin",
+  "branch": "main",
+  "max_repair_rounds": 3,
+  "agent_timeout_minutes": 30,
+  "stop_hour": 5,
+  "shutdown_margin_minutes": 10
+}

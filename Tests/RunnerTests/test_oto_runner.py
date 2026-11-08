@@ -76,7 +76,7 @@ class RunnerPolicyTests(unittest.TestCase):
         config = {"remote": "origin", "branch": "main"}
         with unittest.mock.patch.object(oto_runner, "ensure_isolated_repository"), \
              unittest.mock.patch.object(oto_runner, "git") as mock_git:
-            mock_git.side_effect = lambda *args: {
+            mock_git.side_effect = lambda *args, **_kwargs: {
                 ("branch", "--show-current"): "main",
                 ("remote", "get-url", "--all", "origin"): "https://github.com/TuiLaHieu1/Oto---Youtube-Music-Player\nhttps://github.com/another/repo",
                 ("remote", "get-url", "--push", "--all", "origin"): "https://github.com/TuiLaHieu1/Oto---Youtube-Music-Player",
@@ -89,7 +89,7 @@ class RunnerPolicyTests(unittest.TestCase):
         config = {"remote": "origin", "branch": "main"}
         with unittest.mock.patch.object(oto_runner, "ensure_isolated_repository"), \
              unittest.mock.patch.object(oto_runner, "git") as mock_git:
-            mock_git.side_effect = lambda *args: {
+            mock_git.side_effect = lambda *args, **_kwargs: {
                 ("branch", "--show-current"): "main",
                 ("remote", "get-url", "--all", "origin"): "https://github.com/TuiLaHieu1/Oto---Youtube-Music-Player",
                 ("remote", "get-url", "--push", "--all", "origin"): "https://github.com/attacker/malicious-repo",
@@ -100,7 +100,7 @@ class RunnerPolicyTests(unittest.TestCase):
 
     def test_verify_review_snapshot_phat_hien_tree_thay_doi(self):
         with unittest.mock.patch.object(oto_runner, "git") as mock_git:
-            mock_git.side_effect = lambda *args: {
+            mock_git.side_effect = lambda *args, **_kwargs: {
                 ("write-tree",): "modified_tree_hash",
                 ("rev-parse", "HEAD"): "head_hash",
             }[args]
@@ -110,7 +110,7 @@ class RunnerPolicyTests(unittest.TestCase):
 
     def test_verify_review_snapshot_phat_hien_working_tree_thay_doi(self):
         with unittest.mock.patch.object(oto_runner, "git") as mock_git:
-            mock_git.side_effect = lambda *args: {
+            mock_git.side_effect = lambda *args, **_kwargs: {
                 ("write-tree",): "expected_tree_hash",
                 ("rev-parse", "HEAD"): "head_hash",
                 ("diff", "--name-only", "-z"): "modified.swift\0",

@@ -41,7 +41,7 @@
     {
       "id": "S2-001",
       "title": "Khảo sát tính khả thi Auth và Playback trên iOS",
-      "status": "READY",
+      "status": "COMPLETED",
       "prompt": "Xây dựng module kiểm chứng tính khả thi phát âm thanh nền (AVAudioSession/SingletonPlayerWebView) và cơ chế phiên người dùng YouTube Music theo docs/PLAYBACK_FEASIBILITY.md.",
       "references": [
         "AGENTS.md",
@@ -69,6 +69,37 @@
         "xcodebuild -scheme Oto -destination 'generic/platform=iOS' -derivedDataPath /tmp/DerivedData CODE_SIGNING_ALLOWED=NO build"
       ],
       "commit_message": "feat(playback): khảo sát auth và singleton webview playback"
+    },
+    {
+      "id": "S3-001",
+      "title": "Triển khai luồng Vertical Slice (Tìm kiếm -> Phát nhạc -> Lời -> Chuyển bài)",
+      "status": "READY",
+      "prompt": "Triển khai màn hình tìm kiếm, kết nối YTMusicClient, tích hợp phát nhạc vào SingletonPlayerWebView, đồng bộ lời bài hát qua MultiSourceLyricsService và tự chuyển bài khi kết thúc theo PROJECT_PLAN.",
+      "references": [
+        "AGENTS.md",
+        "PROJECT_PLAN.md",
+        "docs/PLAYBACK_FEASIBILITY.md"
+      ],
+      "acceptance_criteria": [
+        "Cung cấp SearchView cho phép tìm bài hát theo từ khóa",
+        "Chọn bài từ Search kích hoạt phát ngay trong MiniPlayer và FullscreenPlayer",
+        "Hiển thị lời bài hát đồng bộ thời gian thực từ LRCLIB",
+        "Chuyển bài tự động trong hàng đợi khi bài hiện tại kết thúc",
+        "Tuân thủ Swift 6 strict concurrency và Apple frameworks thuần túy"
+      ],
+      "allowed_paths": [
+        "Oto/**",
+        "Oto.xcodeproj/**",
+        "Packages/**",
+        "Tests/**",
+        "runner/backlog.json"
+      ],
+      "checks": [
+        "TMPDIR=/tmp CLANG_MODULE_CACHE_PATH=/tmp/clang-cache swift test --package-path Packages/OtoCore --disable-sandbox",
+        "swiftlint lint --strict",
+        "xcodebuild -scheme Oto -destination 'generic/platform=iOS' -derivedDataPath /tmp/DerivedData CODE_SIGNING_ALLOWED=NO build"
+      ],
+      "commit_message": "feat(slice): hoàn thiện vertical slice tìm kiếm, phát nhạc và lời đồng bộ"
     }
   ]
 }

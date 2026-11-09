@@ -12,6 +12,10 @@ struct OtoApp: App {
 
         AudioSessionManager.shared.activateSession()
 
+        Task { @MainActor in
+            await WebKitManager.shared.restoreSession()
+        }
+
         // Kết nối điều khiển audio session với PlayerViewModel
         AudioSessionManager.shared.onInterruptionBegan = { [weak vm] in
             Task { @MainActor in

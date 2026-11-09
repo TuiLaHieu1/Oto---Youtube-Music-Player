@@ -21,6 +21,10 @@
 		A101000C2CE0000100000001 /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A102000C2CE0000100000001 /* AudioSessionManager.swift */; };
 		A101000D2CE0000100000001 /* NowPlayingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A102000D2CE0000100000001 /* NowPlayingManager.swift */; };
 		A101000E2CE0000100000001 /* OtoCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10400012CE0000100000001 /* OtoCore */; };
+		A10100102CE0000100000001 /* CookieStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200102CE0000100000001 /* CookieStorage.swift */; };
+		A10100112CE0000100000001 /* WebKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200112CE0000100000001 /* WebKitManager.swift */; };
+		A10100122CE0000100000001 /* SingletonPlayerWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200122CE0000100000001 /* SingletonPlayerWebView.swift */; };
+		A10100132CE0000100000001 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200132CE0000100000001 /* AuthView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +43,10 @@
 		A102000C2CE0000100000001 /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/Audio/AudioSessionManager.swift; sourceTree = SOURCE_ROOT; };
 		A102000D2CE0000100000001 /* NowPlayingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/Audio/NowPlayingManager.swift; sourceTree = SOURCE_ROOT; };
 		A102000E2CE0000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Oto/Info.plist; sourceTree = SOURCE_ROOT; };
+		A10200102CE0000100000001 /* CookieStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/CookieStorage.swift; sourceTree = SOURCE_ROOT; };
+		A10200112CE0000100000001 /* WebKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/WebKitManager.swift; sourceTree = SOURCE_ROOT; };
+		A10200122CE0000100000001 /* SingletonPlayerWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/SingletonPlayerWebView.swift; sourceTree = SOURCE_ROOT; };
+		A10200132CE0000100000001 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Auth/AuthView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -198,6 +206,10 @@
 				A101000B2CE0000100000001 /* HomeViewModel.swift in Sources */,
 				A101000C2CE0000100000001 /* AudioSessionManager.swift in Sources */,
 				A101000D2CE0000100000001 /* NowPlayingManager.swift in Sources */,
+				A10100102CE0000100000001 /* CookieStorage.swift in Sources */,
+				A10100112CE0000100000001 /* WebKitManager.swift in Sources */,
+				A10100122CE0000100000001 /* SingletonPlayerWebView.swift in Sources */,
+				A10100132CE0000100000001 /* AuthView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

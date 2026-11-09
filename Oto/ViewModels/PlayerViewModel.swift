@@ -11,6 +11,7 @@ public final class PlayerViewModel {
     public var isExpanded: Bool = false
     public var showLyrics: Bool = false
     public var showQueue: Bool = false
+    public var showAuth: Bool = false
 
     public let queueManager: QueueManager
     public let clock: InterpolatedClock
@@ -23,6 +24,8 @@ public final class PlayerViewModel {
     ) {
         self.queueManager = queueManager
         self.clock = clock
+        setupPlayerBridge()
+        setupNowPlayingCommands()
     }
 
     public var currentSong: Song? {
@@ -48,6 +51,8 @@ public final class PlayerViewModel {
         clock.play(from: 0, rate: 1.0)
         playbackState = .playing(song: song, position: 0)
         currentPosition = 0
+        SingletonPlayerWebView.shared.loadVideo(id: song.id, startSeconds: 0)
+        NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: true, currentTime: 0)
         startPositionTracking()
     }
 
@@ -56,6 +61,8 @@ public final class PlayerViewModel {
         guard let song = currentSong else { return }
         clock.play(from: currentPosition, rate: 1.0)
         playbackState = .playing(song: song, position: currentPosition)
+        SingletonPlayerWebView.shared.play()
+        NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: true, currentTime: currentPosition)
         startPositionTracking()
     }
 
@@ -65,6 +72,8 @@ public final class PlayerViewModel {
         clock.pause()
         currentPosition = clock.currentPosition()
         playbackState = .paused(song: song, position: currentPosition)
+        SingletonPlayerWebView.shared.pause()
+        NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: false, currentTime: currentPosition)
         stopPositionTracking()
     }
 
@@ -102,12 +111,14 @@ public final class PlayerViewModel {
     public func seek(to position: TimeInterval) {
         clock.seek(to: position)
         currentPosition = position
+        SingletonPlayerWebView.shared.seek(to: position)
         if let song = currentSong {
             if isPlaying {
                 playbackState = .playing(song: song, position: position)
             } else {
                 playbackState = .paused(song: song, position: position)
             }
+            NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: isPlaying, currentTime: position)
         }
     }
 
@@ -119,6 +130,52 @@ public final class PlayerViewModel {
     /// Đổi chế độ lặp.
     public func toggleRepeat() {
         queueManager.toggleRepeat()
+    }
+
+    // MARK: - Internal Player Bridge & NowPlaying Callbacks
+
+    private func setupPlayerBridge() {
+        SingletonPlayerWebView.shared.onPositionUpdate = { [weak self] cur, _ in
+            guard let self, self.isPlaying else { return }
+            self.currentPosition = cur
+            NowPlayingManager.shared.updateNowPlaying(
+                song: self.currentSong,
+                isPlaying: true,
+                currentTime: cur
+            )
+        }
+
+        SingletonPlayerWebView.shared.onTrackEnded = { [weak self] in
+            self?.next()
+        }
+    }
+
+    private func setupNowPlayingCommands() {
+        NowPlayingManager.shared.onPlayCommand = { [weak self] in
+            Task { @MainActor in
+                self?.resume()
+            }
+        }
+        NowPlayingManager.shared.onPauseCommand = { [weak self] in
+            Task { @MainActor in
+                self?.pause()
+            }
+        }
+        NowPlayingManager.shared.onNextCommand = { [weak self] in
+            Task { @MainActor in
+                self?.next()
+            }
+        }
+        NowPlayingManager.shared.onPreviousCommand = { [weak self] in
+            Task { @MainActor in
+                self?.previous()
+            }
+        }
+        NowPlayingManager.shared.onSeekCommand = { [weak self] targetPosition in
+            Task { @MainActor in
+                self?.seek(to: targetPosition)
+            }
+        }
     }
 
     // MARK: - Internal Position Tracking

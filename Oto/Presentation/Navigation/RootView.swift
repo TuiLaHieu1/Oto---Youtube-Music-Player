@@ -71,6 +71,9 @@ public struct RootView: View {
         .fullScreenCover(isPresented: $playerVM.isExpanded) {
             FullscreenPlayerView(playerVM: playerVM)
         }
+        .sheet(isPresented: $playerVM.showAuth) {
+            AuthView()
+        }
     }
 
     @ViewBuilder

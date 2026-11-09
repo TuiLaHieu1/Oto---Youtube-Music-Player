@@ -22,16 +22,19 @@ public final class PlayerViewModel {
     public let queueManager: QueueManager
     public let clock: InterpolatedClock
 
+    private let backend: any PlaybackBackend
     private let logger = Logger(subsystem: "com.oto.music", category: "PlayerViewModel")
     private var stateMachine = PlaybackStateMachine()
     private var positionTimerTask: Task<Void, Never>?
 
     public init(
         queueManager: QueueManager = QueueManager(),
-        clock: InterpolatedClock = InterpolatedClock()
+        clock: InterpolatedClock = InterpolatedClock(),
+        backend: (any PlaybackBackend)? = nil
     ) {
         self.queueManager = queueManager
         self.clock = clock
+        self.backend = backend ?? SingletonPlayerWebView.shared
         setupPlayerBridge()
         setupAudioSessionObserver()
         setupNowPlayingCommands()
@@ -175,31 +178,32 @@ extension PlayerViewModel {
         if let payload = effects.shouldStartEngine {
             runtimeDuration = nil
             clock.pause(at: payload.startSeconds)
-            SingletonPlayerWebView.shared.loadVideo(
+            backend.loadVideo(
                 id: payload.songId,
                 startSeconds: payload.startSeconds,
-                generation: payload.generation
+                generation: payload.generation,
+                shouldPlay: effects.shouldResumeEngine || stateMachine.userIntent == .playing
             )
         }
 
         // 3. Tiếp tục WebKit engine
         if effects.shouldResumeEngine {
             clock.play(from: stateMachine.currentPosition, rate: 1.0)
-            SingletonPlayerWebView.shared.play()
+            backend.play()
             startPositionTracking()
         }
 
         // 4. Tạm dừng WebKit engine
         if effects.shouldPauseEngine {
             clock.pause()
-            SingletonPlayerWebView.shared.pause()
+            backend.pause()
             stopPositionTracking()
         }
 
         // 5. Tua WebKit engine
         if let seekTime = effects.shouldSeekEngine {
             clock.seek(to: seekTime)
-            SingletonPlayerWebView.shared.seek(to: seekTime)
+            backend.seek(to: seekTime)
         }
 
         // 6. Chuyển bài kế tiếp
@@ -244,20 +248,27 @@ extension PlayerViewModel {
     }
 
     private func setupPlayerBridge() {
-        SingletonPlayerWebView.shared.onPlaybackStateChange = { [weak self] (stateCode, gen) in
+        backend.onPlaybackStateChange = { [weak self] (stateCode, gen) in
             self?.handleBridgeStateChange(stateCode: stateCode, generation: gen)
         }
 
-        SingletonPlayerWebView.shared.onPositionUpdate = { [weak self] (cur, dur, gen) in
+        backend.onPositionUpdate = { [weak self] (cur, dur, gen) in
             self?.handleBridgePositionUpdate(current: cur, duration: dur, generation: gen)
         }
 
-        SingletonPlayerWebView.shared.onTrackEnded = { [weak self] gen in
+        backend.onTrackEnded = { [weak self] gen in
             self?.handleBridgeTrackEnded(generation: gen)
         }
 
-        SingletonPlayerWebView.shared.onError = { [weak self] (code, gen, trackId) in
+        backend.onError = { [weak self] (code, gen, trackId) in
             self?.handleBridgeError(code: code, generation: gen, trackId: trackId)
+        }
+
+        backend.onRecoveryRequired = { [weak self] in
+            guard let self else { return }
+            self.logger.warning("Đang thực hiện khôi phục playback sau sự cố crash...")
+            let effects = self.stateMachine.engineCrashed()
+            self.applyEffects(effects)
         }
     }
 

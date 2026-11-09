@@ -14,6 +14,7 @@ public final class HomeViewModel {
 
     private let client: YTMusicClient
     private let cache: HomeCache
+    private var loadTask: Task<Void, Never>?
 
     public init(
         client: YTMusicClient = .shared,
@@ -21,12 +22,19 @@ public final class HomeViewModel {
     ) {
         self.client = client
         self.cache = cache
-        loadCachedData()
+        SessionStore.shared.registerResetHandler { [weak self] in
+            self?.clearSessionData()
+        }
+        loadTask = Task { [weak self] in
+            await self?.loadCachedData()
+        }
     }
 
-    /// Khôi phục dữ liệu từ bộ đệm tài khoản nếu có.
-    private func loadCachedData() {
-        if let cached = cache.loadCachedFeed() {
+    /// Khôi phục dữ liệu từ bộ đệm tài khoản nếu có hoàn toàn bất đồng bộ.
+    public func loadCachedData() async {
+        guard !Task.isCancelled else { return }
+        if let cached = await cache.loadCachedFeed() {
+            guard !Task.isCancelled else { return }
             self.quickPicks = cached.quickPicks
             if cached.listenAgain.count > 4 {
                 self.listenAgain = Array(cached.listenAgain.prefix(4))
@@ -36,6 +44,16 @@ public final class HomeViewModel {
                 self.recentlyPlayed = []
             }
         }
+    }
+
+    /// Xóa toàn bộ dữ liệu bộ nhớ của trang chủ khi đăng xuất.
+    public func clearSessionData() {
+        loadTask?.cancel()
+        loadTask = nil
+        self.quickPicks = []
+        self.listenAgain = []
+        self.recentlyPlayed = []
+        self.errorMessage = nil
     }
 
     /// Nạp dữ liệu mới nhất từ YouTube Music API thật, không dùng ID giả.
@@ -54,7 +72,7 @@ public final class HomeViewModel {
                     self.listenAgain = feed.listenAgain
                     self.recentlyPlayed = []
                 }
-                cache.saveFeed(quickPicks: feed.quickPicks, listenAgain: feed.listenAgain)
+                await cache.saveFeed(quickPicks: feed.quickPicks, listenAgain: feed.listenAgain)
             }
         } catch is CancellationError {
             // Phiên cũ đã bị hủy hoặc view không còn hiển thị; không ghi lỗi trễ vào UI.

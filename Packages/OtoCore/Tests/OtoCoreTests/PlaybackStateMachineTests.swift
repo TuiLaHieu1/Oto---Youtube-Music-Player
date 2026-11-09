@@ -204,4 +204,107 @@ struct PlaybackStateMachineTests {
         let isStale = (errorGen != sm.currentGeneration)
         #expect(isStale == true)
     }
+
+    @Test("crash khi đang playing -> generation mới -> state buffering -> effects chứa shouldStartEngine và resume")
+    func testCrashWhilePlayingRecoversWithNewGenerationAndResume() {
+        var sm = PlaybackStateMachine()
+        _ = sm.userPlay(song: testSong1)
+        sm.engineTimeUpdated(currentTime: 42, generation: 1)
+        _ = sm.engineStateChanged(.playing, generation: 1)
+
+        #expect(sm.currentGeneration == 1)
+        #expect(sm.userIntent == .playing)
+        #expect(sm.currentPosition == 42)
+
+        // WebContent process crash
+        let crashEffects = sm.engineCrashed()
+        #expect(sm.currentGeneration == 2)
+        #expect(sm.userIntent == .playing)
+        #expect(sm.engineState == .buffering)
+        #expect(crashEffects.shouldStartEngine?.generation == 2)
+        #expect(crashEffects.shouldStartEngine?.startSeconds == 42)
+        #expect(crashEffects.shouldStartEngine?.songId == "song_1")
+        #expect(crashEffects.shouldResumeEngine == true)
+        #expect(crashEffects.shouldActivateSession == true)
+
+        // Callback từ generation 1 cũ bị loại
+        let oldCallback = sm.engineStateChanged(.playing, generation: 1)
+        #expect(oldCallback == PlaybackEffects())
+
+        // Callback từ generation 2 mới được chấp nhận
+        let newCallback = sm.engineStateChanged(.playing, generation: 2)
+        #expect(newCallback == PlaybackEffects())
+        #expect(sm.engineState == .playing)
+    }
+
+    @Test("crash khi đang paused -> generation mới -> không tự resume")
+    func testCrashWhilePausedRecoversWithoutAutoResume() {
+        var sm = PlaybackStateMachine()
+        _ = sm.userPlay(song: testSong1)
+        sm.engineTimeUpdated(currentTime: 60, generation: 1)
+        _ = sm.userPause()
+
+        #expect(sm.userIntent == .paused)
+        #expect(sm.currentPosition == 60)
+
+        // WebContent crash khi đang paused
+        let crashEffects = sm.engineCrashed()
+        #expect(sm.currentGeneration == 2)
+        #expect(sm.userIntent == .paused)
+        #expect(sm.engineState == .buffering)
+        #expect(crashEffects.shouldResumeEngine == false)
+        #expect(crashEffects.shouldPauseEngine == true)
+        #expect(crashEffects.shouldStartEngine?.generation == 2)
+        #expect(crashEffects.shouldStartEngine?.startSeconds == 60)
+    }
+
+    @Test("fake backend integration: crash recovery cấp generation mới và đồng bộ callback")
+    func testFakeBackendIntegrationCrashRecovery() {
+        var sm = PlaybackStateMachine()
+        var backendLoadedId: String?
+        var backendStartSeconds: TimeInterval = 0
+        var backendGeneration: Int = 0
+        var backendShouldPlay: Bool = false
+
+        // 1. User play
+        let playEffects = sm.userPlay(song: testSong1, startSeconds: 10)
+        if let payload = playEffects.shouldStartEngine {
+            backendLoadedId = payload.songId
+            backendStartSeconds = payload.startSeconds
+            backendGeneration = payload.generation
+            backendShouldPlay = playEffects.shouldResumeEngine || sm.userIntent == .playing
+        }
+
+        #expect(backendLoadedId == "song_1")
+        #expect(backendStartSeconds == 10)
+        #expect(backendGeneration == 1)
+        #expect(backendShouldPlay == true)
+
+        // 2. Backend báo playing
+        _ = sm.engineStateChanged(.playing, generation: backendGeneration)
+        sm.engineTimeUpdated(currentTime: 35, generation: backendGeneration)
+        #expect(sm.currentPosition == 35)
+
+        // 3. Backend process terminates -> coordinator gọi engineCrashed()
+        let recoveryEffects = sm.engineCrashed()
+        if let payload = recoveryEffects.shouldStartEngine {
+            backendLoadedId = payload.songId
+            backendStartSeconds = payload.startSeconds
+            backendGeneration = payload.generation
+            backendShouldPlay = recoveryEffects.shouldResumeEngine || sm.userIntent == .playing
+        }
+
+        #expect(backendGeneration == 2)
+        #expect(backendStartSeconds == 35)
+        #expect(backendShouldPlay == true)
+
+        // 4. Stale callback từ gen 1 bị state machine từ chối
+        let staleEffects = sm.engineStateChanged(.playing, generation: 1)
+        #expect(staleEffects == PlaybackEffects())
+
+        // 5. Fresh callback từ gen 2 được state machine chấp nhận
+        let freshEffects = sm.engineStateChanged(.playing, generation: 2)
+        #expect(freshEffects == PlaybackEffects())
+        #expect(sm.engineState == .playing)
+    }
 }

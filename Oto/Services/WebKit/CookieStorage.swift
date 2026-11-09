@@ -46,15 +46,19 @@ public final class CookieStorage: Sendable {
     private init() {}
 
     /// Lưu danh sách cookie phiên làm việc vào Keychain (mã hoá an toàn).
-    public func saveCookies(_ cookies: [HTTPCookie]) {
+    @discardableResult
+    public func saveCookies(_ cookies: [HTTPCookie]) -> Bool {
         lock.lock()
         defer { lock.unlock() }
 
         let authCookies = cookies.filter { isRelevantAuthCookie($0.name) }
-        guard !authCookies.isEmpty else { return }
+        guard !authCookies.isEmpty else {
+            logger.warning("Không tìm thấy cookie xác thực hợp lệ để lưu.")
+            return false
+        }
 
-        let codableCookies = authCookies.map { CodableCookie(cookie: $0) }
         do {
+            let codableCookies = authCookies.map { CodableCookie(cookie: $0) }
             let data = try JSONEncoder().encode(codableCookies)
             let query: [String: Any] = [
                 kSecClass as String: kSecClassGenericPassword,
@@ -67,21 +71,24 @@ public final class CookieStorage: Sendable {
                 kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
             ]
 
-            let status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+            var status = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
             if status == errSecItemNotFound {
                 var newQuery = query
                 newQuery[kSecValueData as String] = data
                 newQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-                let addStatus = SecItemAdd(newQuery as CFDictionary, nil)
-                if addStatus != errSecSuccess {
-                    logger.error("Lỗi SecItemAdd Keychain: \(addStatus)")
-                }
-            } else if status != errSecSuccess {
-                logger.error("Lỗi SecItemUpdate Keychain: \(status)")
+                status = SecItemAdd(newQuery as CFDictionary, nil)
             }
+
+            guard status == errSecSuccess else {
+                logger.error("Lưu Keychain thất bại với OSStatus: \(status)")
+                return false
+            }
+
             logger.info("Đã lưu an toàn phiên làm việc vào Keychain.")
+            return true
         } catch {
             logger.error("Không thể mã hoá cookie để lưu Keychain: \(error.localizedDescription)")
+            return false
         }
     }
 

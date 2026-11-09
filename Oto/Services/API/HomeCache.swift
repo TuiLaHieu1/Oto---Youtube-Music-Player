@@ -17,8 +17,8 @@ public struct CachedHomeFeed: Codable, Sendable {
 }
 
 /// Bộ nhớ đệm tệp cục bộ lưu trữ dữ liệu trang chủ an toàn, tách biệt theo tài khoản người dùng với TTL 15 phút.
-@MainActor
-public final class HomeCache {
+/// Toàn bộ thao tác I/O đọc/ghi/xóa được cô lập trong actor riêng ngoài MainActor.
+public actor HomeCache {
     public static let shared = HomeCache()
     private let logger = Logger(subsystem: "com.oto.music", category: "HomeCache")
     private let fileManager = FileManager.default
@@ -27,7 +27,7 @@ public final class HomeCache {
     private init() {}
 
     /// Mã định danh phân vùng bộ nhớ đệm dựa trên cookie phiên hiện tại (ngăn rò rỉ dữ liệu giữa các tài khoản).
-    public var accountScopeKey: String {
+    public func accountScopeKey() -> String {
         let cookies = CookieStorage.shared.loadCookies()
         if let authCookie = cookies.first(where: { $0.name == "SAPISID" || $0.name == "__Secure-3PAPISID" }) {
             let digest = SHA256.hash(data: Data(authCookie.value.utf8))
@@ -37,29 +37,27 @@ public final class HomeCache {
         return "guest"
     }
 
-    private var cacheFileURL: URL? {
+    private func cacheFileURL() -> URL? {
         fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("home_feed_\(accountScopeKey).json")
+            .appendingPathComponent("home_feed_\(accountScopeKey()).json")
     }
 
     /// Lưu dữ liệu trang chủ vào bộ đệm tệp cục bộ theo tài khoản ngoài MainActor.
     public func saveFeed(quickPicks: [Song], listenAgain: [Song]) {
-        guard let url = cacheFileURL else { return }
+        guard let url = cacheFileURL() else { return }
         let cached = CachedHomeFeed(quickPicks: quickPicks, listenAgain: listenAgain)
-        Task.detached(priority: .utility) { [logger = self.logger] in
-            do {
-                let data = try JSONEncoder().encode(cached)
-                try data.write(to: url, options: .atomic)
-                logger.info("Đã lưu bộ đệm trang chủ theo phân vùng tài khoản.")
-            } catch {
-                logger.error("Không thể ghi bộ đệm trang chủ: \(error.localizedDescription)")
-            }
+        do {
+            let data = try JSONEncoder().encode(cached)
+            try data.write(to: url, options: .atomic)
+            logger.info("Đã lưu bộ đệm trang chủ theo phân vùng tài khoản.")
+        } catch {
+            logger.error("Không thể ghi bộ đệm trang chủ: \(error.localizedDescription)")
         }
     }
 
-    /// Tải dữ liệu trang chủ từ bộ đệm nếu chưa hết hạn TTL.
+    /// Tải dữ liệu trang chủ từ bộ đệm nếu chưa hết hạn TTL hoàn toàn bất đồng bộ.
     public func loadCachedFeed() -> CachedHomeFeed? {
-        guard let url = cacheFileURL, fileManager.fileExists(atPath: url.path) else {
+        guard let url = cacheFileURL(), fileManager.fileExists(atPath: url.path) else {
             return nil
         }
 

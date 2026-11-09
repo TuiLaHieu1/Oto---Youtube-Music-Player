@@ -6,18 +6,20 @@ import os
 /// Sử dụng YouTube Music Web Player chính chủ để có đầy đủ bản quyền Widevine DRM,
 /// chất lượng âm thanh gốc và tuân thủ các quy tắc bảo mật của hệ thống.
 @MainActor
-public final class SingletonPlayerWebView: NSObject {
+public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
     public static let shared = SingletonPlayerWebView()
 
     public struct PendingPlayback: Sendable {
         public let id: String
         public let startSeconds: TimeInterval
         public let generation: Int
+        public let shouldPlay: Bool
 
-        public init(id: String, startSeconds: TimeInterval, generation: Int) {
+        public init(id: String, startSeconds: TimeInterval, generation: Int, shouldPlay: Bool = true) {
             self.id = id
             self.startSeconds = startSeconds
             self.generation = generation
+            self.shouldPlay = shouldPlay
         }
     }
 
@@ -35,21 +37,22 @@ public final class SingletonPlayerWebView: NSObject {
         }
     }
 
-    private let logger = Logger(subsystem: "com.oto.music", category: "SingletonPlayerWebView")
+    let logger = Logger(subsystem: "com.oto.music", category: "SingletonPlayerWebView")
     public private(set) var webView: WKWebView?
-    private var isBridgeReady: Bool = false
+    var isBridgeReady: Bool = false
     private var pendingLoad: PendingPlayback?
     public private(set) var currentGeneration: Int = 0
     public private(set) var currentLoadedVideoId: String?
     public private(set) var activeDescriptor: ActivePlaybackDescriptor?
 
-    private var crashRetryCount = 0
-    private let maxCrashRetries = 3
+    var crashRetryCount = 0
+    let maxCrashRetries = 3
 
     public var onPlaybackStateChange: ((_ state: Int, _ generation: Int) -> Void)?
     public var onPositionUpdate: ((_ current: TimeInterval, _ duration: TimeInterval, _ generation: Int) -> Void)?
     public var onTrackEnded: ((_ generation: Int) -> Void)?
     public var onError: ((_ code: Int, _ generation: Int, _ trackId: String) -> Void)?
+    public var onRecoveryRequired: (() -> Void)?
 
     private override init() {
         super.init()
@@ -92,24 +95,34 @@ public final class SingletonPlayerWebView: NSObject {
     // MARK: - Playback Controls (Safe JS Bridge)
 
     /// Nạp và phát bài hát mới. Đảm bảo generation và startSeconds luôn được truyền chính xác tới JavaScript.
-    public func loadVideo(id: String, startSeconds: TimeInterval = 0, generation: Int = 0) {
+    public func loadVideo(
+        id: String,
+        startSeconds: TimeInterval = 0,
+        generation: Int = 0,
+        shouldPlay: Bool = true
+    ) {
+        if id != currentLoadedVideoId {
+            crashRetryCount = 0
+        }
         currentGeneration = generation
         activeDescriptor = ActivePlaybackDescriptor(
             id: id,
             generation: generation,
             position: startSeconds,
-            shouldPlay: true
+            shouldPlay: shouldPlay
         )
-        crashRetryCount = 0
 
         // Nếu video đã được nạp sẵn trong DOM, đồng bộ generation mới và seek tới startSeconds thay vì chỉ gọi play()
         if id == currentLoadedVideoId, isBridgeReady {
-            logger.info("Video \(id) đã nạp sẵn, adoptCurrentVideo với gen \(generation), seek \(startSeconds).")
-            let jsCode = "if (window.otoPlayer) window.otoPlayer.adoptCurrentVideo(id, startSeconds, generation, true);"
+            logger.info("Video \(id) đã nạp sẵn, adoptCurrentVideo (gen: \(generation), seek: \(startSeconds)).")
+            let jsCode = """
+            if (window.otoPlayer) window.otoPlayer.adoptCurrentVideo(id, startSeconds, generation, shouldPlay);
+            """
             let arguments: [String: Any] = [
                 "id": id,
                 "startSeconds": startSeconds,
-                "generation": generation
+                "generation": generation,
+                "shouldPlay": shouldPlay
             ]
             webView?.callAsyncJavaScript(jsCode, arguments: arguments, in: nil, in: .page)
             return
@@ -123,7 +136,12 @@ public final class SingletonPlayerWebView: NSObject {
         // Nếu chưa ở trang watch hoặc bridge chưa ready, lưu pendingLoad và nạp URL
         guard isBridgeReady, isAlreadyOnWatch else {
             currentLoadedVideoId = id
-            pendingLoad = PendingPlayback(id: id, startSeconds: startSeconds, generation: generation)
+            pendingLoad = PendingPlayback(
+                id: id,
+                startSeconds: startSeconds,
+                generation: generation,
+                shouldPlay: shouldPlay
+            )
             logger.info("Nạp trực tiếp URL phát nhạc: \(watchURLString) (gen: \(generation)).")
             isBridgeReady = false
             webView?.load(URLRequest(url: watchURL))
@@ -144,16 +162,35 @@ public final class SingletonPlayerWebView: NSObject {
                 self?.webView?.load(URLRequest(url: watchURL))
             }
         }
+        if !shouldPlay {
+            pause()
+        }
         logger.info("Đã gửi lệnh đổi bài trong trang (id: \(id), gen: \(generation)).")
     }
 
     /// Tiếp tục phát nhạc.
     public func play() {
+        if let desc = activeDescriptor {
+            activeDescriptor = ActivePlaybackDescriptor(
+                id: desc.id,
+                generation: desc.generation,
+                position: desc.position,
+                shouldPlay: true
+            )
+        }
         webView?.evaluateJavaScript("if (window.otoPlayer) window.otoPlayer.play();")
     }
 
     /// Tạm dừng nhạc.
     public func pause() {
+        if let desc = activeDescriptor {
+            activeDescriptor = ActivePlaybackDescriptor(
+                id: desc.id,
+                generation: desc.generation,
+                position: desc.position,
+                shouldPlay: false
+            )
+        }
         webView?.evaluateJavaScript("if (window.otoPlayer) window.otoPlayer.pause();")
     }
 
@@ -168,7 +205,12 @@ public final class SingletonPlayerWebView: NSObject {
         Task { @MainActor in
             await WebKitManager.shared.restoreSession()
             if let pending = pendingLoad {
-                loadVideo(id: pending.id, startSeconds: pending.startSeconds, generation: pending.generation)
+                loadVideo(
+                    id: pending.id,
+                    startSeconds: pending.startSeconds,
+                    generation: pending.generation,
+                    shouldPlay: pending.shouldPlay
+                )
             } else if let homeURL = URL(string: "https://music.youtube.com") {
                 isBridgeReady = false
                 webView?.load(URLRequest(url: homeURL))
@@ -189,38 +231,43 @@ public final class SingletonPlayerWebView: NSObject {
         }
     }
 
-    private func checkReadyAndFlush() {
+    func checkReadyAndFlush() {
         isBridgeReady = true
-        crashRetryCount = 0
         if let pending = pendingLoad {
             pendingLoad = nil
             currentGeneration = pending.generation
             currentLoadedVideoId = pending.id
 
             if webView?.url?.absoluteString.contains(pending.id) == true {
-                logger.info("Trang watch \(pending.id) đã ready, gọi adoptLoadedVideo (gen: \(pending.generation)).")
+                logger.info(
+                    "Trang watch \(pending.id) đã ready, gọi adoptLoadedVideo (gen: \(pending.generation))."
+                )
                 let jsCode = """
-                if (window.otoPlayer) window.otoPlayer.adoptLoadedVideo(id, startSeconds, generation, true);
+                if (window.otoPlayer) window.otoPlayer.adoptLoadedVideo(id, startSeconds, generation, shouldPlay);
                 """
                 let arguments: [String: Any] = [
                     "id": pending.id,
                     "startSeconds": pending.startSeconds,
-                    "generation": pending.generation
+                    "generation": pending.generation,
+                    "shouldPlay": pending.shouldPlay
                 ]
                 webView?.callAsyncJavaScript(jsCode, arguments: arguments, in: nil, in: .page)
             } else {
                 loadVideo(
                     id: pending.id,
                     startSeconds: pending.startSeconds,
-                    generation: pending.generation
+                    generation: pending.generation,
+                    shouldPlay: pending.shouldPlay
                 )
             }
         }
     }
+}
 
-    // MARK: - Message Handlers
+// MARK: - Message Handlers
 
-    fileprivate func handleMessageBody(_ body: [String: Any], type: String) {
+extension SingletonPlayerWebView {
+    func handleMessageBody(_ body: [String: Any], type: String) {
         logger.info("JS Bridge message: \(type)")
         switch type {
         case "ready":
@@ -243,6 +290,10 @@ public final class SingletonPlayerWebView: NSObject {
             return
         }
         if let stateCode = body["state"] as? Int {
+            // Khi engine đã phát ổn định (stateCode == 1: playing), reset retry count của recovery episode
+            if stateCode == 1 {
+                crashRetryCount = 0
+            }
             onPlaybackStateChange?(stateCode, gen)
         }
     }
@@ -257,11 +308,12 @@ public final class SingletonPlayerWebView: NSObject {
         let dur = (body["duration"] as? Double).flatMap { (!$0.isNaN && !$0.isInfinite && $0 > 0) ? $0 : nil } ?? 0
 
         if cur > 0, let videoId = currentLoadedVideoId {
+            let wasPlaying = activeDescriptor?.shouldPlay ?? true
             activeDescriptor = ActivePlaybackDescriptor(
                 id: videoId,
                 generation: gen,
                 position: cur,
-                shouldPlay: true
+                shouldPlay: wasPlaying
             )
         }
 
@@ -283,98 +335,5 @@ public final class SingletonPlayerWebView: NSObject {
         let code = body["code"] as? Int ?? -1
         let trackId = body["videoId"] as? String ?? ""
         onError?(code, gen, trackId)
-    }
-}
-
-// MARK: - WKNavigationDelegate
-extension SingletonPlayerWebView: WKNavigationDelegate {
-    public func webView(
-        _ webView: WKWebView,
-        decidePolicyFor navigationAction: WKNavigationAction,
-        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
-    ) {
-        guard let url = navigationAction.request.url else {
-            decisionHandler(.cancel)
-            return
-        }
-
-        // Chỉ cho phép navigation https tới music.youtube.com và accounts.google.com
-        let host = url.host ?? ""
-        let scheme = url.scheme ?? ""
-
-        if scheme == "about" && url.absoluteString == "about:blank" {
-            decisionHandler(.allow)
-            return
-        }
-
-        if scheme == "https" && (host == "music.youtube.com" || host == "accounts.google.com") {
-            decisionHandler(.allow)
-            return
-        }
-
-        if navigationAction.navigationType == .linkActivated {
-            logger.warning("Chặn navigation ngoài allowlist: \(url.absoluteString)")
-            decisionHandler(.cancel)
-            return
-        }
-
-        decisionHandler(.allow)
-    }
-
-    public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        logger.info("WebView đã nạp xong: \(webView.url?.absoluteString ?? "unknown")")
-        webView.evaluateJavaScript(PlayerBridgeScript.source) { [weak self] _, _ in
-            self?.checkReadyAndFlush()
-        }
-    }
-
-    public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
-        logger.error("WebContent process bị terminate bởi iOS, kiểm tra phục hồi...")
-        isBridgeReady = false
-        currentGeneration += 1 // Fence toàn bộ callback đang treo
-
-        guard crashRetryCount < maxCrashRetries, let descriptor = activeDescriptor else {
-            logger.error("Đã vượt quá giới hạn thử lại sau crash hoặc không có bài hát active.")
-            onError?(-999, currentGeneration, activeDescriptor?.id ?? "")
-            return
-        }
-
-        crashRetryCount += 1
-        logger.info("Đang tự động khôi phục bài hát \(descriptor.id) ở vị trí \(descriptor.position)s...")
-        pendingLoad = PendingPlayback(
-            id: descriptor.id,
-            startSeconds: descriptor.position,
-            generation: currentGeneration
-        )
-        if let watchURL = URL(string: "https://music.youtube.com/watch?v=\(descriptor.id)") {
-            webView.load(URLRequest(url: watchURL))
-        }
-    }
-}
-
-// MARK: - WKScriptMessageHandler
-extension SingletonPlayerWebView: WKScriptMessageHandler {
-    public func userContentController(
-        _ userContentController: WKUserContentController,
-        didReceive message: WKScriptMessage
-    ) {
-        guard message.frameInfo.isMainFrame else {
-            logger.warning("Bỏ qua message không xuất phát từ main frame.")
-            return
-        }
-
-        let origin = message.frameInfo.securityOrigin
-        let isTrusted = origin.protocol == "https" && origin.host == "music.youtube.com"
-        guard isTrusted else {
-            logger.warning("Bỏ qua message từ origin không được ủy quyền: \(origin.host)")
-            return
-        }
-
-        guard let body = message.body as? [String: Any],
-              let type = body["type"] as? String else {
-            return
-        }
-
-        handleMessageBody(body, type: type)
     }
 }

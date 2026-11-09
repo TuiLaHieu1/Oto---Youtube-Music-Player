@@ -69,7 +69,10 @@ struct AuthWebViewRepresentable: UIViewRepresentable {
         let config = WebKitManager.shared.makePlayerConfiguration()
         let wv = WKWebView(frame: .zero, configuration: config)
 
-        // Cấu hình Safari User-Agent tiêu chuẩn cho webview xác thực tài khoản Google
+        // ADR Note: Cấu hình Safari macOS User-Agent là một giải pháp tình thế (workaround)
+        // để xử lý hạn chế embedded webview ('disallowed_useragent') của Google OAuth.
+        // Đây là giả thuyết vận hành cần được theo dõi thực tế và không được xem là
+        // cơ chế đăng nhập chính thức được Google cam kết hỗ trợ lâu dài.
         wv.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 "
             + "(KHTML, like Gecko) Version/17.0 Safari/605.1.15"
 
@@ -120,12 +123,15 @@ struct AuthWebViewRepresentable: UIViewRepresentable {
             if url.host?.contains("music.youtube.com") == true {
                 hasHandledSuccess = true
                 Task { @MainActor in
-                    let store = webView.configuration.websiteDataStore.httpCookieStore
-                    let cookies = await store.allCookies()
-                    CookieStorage.shared.saveCookies(cookies)
-                    self.logger.info("Đã đăng nhập thành công và lưu cookie vào Keychain (\(cookies.count) cookies).")
-                    await WebKitManager.shared.restoreSession()
-                    self.onLoginSuccess()
+                    do {
+                        try await SessionStore.shared.handleSignInSuccess()
+                        self.logger.info("Đã đăng nhập thành công và đồng bộ phiên Keychain.")
+                        await WebKitManager.shared.restoreSession()
+                        self.onLoginSuccess()
+                    } catch {
+                        self.logger.error("Đăng nhập thất bại: \(error.localizedDescription)")
+                        self.hasHandledSuccess = false
+                    }
                 }
             }
         }

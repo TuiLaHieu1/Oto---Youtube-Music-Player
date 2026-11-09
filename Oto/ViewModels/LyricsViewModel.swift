@@ -16,7 +16,7 @@ public final class LyricsViewModel {
     private var scrollResetTask: Task<Void, Never>?
     private var fetchLyricsTask: Task<Void, Never>?
 
-    public init(lyricsService: MultiSourceLyricsService = MultiSourceLyricsService()) {
+    public init(lyricsService: MultiSourceLyricsService = .shared) {
         self.lyricsService = lyricsService
     }
 

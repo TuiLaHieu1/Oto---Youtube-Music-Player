@@ -46,6 +46,11 @@
 		A10100472CE0000100000001 /* Oto/Presentation/Components/OtoLoadingSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200472CE0000100000001 /* Oto/Presentation/Components/OtoLoadingSkeleton.swift */; };
 		A10100482CE0000100000001 /* Oto/Presentation/Components/OtoMiniPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200482CE0000100000001 /* Oto/Presentation/Components/OtoMiniPlayer.swift */; };
 		A10100492CE0000100000001 /* Oto/Services/Session/SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200492CE0000100000001 /* Oto/Services/Session/SessionStore.swift */; };
+		A10100532CE0000100000001 /* Oto/Services/WebKit/PlaybackBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200532CE0000100000001 /* Oto/Services/WebKit/PlaybackBackend.swift */; };
+		A10100542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift */; };
+		A10100502CE0000100000001 /* Tests/OtoTests/PlayerViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200502CE0000100000001 /* Tests/OtoTests/PlayerViewModelTests.swift */; };
+		A10100512CE0000100000001 /* Tests/OtoTests/SessionStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200512CE0000100000001 /* Tests/OtoTests/SessionStoreTests.swift */; };
+		A10100522CE0000100000001 /* OtoCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10400012CE0000100000001 /* OtoCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -89,7 +94,22 @@
 		A10200472CE0000100000001 /* Oto/Presentation/Components/OtoLoadingSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Components/OtoLoadingSkeleton.swift; sourceTree = SOURCE_ROOT; };
 		A10200482CE0000100000001 /* Oto/Presentation/Components/OtoMiniPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Components/OtoMiniPlayer.swift; sourceTree = SOURCE_ROOT; };
 		A10200492CE0000100000001 /* Oto/Services/Session/SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/Session/SessionStore.swift; sourceTree = SOURCE_ROOT; };
+		A10200532CE0000100000001 /* Oto/Services/WebKit/PlaybackBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/PlaybackBackend.swift; sourceTree = SOURCE_ROOT; };
+		A10200542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift"; sourceTree = SOURCE_ROOT; };
+		A10200502CE0000100000001 /* Tests/OtoTests/PlayerViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/PlayerViewModelTests.swift; sourceTree = SOURCE_ROOT; };
+		A10200512CE0000100000001 /* Tests/OtoTests/SessionStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/SessionStoreTests.swift; sourceTree = SOURCE_ROOT; };
+		A10200522CE0000100000001 /* OtoTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OtoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXContainerItemProxy section */
+		A10D00012CE0000100000001 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A10900012CE0000100000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A10600012CE0000100000001;
+			remoteInfo = Oto;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		A10300012CE0000100000001 /* Frameworks */ = {
@@ -97,6 +117,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				A101000E2CE0000100000001 /* OtoCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10300022CE0000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10100522CE0000100000001 /* OtoCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -123,6 +151,7 @@
 			isa = PBXGroup;
 			children = (
 				A10500012CE0000100000001 /* Oto */,
+				A10500072CE0000100000001 /* Tests */,
 				A10500062CE0000100000001 /* Products */,
 				1CF4356230A18120002C0B45 /* Recovered References */,
 			);
@@ -192,6 +221,8 @@
 				A102000D2CE0000100000001 /* Oto/Services/Audio/NowPlayingManager.swift */,
 				A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */,
 				A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */,
+				A10200532CE0000100000001 /* Oto/Services/WebKit/PlaybackBackend.swift */,
+				A10200542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift */,
 				A10200492CE0000100000001 /* Oto/Services/Session/SessionStore.swift */,
 			);
 			path = Services;
@@ -201,8 +232,18 @@
 			isa = PBXGroup;
 			children = (
 				A10200002CE0000100000001 /* Oto.app */,
+				A10200522CE0000100000001 /* OtoTests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A10500072CE0000100000001 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				A10200502CE0000100000001 /* Tests/OtoTests/PlayerViewModelTests.swift */,
+				A10200512CE0000100000001 /* Tests/OtoTests/SessionStoreTests.swift */,
+			);
+			name = Tests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -227,6 +268,26 @@
 			productReference = A10200002CE0000100000001 /* Oto.app */;
 			productType = "com.apple.product-type.application";
 		};
+		A10600022CE0000100000001 /* OtoTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10700032CE0000100000001 /* Build configuration list for PBXNativeTarget "OtoTests" */;
+			buildPhases = (
+				A10800022CE0000100000001 /* Sources */,
+				A10300022CE0000100000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A10C00012CE0000100000001 /* PBXTargetDependency */,
+			);
+			name = OtoTests;
+			packageProductDependencies = (
+				A10400012CE0000100000001 /* OtoCore */,
+			);
+			productName = OtoTests;
+			productReference = A10200522CE0000100000001 /* OtoTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -240,6 +301,10 @@
 					A10600012CE0000100000001 = {
 						CreatedOnToolsVersion = 16.0;
 						ProvisioningStyle = Automatic;
+					};
+					A10600022CE0000100000001 = {
+						CreatedOnToolsVersion = 16.0;
+						TestTargetID = A10600012CE0000100000001;
 					};
 				};
 			};
@@ -260,6 +325,7 @@
 			projectRoot = "";
 			targets = (
 				A10600012CE0000100000001 /* Oto */,
+				A10600022CE0000100000001 /* OtoTests */,
 			);
 		};
 /* End PBXProject section */
@@ -307,10 +373,29 @@
 				A10100472CE0000100000001 /* Oto/Presentation/Components/OtoLoadingSkeleton.swift in Sources */,
 				A10100482CE0000100000001 /* Oto/Presentation/Components/OtoMiniPlayer.swift in Sources */,
 				A10100492CE0000100000001 /* Oto/Services/Session/SessionStore.swift in Sources */,
+				A10100532CE0000100000001 /* Oto/Services/WebKit/PlaybackBackend.swift in Sources */,
+				A10100542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A10800022CE0000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10100502CE0000100000001 /* Tests/OtoTests/PlayerViewModelTests.swift in Sources */,
+				A10100512CE0000100000001 /* Tests/OtoTests/SessionStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A10C00012CE0000100000001 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A10600012CE0000100000001 /* Oto */;
+			targetProxy = A10D00012CE0000100000001 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		A10B00012CE0000100000001 /* Debug */ = {
@@ -482,6 +567,46 @@
 			};
 			name = Release;
 		};
+		A10B00052CE0000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YRXR7F2DR8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hieu.oto.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Oto.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Oto";
+			};
+			name = Debug;
+		};
+		A10B00062CE0000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = YRXR7F2DR8;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.hieu.oto.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Oto.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Oto";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -499,6 +624,15 @@
 			buildConfigurations = (
 				A10B00032CE0000100000001 /* Debug */,
 				A10B00042CE0000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10700032CE0000100000001 /* Build configuration list for PBXNativeTarget "OtoTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10B00052CE0000100000001 /* Debug */,
+				A10B00062CE0000100000001 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

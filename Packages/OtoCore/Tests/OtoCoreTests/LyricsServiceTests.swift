@@ -160,4 +160,34 @@ struct LyricsServiceTests {
         #expect(doc.type == .none)
         #expect(doc.lines.isEmpty)
     }
+
+    @Test("MultiSourceLyricsService clearCache removes all cached lyrics")
+    func testClearCacheRemovesCachedLyrics() async {
+        final class CounterProvider: LyricsProvider, @unchecked Sendable {
+            let providerName = "Counter"
+            var fetchCount = 0
+            func fetchLyrics(for song: Song) async throws -> LyricsDocument? {
+                fetchCount += 1
+                return LyricsDocument(type: .synced, lines: [], source: "Counter-\(fetchCount)")
+            }
+        }
+
+        let provider = CounterProvider()
+        let service = MultiSourceLyricsService(providers: [provider])
+        let song = Song(id: "c1", title: "Count", artist: "Artist", duration: 100)
+
+        let first = await service.resolveLyrics(for: song)
+        #expect(first.source == "Counter-1")
+
+        // Lấy lại lần 2 từ cache -> provider không được gọi lại
+        let second = await service.resolveLyrics(for: song)
+        #expect(second.source == "Counter-1")
+
+        // Xóa cache
+        await service.clearCache()
+
+        // Lấy lại lần 3 sau khi xóa cache -> provider được gọi lại (Counter-2)
+        let third = await service.resolveLyrics(for: song)
+        #expect(third.source == "Counter-2")
+    }
 }

@@ -78,8 +78,10 @@ public final class LibraryViewModel {
 
     /// Xóa toàn bộ bộ nhớ đệm ứng dụng.
     public func clearAllCache() {
-        HomeCache.shared.clear()
-        URLCache.shared.removeAllCachedResponses()
-        updateCacheSize()
+        Task {
+            await HomeCache.shared.clear()
+            URLCache.shared.removeAllCachedResponses()
+            updateCacheSize()
+        }
     }
 }

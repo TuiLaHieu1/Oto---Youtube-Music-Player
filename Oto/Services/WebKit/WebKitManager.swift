@@ -37,17 +37,18 @@ public final class WebKitManager {
     }
 
     /// Sao lưu cookie từ WKHTTPCookieStore vào Keychain khi người dùng đăng nhập thành công.
-    public func syncCookiesToStorage() async {
+    @discardableResult
+    public func syncCookiesToStorage() async -> Bool {
         let store = WKWebsiteDataStore.default().httpCookieStore
         let cookies = await store.allCookies()
-        cookieStorage.saveCookies(cookies)
+        return cookieStorage.saveCookies(cookies)
     }
 
     /// Đăng xuất và dọn dẹp toàn bộ dữ liệu web của phiên người dùng.
     public func clearSession() async {
         await YTMusicClient.shared.invalidateSession()
         cookieStorage.clearCookies()
-        HomeCache.shared.clear()
+        await HomeCache.shared.clear()
         let dataStore = WKWebsiteDataStore.default()
         let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
         let records = await dataStore.dataRecords(ofTypes: dataTypes)

@@ -226,6 +226,42 @@ public struct PlaybackStateMachine: Sendable {
         return PlaybackEffects()
     }
 
+    // MARK: - Engine Crash & Recovery
+
+    /// Xử lý sự cố tiến trình WebContent (WKWebView) bị terminate đột ngột.
+    /// Giữ nguyên `userIntent` của người dùng (nếu đang pause thì phục hồi ở trạng thái pause, không tự ý play).
+    /// Tăng `currentGeneration` mới trong state machine và phát lệnh tải lại bài hát tại `currentPosition`.
+    public mutating func engineCrashed() -> PlaybackEffects {
+        guard let song = currentSong else {
+            engineState = .idle
+            return PlaybackEffects()
+        }
+
+        currentGeneration += 1
+        hasEndedForCurrentTrack = false
+        engineState = .buffering
+
+        var effects = PlaybackEffects()
+        if userIntent == .playing {
+            effects.shouldActivateSession = true
+            effects.shouldStartEngine = PlaybackEffects.StartEnginePayload(
+                songId: song.id,
+                startSeconds: currentPosition,
+                generation: currentGeneration
+            )
+            effects.shouldResumeEngine = true
+        } else {
+            // Khi userIntent == .paused, nạp bài và seek đến currentPosition, không resume
+            effects.shouldStartEngine = PlaybackEffects.StartEnginePayload(
+                songId: song.id,
+                startSeconds: currentPosition,
+                generation: currentGeneration
+            )
+            effects.shouldPauseEngine = true
+        }
+        return effects
+    }
+
     // MARK: - Public State Projection
 
     /// Chiếu trạng thái nội bộ ra PlaybackState công khai cho giao diện người dùng.

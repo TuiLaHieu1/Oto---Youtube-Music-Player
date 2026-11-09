@@ -3,6 +3,7 @@ import Foundation
 /// Dịch vụ phân giải lời bài hát đa nguồn theo đúng luồng ưu tiên quy định trong AGENTS.md.
 /// Cách ly luồng bằng actor, tự động hủy bỏ kết quả cũ khi đổi bài hát (stale generation protection).
 public actor MultiSourceLyricsService {
+    public static let shared = MultiSourceLyricsService()
     private let providers: [LyricsProvider]
     private var cache: [String: LyricsDocument] = [:]
     private var cacheKeys: [String] = []

@@ -62,4 +62,9 @@ public final class SearchViewModel {
         isLoading = false
         errorMessage = nil
     }
+
+    /// Thử lại truy vấn hiện tại sau lỗi mạng mà không buộc người dùng sửa nội dung ô tìm kiếm.
+    public func retry() {
+        handleQueryChange(query)
+    }
 }

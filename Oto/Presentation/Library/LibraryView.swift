@@ -46,12 +46,9 @@ public struct LibraryView: View {
                         }
                     }
 
-                    Label("Danh sách phát", systemImage: "music.note.list")
-                        .foregroundStyle(OtoTheme.secondaryText)
-                    Label("Album", systemImage: "square.stack")
-                        .foregroundStyle(OtoTheme.secondaryText)
-                    Label("Nghệ sĩ", systemImage: "music.mic")
-                        .foregroundStyle(OtoTheme.secondaryText)
+                    unavailableLibraryRow("Danh sách phát", systemImage: "music.note.list")
+                    unavailableLibraryRow("Album", systemImage: "square.stack")
+                    unavailableLibraryRow("Nghệ sĩ", systemImage: "music.mic")
                 }
 
                 Section("Bộ nhớ đệm & Cài đặt") {
@@ -85,7 +82,7 @@ public struct LibraryView: View {
                     if hasSession {
                         HStack {
                             Label("Đã kết nối YouTube Music", systemImage: "checkmark.seal.fill")
-                                .foregroundStyle(.green)
+                                .foregroundStyle(OtoTheme.success)
                             Spacer()
                         }
                         Button(role: .destructive) {
@@ -139,5 +136,18 @@ public struct LibraryView: View {
                 }
             }
         }
+    }
+
+    private func unavailableLibraryRow(_ title: String, systemImage: String) -> some View {
+        HStack {
+            Label(title, systemImage: systemImage)
+            Spacer()
+            Text("Chưa có dữ liệu")
+                .font(.caption)
+                .foregroundStyle(OtoTheme.tertiaryText)
+        }
+        .foregroundStyle(OtoTheme.controlInactive)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title), chưa có dữ liệu")
     }
 }

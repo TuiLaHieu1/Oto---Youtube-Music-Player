@@ -72,6 +72,8 @@ public struct MiniPlayerView: View {
                                 .foregroundStyle(OtoTheme.primaryText)
                         }
                         .buttonStyle(.plain)
+                        .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
+                        .accessibilityLabel(playerVM.isPlaying ? "Tạm dừng" : "Phát")
 
                         Button {
                             #if os(iOS)
@@ -86,6 +88,8 @@ public struct MiniPlayerView: View {
                                 .foregroundStyle(OtoTheme.primaryText)
                         }
                         .buttonStyle(.plain)
+                        .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
+                        .accessibilityLabel("Bài tiếp theo")
                     }
                 }
                 .padding(.horizontal, 16)
@@ -110,6 +114,8 @@ public struct MiniPlayerView: View {
                     playerVM.isExpanded = true
                 }
             }
+            .accessibilityElement(children: .contain)
+            .accessibilityHint("Chạm vào thông tin bài hát để mở trình phát toàn màn hình")
         }
     }
 }

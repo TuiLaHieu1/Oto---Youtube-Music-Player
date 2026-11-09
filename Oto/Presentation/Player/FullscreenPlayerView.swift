@@ -4,6 +4,7 @@ import OtoCore
 /// Màn hình phát nhạc toàn màn hình (Fullscreen Player) giao thoa Atelier Light × Spectrum Dark.
 public struct FullscreenPlayerView: View {
     @Bindable var playerVM: PlayerViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var lyricsVM = LyricsViewModel()
     @State private var isScrubbing: Bool = false
     @State private var scrubPosition: TimeInterval = 0
@@ -16,26 +17,10 @@ public struct FullscreenPlayerView: View {
         GeometryReader { geo in
             ZStack {
                 AmbientBackgroundView(artworkURL: playerVM.currentSong?.artworkURL, size: geo.size)
-
-                VStack(spacing: 0) {
-                    FullscreenHeaderBar(isExpanded: $playerVM.isExpanded)
-
-                    if playerVM.showLyrics {
-                        SyncedLyricsView(lyricsVM: lyricsVM) { seekTime in
-                            playerVM.seek(to: seekTime)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        artworkView(geo: geo)
-                    }
-
-                    VStack(spacing: OtoTheme.spacing24) {
-                        trackMetadataView
-                        scrubberView
-                        transportControls
-                        bottomBar
-                    }
-                    .padding(.bottom, OtoTheme.spacing16)
+                if geo.size.width >= 760, geo.size.height >= 540 {
+                    widePlayerLayout(geo: geo)
+                } else {
+                    compactPlayerLayout(geo: geo)
                 }
             }
         }
@@ -66,12 +51,77 @@ public struct FullscreenPlayerView: View {
         )
     }
 
+    private func compactPlayerLayout(geo: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            FullscreenHeaderBar(isExpanded: $playerVM.isExpanded)
+
+            if playerVM.showLyrics {
+                SyncedLyricsView(lyricsVM: lyricsVM) { seekTime in
+                    playerVM.seek(to: seekTime)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                artworkView(geo: geo)
+            }
+
+            VStack(spacing: OtoTheme.spacing24) {
+                trackMetadataView
+                scrubberView
+                transportControls
+                bottomBar
+            }
+            .padding(.bottom, OtoTheme.spacing16)
+        }
+    }
+
+    /// iPad và cửa sổ rộng giữ player bên trái, lời bên phải theo cùng geometry Light/Dark.
+    private func widePlayerLayout(geo: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            FullscreenHeaderBar(isExpanded: $playerVM.isExpanded)
+
+            HStack(alignment: .top, spacing: OtoTheme.spacing32) {
+                VStack(spacing: OtoTheme.spacing24) {
+                    artworkImage(size: min(geo.size.width * 0.34, geo.size.height * 0.46))
+                    trackMetadataView
+                    scrubberView
+                    transportControls
+                    bottomBar
+                }
+                .frame(maxWidth: 480, maxHeight: .infinity)
+
+                SyncedLyricsView(lyricsVM: lyricsVM) { seekTime in
+                    playerVM.seek(to: seekTime)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
+                        .fill(OtoTheme.surface.opacity(0.78))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
+                                .stroke(OtoTheme.separator, lineWidth: 0.5)
+                        )
+                )
+                .clipShape(RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous))
+            }
+            .padding(.horizontal, OtoTheme.spacing32)
+            .padding(.bottom, OtoTheme.spacing24)
+        }
+    }
+}
+
+private extension FullscreenPlayerView {
+
     // MARK: - Artwork Component
 
     @ViewBuilder
     private func artworkView(geo: GeometryProxy) -> some View {
         Spacer()
         let artSize = max(0, min(geo.size.width - 64, 340))
+        artworkImage(size: artSize)
+        Spacer()
+    }
+
+    private func artworkImage(size: CGFloat) -> some View {
         AsyncImage(url: playerVM.currentSong?.artworkURL) { image in
             image.resizable().scaledToFill()
         } placeholder: {
@@ -83,16 +133,16 @@ public struct FullscreenPlayerView: View {
                     .foregroundStyle(OtoTheme.secondaryText)
             }
         }
-        .frame(width: artSize, height: artSize)
+        .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
                 .stroke(OtoTheme.separator.opacity(0.4), lineWidth: 0.5)
         )
         .shadow(color: Color.black.opacity(playerVM.isPlaying ? 0.25 : 0.12), radius: 20, x: 0, y: 10)
-        .scaleEffect(playerVM.isPlaying ? 1.0 : 0.90)
-        .animation(OtoTheme.smoothSpring, value: playerVM.isPlaying)
-        Spacer()
+        .scaleEffect(reduceMotion ? 1 : (playerVM.isPlaying ? 1.0 : 0.90))
+        .animation(reduceMotion ? nil : OtoTheme.smoothSpring, value: playerVM.isPlaying)
+        .accessibilityLabel("Ảnh bìa \(playerVM.currentSong?.title ?? "bài hát")")
     }
 
     // MARK: - Track Metadata

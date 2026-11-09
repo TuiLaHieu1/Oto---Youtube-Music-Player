@@ -78,6 +78,19 @@ public enum OtoTheme {
     /// - Spectrum: #FF6B6B
     public static let error = dynamicColor(light: "C83E3E", dark: "FF6B6B")
 
+    /// Warning dùng cho trạng thái kết nối chập chờn hoặc dữ liệu chưa đồng bộ.
+    public static let warning = dynamicColor(light: "9A6700", dark: "F2C94C")
+
+    /// Success tách khỏi Accent để trạng thái tài khoản luôn dễ hiểu.
+    public static let success = dynamicColor(light: "2F7D4A", dark: "62C987")
+
+    /// Control chưa chọn và trạng thái disabled.
+    public static let controlInactive = dynamicColor(light: "8B867E", dark: "9297AA")
+    public static let disabled = dynamicColor(light: "C8C2B8", dark: "4B5061")
+
+    /// Lớp phủ cho sheet/menu, không phụ thuộc màu artwork.
+    public static let scrim = dynamicColor(light: "201E1B", dark: "05060A")
+
     // MARK: - Geometry Tokens
 
     /// Bo góc thẻ nội dung thống nhất: 16 pt

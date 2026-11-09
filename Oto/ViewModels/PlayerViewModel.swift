@@ -4,6 +4,11 @@ import OtoCore
 import os
 
 /// ViewModel quản lý toàn bộ trạng thái phát nhạc và hàng đợi trên MainActor.
+///
+/// Phối hợp chặt chẽ với:
+/// 1. `PlaybackStateMachine` (OtoCore) để phân tách rạch ròi user intent, engine state, interruption state.
+/// 2. `AudioSessionCoordinator` (Actor ngoài main thread) để kích hoạt/hủy phiên an toàn, không block UI.
+/// 3. `AudioSessionObserver` để đón nhận gián đoạn cuộc gọi/siri và ngắt tai nghe mà không gọi setActive đồng bộ.
 @MainActor
 @Observable
 public final class PlayerViewModel {
@@ -18,8 +23,7 @@ public final class PlayerViewModel {
     public let clock: InterpolatedClock
 
     private let logger = Logger(subsystem: "com.oto.music", category: "PlayerViewModel")
-    private var playbackGeneration: Int = 0
-    private var hasAdvancedCurrentTrack: Bool = false
+    private var stateMachine = PlaybackStateMachine()
     private var positionTimerTask: Task<Void, Never>?
 
     public init(
@@ -29,6 +33,7 @@ public final class PlayerViewModel {
         self.queueManager = queueManager
         self.clock = clock
         setupPlayerBridge()
+        setupAudioSessionObserver()
         setupNowPlayingCommands()
     }
 
@@ -48,26 +53,13 @@ public final class PlayerViewModel {
         queueManager.repeatMode
     }
 
-    // MARK: - Actions
+    // MARK: - User Intent Actions
 
-    /// Bắt đầu phát một bài hát cụ thể và cập nhật hàng đợi.
+    /// Bắt đầu phát một bài hát cụ thể từ ý định người dùng và cập nhật hàng đợi.
     public func play(song: Song) {
         queueManager.setQueue(songs: [song])
-        startPlayback(song: song)
-    }
-
-    /// Bắt đầu engine cho bài mà QueueManager đã chọn, không làm mất phần còn lại của hàng đợi.
-    private func startPlayback(song: Song) {
-        playbackGeneration += 1
-        hasAdvancedCurrentTrack = false
-        let gen = playbackGeneration
-
-        AudioSessionManager.shared.activateSession()
-        clock.pause(at: 0)
-        playbackState = .playing(song: song, position: 0)
-        currentPosition = 0
-        SingletonPlayerWebView.shared.loadVideo(id: song.id, startSeconds: 0, generation: gen)
-        NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: true, currentTime: 0)
+        let effects = stateMachine.userPlay(song: song)
+        applyEffects(effects)
     }
 
     /// Khởi tạo hàng đợi mới từ danh sách bài hát và bắt đầu phát từ vị trí chỉ định.
@@ -75,37 +67,29 @@ public final class PlayerViewModel {
         guard !songs.isEmpty else { return }
         queueManager.setQueue(songs: songs, startIndex: startIndex)
         if let targetSong = queueManager.currentSong {
-            startPlayback(song: targetSong)
+            let effects = stateMachine.userPlay(song: targetSong)
+            applyEffects(effects)
         }
     }
 
     /// Phát bài hát tại một vị trí cụ thể trong hàng đợi và cập nhật currentIndex.
     public func playQueueItem(at index: Int) {
         if let targetSong = queueManager.skipToIndex(index) {
-            startPlayback(song: targetSong)
+            let effects = stateMachine.userPlay(song: targetSong)
+            applyEffects(effects)
         }
     }
 
-    /// Tiếp tục phát.
+    /// Người dùng tiếp tục phát (Resume).
     public func resume() {
-        guard let song = currentSong else { return }
-        AudioSessionManager.shared.activateSession()
-        clock.play(from: currentPosition, rate: 1.0)
-        playbackState = .playing(song: song, position: currentPosition)
-        SingletonPlayerWebView.shared.play()
-        NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: true, currentTime: currentPosition)
-        startPositionTracking()
+        let effects = stateMachine.userResume()
+        applyEffects(effects)
     }
 
-    /// Tạm dừng.
+    /// Người dùng tạm dừng (Pause).
     public func pause() {
-        guard let song = currentSong else { return }
-        clock.pause()
-        currentPosition = clock.currentPosition()
-        playbackState = .paused(song: song, position: currentPosition)
-        SingletonPlayerWebView.shared.pause()
-        NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: false, currentTime: currentPosition)
-        stopPositionTracking()
+        let effects = stateMachine.userPause()
+        applyEffects(effects)
     }
 
     /// Đổi trạng thái Play / Pause.
@@ -117,22 +101,24 @@ public final class PlayerViewModel {
         }
     }
 
-    /// Chuyển bài tiếp theo trong queue.
+    /// Chuyển bài tiếp theo trong hàng đợi.
     public func next() {
         if let nextSong = queueManager.next() {
-            startPlayback(song: nextSong)
+            let effects = stateMachine.userPlay(song: nextSong)
+            applyEffects(effects)
         } else {
             pause()
             seek(to: 0)
         }
     }
 
-    /// Quay lại bài trước.
+    /// Quay lại bài trước hoặc tua về đầu bài.
     public func previous() {
         if currentPosition > 3.0 {
             seek(to: 0)
         } else if let prevSong = queueManager.previous() {
-            startPlayback(song: prevSong)
+            let effects = stateMachine.userPlay(song: prevSong)
+            applyEffects(effects)
         } else {
             seek(to: 0)
         }
@@ -140,17 +126,8 @@ public final class PlayerViewModel {
 
     /// Nhảy đến vị trí thời gian chỉ định (Seek).
     public func seek(to position: TimeInterval) {
-        clock.seek(to: position)
-        currentPosition = position
-        SingletonPlayerWebView.shared.seek(to: position)
-        if let song = currentSong {
-            if isPlaying {
-                playbackState = .playing(song: song, position: position)
-            } else {
-                playbackState = .paused(song: song, position: position)
-            }
-            NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: isPlaying, currentTime: position)
-        }
+        let effects = stateMachine.userSeek(to: position)
+        applyEffects(effects)
     }
 
     /// Bật/tắt trộn bài.
@@ -163,11 +140,112 @@ public final class PlayerViewModel {
         queueManager.toggleRepeat()
     }
 
-    // MARK: - Internal Player Bridge & NowPlaying Callbacks
+    // MARK: - Side Effects Dispatcher
+
+    private func applyEffects(_ effects: PlaybackEffects) {
+        // 1. Kích hoạt AudioSession bất đồng bộ ngoài main thread khi có yêu cầu
+        if effects.shouldActivateSession {
+            Task {
+                do {
+                    try await AudioSessionCoordinator.shared.configureAndActivate()
+                } catch {
+                    self.logger.error("Lỗi kích hoạt AVAudioSession: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // 2. Nạp bài hát mới vào WebKit engine
+        if let payload = effects.shouldStartEngine {
+            clock.pause(at: payload.startSeconds)
+            SingletonPlayerWebView.shared.loadVideo(
+                id: payload.songId,
+                startSeconds: payload.startSeconds,
+                generation: payload.generation
+            )
+        }
+
+        // 3. Tiếp tục WebKit engine
+        if effects.shouldResumeEngine {
+            clock.play(from: stateMachine.currentPosition, rate: 1.0)
+            SingletonPlayerWebView.shared.play()
+            startPositionTracking()
+        }
+
+        // 4. Tạm dừng WebKit engine
+        if effects.shouldPauseEngine {
+            clock.pause()
+            SingletonPlayerWebView.shared.pause()
+            stopPositionTracking()
+        }
+
+        // 5. Tua WebKit engine
+        if let seekTime = effects.shouldSeekEngine {
+            clock.seek(to: seekTime)
+            SingletonPlayerWebView.shared.seek(to: seekTime)
+        }
+
+        // 6. Chuyển bài kế tiếp
+        if effects.shouldAdvanceToNextTrack {
+            next()
+        }
+
+        // 7. Đồng bộ trạng thái ra giao diện người dùng và NowPlaying
+        syncPublicState()
+    }
+
+    private func syncPublicState() {
+        playbackState = stateMachine.playbackState
+        currentPosition = stateMachine.currentPosition
+
+        NowPlayingManager.shared.updateNowPlaying(
+            song: currentSong,
+            isPlaying: isPlaying,
+            currentTime: currentPosition
+        )
+    }
+
+    // MARK: - Observer & Bridge Wireup
+
+    private func setupAudioSessionObserver() {
+        AudioSessionObserver.shared.onInterruptionBegan = { [weak self] in
+            guard let self else { return }
+            let effects = self.stateMachine.interruptionBegan()
+            self.applyEffects(effects)
+        }
+
+        AudioSessionObserver.shared.onInterruptionEnded = { [weak self] shouldResume in
+            guard let self else { return }
+            let effects = self.stateMachine.interruptionEnded(shouldResume: shouldResume)
+            self.applyEffects(effects)
+        }
+
+        AudioSessionObserver.shared.onHeadphonesUnplugged = { [weak self] in
+            guard let self else { return }
+            let effects = self.stateMachine.routeUnplugged()
+            self.applyEffects(effects)
+        }
+    }
 
     private func setupPlayerBridge() {
-        SingletonPlayerWebView.shared.onPositionUpdate = { [weak self] cur, _ in
-            guard let self, self.isPlaying else { return }
+        SingletonPlayerWebView.shared.onPlaybackStateChange = { [weak self] (stateCode, gen) in
+            guard let self else { return }
+            let engineState: EnginePlaybackState
+            switch stateCode {
+            case 1:
+                engineState = .playing
+            case 2:
+                engineState = .paused
+            default:
+                engineState = .buffering
+            }
+
+            let effects = self.stateMachine.engineStateChanged(engineState, generation: gen)
+            self.applyEffects(effects)
+        }
+
+        SingletonPlayerWebView.shared.onPositionUpdate = { [weak self] (cur, _, gen) in
+            guard let self else { return }
+            self.stateMachine.engineTimeUpdated(currentTime: cur, generation: gen)
             let clockPos = self.clock.currentPosition()
             if abs(clockPos - cur) > 0.5 {
                 self.clock.seek(to: cur)
@@ -175,45 +253,23 @@ public final class PlayerViewModel {
             self.currentPosition = cur
             NowPlayingManager.shared.updateNowPlaying(
                 song: self.currentSong,
-                isPlaying: true,
+                isPlaying: self.isPlaying,
                 currentTime: cur
             )
         }
 
-        SingletonPlayerWebView.shared.onTrackEnded = { [weak self] in
-            self?.advanceOnce()
-        }
-
-        SingletonPlayerWebView.shared.onPlaybackStateChange = { [weak self] state in
+        SingletonPlayerWebView.shared.onTrackEnded = { [weak self] gen in
             guard let self else { return }
-            if state == 1 { // YT.PlayerState.PLAYING
-                if let song = self.currentSong {
-                    self.clock.play(from: self.currentPosition, rate: 1.0)
-                    self.playbackState = .playing(song: song, position: self.currentPosition)
-                    self.startPositionTracking()
-                }
-            } else if state == 2 { // YT.PlayerState.PAUSED
-                if self.isPlaying, let song = self.currentSong {
-                    self.clock.pause()
-                    self.playbackState = .paused(song: song, position: self.currentPosition)
-                    self.stopPositionTracking()
-                }
-            }
+            let effects = self.stateMachine.engineTrackEnded(generation: gen)
+            self.applyEffects(effects)
         }
 
         SingletonPlayerWebView.shared.onError = { [weak self] code in
             self?.logger.error("Lỗi playback YouTube Iframe: code \(code)")
             if code == 100 || code == 101 || code == 150 || code == 152 {
-                self?.advanceOnce()
+                self?.next()
             }
         }
-    }
-
-    /// Chuyển bài kế tiếp duy nhất một lần khi bài hiện tại kết thúc, ngăn chặn nhảy bài kép.
-    private func advanceOnce() {
-        guard !hasAdvancedCurrentTrack else { return }
-        hasAdvancedCurrentTrack = true
-        next()
     }
 
     private func setupNowPlayingCommands() {
@@ -254,7 +310,6 @@ public final class PlayerViewModel {
                 guard let self = self, self.isPlaying else { break }
                 let newPos = self.clock.currentPosition()
                 self.currentPosition = newPos
-                // Timer chỉ cập nhật tiến trình hiển thị; việc chuyển bài do onTrackEnded đảm nhiệm.
             }
         }
     }

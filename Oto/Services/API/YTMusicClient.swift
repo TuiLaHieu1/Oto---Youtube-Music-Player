@@ -166,30 +166,62 @@ public final class YTMusicClient: Sendable {
             guard let httpResponse = response as? HTTPURLResponse else {
                 throw YTMusicError.invalidResponse
             }
-            switch httpResponse.statusCode {
-            case 200...299:
-                return data
-            case 401:
-                throw YTMusicError.authenticationExpired
-            case 403:
-                throw YTMusicError.permissionDenied
-            case 429:
-                throw YTMusicError.rateLimited(
-                    retryAfter: Self.retryAfter(from: httpResponse.value(forHTTPHeaderField: "Retry-After"))
-                )
-            case 500...599:
-                throw YTMusicError.serverError(statusCode: httpResponse.statusCode)
-            default:
-                throw YTMusicError.invalidResponse
-            }
+            try validate(httpResponse, operation: operation)
+            return data
         } catch is CancellationError {
+            logger.info("operation=\(operation, privacy: .public) errorCategory=cancelled")
             throw CancellationError()
+        } catch let urlError as URLError {
+            logURLError(urlError, operation: operation)
+            throw YTMusicError.transport(urlError.localizedDescription)
         } catch let error as YTMusicError {
             throw error
         } catch {
-            logger.error("Innertube \(operation, privacy: .public) thất bại do lỗi vận chuyển.")
+            logger.error("operation=\(operation, privacy: .public) errorCategory=unknown")
             throw YTMusicError.transport(error.localizedDescription)
         }
+    }
+
+    private func validate(_ response: HTTPURLResponse, operation: String) throws {
+        let code = response.statusCode
+        switch code {
+        case 200...299:
+            return
+        case 401:
+            logger.error("operation=\(operation, privacy: .public) errorCategory=http statusCode=401")
+            throw YTMusicError.authenticationExpired
+        case 403:
+            logger.error("operation=\(operation, privacy: .public) errorCategory=http statusCode=403")
+            throw YTMusicError.permissionDenied
+        case 429:
+            logger.error("operation=\(operation, privacy: .public) errorCategory=http statusCode=429")
+            let retryHeader = response.value(forHTTPHeaderField: "Retry-After")
+            throw YTMusicError.rateLimited(retryAfter: Self.retryAfter(from: retryHeader))
+        case 500...599:
+            logger.error("operation=\(operation, privacy: .public) errorCategory=http statusCode=\(code)")
+            throw YTMusicError.serverError(statusCode: code)
+        default:
+            logger.error("operation=\(operation, privacy: .public) errorCategory=http statusCode=\(code)")
+            throw YTMusicError.invalidResponse
+        }
+    }
+
+    private func logURLError(_ urlError: URLError, operation: String) {
+        let category: String
+        switch urlError.code {
+        case .notConnectedToInternet, .networkConnectionLost:
+            category = "offline"
+        case .timedOut:
+            category = "timeout"
+        case .cancelled:
+            category = "cancelled"
+        default:
+            category = "transport"
+        }
+        let op = operation
+        let cat = category
+        let code = urlError.errorCode
+        logger.error("operation=\(op, privacy: .public) errorCategory=\(cat, privacy: .public) code=\(code)")
     }
 
     private static func retryAfter(from value: String?) -> TimeInterval? {

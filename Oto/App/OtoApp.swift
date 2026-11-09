@@ -13,27 +13,6 @@ struct OtoApp: App {
         Task { @MainActor in
             await WebKitManager.shared.restoreSession()
         }
-
-        // Kết nối điều khiển audio session với PlayerViewModel
-        AudioSessionManager.shared.onInterruptionBegan = { [weak vm] in
-            Task { @MainActor in
-                vm?.pause()
-            }
-        }
-
-        AudioSessionManager.shared.onInterruptionEnded = { [weak vm] shouldResume in
-            if shouldResume {
-                Task { @MainActor in
-                    vm?.resume()
-                }
-            }
-        }
-
-        AudioSessionManager.shared.onHeadphonesUnplugged = { [weak vm] in
-            Task { @MainActor in
-                vm?.pause()
-            }
-        }
     }
 
     var body: some Scene {

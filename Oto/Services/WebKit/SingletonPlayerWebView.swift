@@ -23,9 +23,9 @@ public final class SingletonPlayerWebView: NSObject {
     public private(set) var currentGeneration: Int = 0
     private var currentLoadedVideoId: String?
 
-    public var onPlaybackStateChange: ((Int) -> Void)?
-    public var onPositionUpdate: ((TimeInterval, TimeInterval) -> Void)?
-    public var onTrackEnded: (() -> Void)?
+    public var onPlaybackStateChange: ((_ state: Int, _ generation: Int) -> Void)?
+    public var onPositionUpdate: ((_ current: TimeInterval, _ duration: TimeInterval, _ generation: Int) -> Void)?
+    public var onTrackEnded: ((_ generation: Int) -> Void)?
     public var onError: ((Int) -> Void)?
 
     private override init() {
@@ -187,29 +187,29 @@ public final class SingletonPlayerWebView: NSObject {
     }
 
     private func handleStateChange(_ body: [String: Any]) {
-        if let gen = body["generation"] as? Int, gen != currentGeneration {
+        guard let gen = body["generation"] as? Int, gen == currentGeneration else {
             return
         }
         if let stateCode = body["state"] as? Int {
-            onPlaybackStateChange?(stateCode)
+            onPlaybackStateChange?(stateCode, gen)
         }
     }
 
     private func handleTimeUpdate(_ body: [String: Any]) {
-        if let gen = body["generation"] as? Int, gen != currentGeneration {
+        guard let gen = body["generation"] as? Int, gen == currentGeneration else {
             return
         }
         if let cur = body["currentTime"] as? Double,
            let dur = body["duration"] as? Double {
-            onPositionUpdate?(cur, dur)
+            onPositionUpdate?(cur, dur, gen)
         }
     }
 
     private func handleTrackEnded(_ body: [String: Any]) {
-        if let gen = body["generation"] as? Int, gen != currentGeneration {
+        guard let gen = body["generation"] as? Int, gen == currentGeneration else {
             return
         }
-        onTrackEnded?()
+        onTrackEnded?(gen)
     }
 }
 

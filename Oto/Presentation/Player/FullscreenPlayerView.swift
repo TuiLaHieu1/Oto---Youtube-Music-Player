@@ -55,8 +55,8 @@ public struct FullscreenPlayerView: View {
                             }
                         }
                         .frame(
-                            width: min(geo.size.width - 64, 340),
-                            height: min(geo.size.width - 64, 340)
+                            width: max(0, min(geo.size.width - 64, 340)),
+                            height: max(0, min(geo.size.width - 64, 340))
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                         .shadow(color: .black.opacity(0.3), radius: 24, x: 0, y: 12)

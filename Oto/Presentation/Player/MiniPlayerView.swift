@@ -20,7 +20,7 @@ public struct MiniPlayerView: View {
                             .fill(Color.secondary.opacity(0.2))
                         Rectangle()
                             .fill(Color.accentColor)
-                            .frame(width: geo.size.width * progress)
+                            .frame(width: max(0, geo.size.width * progress))
                     }
                 }
                 .frame(height: 2)

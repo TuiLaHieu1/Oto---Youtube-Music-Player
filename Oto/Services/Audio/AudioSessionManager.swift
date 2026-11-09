@@ -16,12 +16,14 @@ public final class AudioSessionManager: @unchecked Sendable {
     /// Kích hoạt phiên âm thanh nền cho ứng dụng phát nhạc.
     public func activateSession() {
         #if os(iOS)
-        do {
-            let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
-            try session.setActive(true)
-        } catch {
-            // Không làm crash ứng dụng nếu audio session không khởi tạo được trên simulator
+        Task.detached(priority: .userInitiated) {
+            do {
+                let session = AVAudioSession.sharedInstance()
+                try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
+                try session.setActive(true)
+            } catch {
+                // Không làm crash ứng dụng nếu audio session không khởi tạo được trên simulator
+            }
         }
         #endif
     }

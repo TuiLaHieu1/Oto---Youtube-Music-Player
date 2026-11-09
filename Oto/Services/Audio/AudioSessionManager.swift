@@ -1,9 +1,11 @@
 import Foundation
 import AVFoundation
+import os
 
 /// Quản lý cấu hình âm thanh nền, gián đoạn cuộc gọi/siri và thay đổi cổng cắm tai nghe.
 public final class AudioSessionManager: @unchecked Sendable {
     public static let shared = AudioSessionManager()
+    private let logger = Logger(subsystem: "com.oto.music", category: "AudioSessionManager")
 
     public var onInterruptionBegan: (@Sendable () -> Void)?
     public var onInterruptionEnded: (@Sendable (_ shouldResume: Bool) -> Void)?
@@ -16,14 +18,12 @@ public final class AudioSessionManager: @unchecked Sendable {
     /// Kích hoạt phiên âm thanh nền cho ứng dụng phát nhạc.
     public func activateSession() {
         #if os(iOS)
-        Task.detached(priority: .userInitiated) {
-            do {
-                let session = AVAudioSession.sharedInstance()
-                try session.setCategory(.playback, mode: .default, policy: .longFormAudio)
-                try session.setActive(true)
-            } catch {
-                // Không làm crash ứng dụng nếu audio session không khởi tạo được trên simulator
-            }
+        do {
+            let session = AVAudioSession.sharedInstance()
+            try session.setCategory(.playback, mode: .default)
+            try session.setActive(true)
+        } catch {
+            logger.error("Lỗi kích hoạt AVAudioSession: \(error.localizedDescription)")
         }
         #endif
     }

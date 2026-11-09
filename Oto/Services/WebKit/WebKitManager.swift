@@ -13,10 +13,23 @@ public final class WebKitManager {
 
     /// Khôi phục các cookie từ Keychain vào WKHTTPCookieStore khi khởi chạy ứng dụng.
     public func restoreSession() async {
+        let store = WKWebsiteDataStore.default().httpCookieStore
+
+        // Đảm bảo SOCS=CAI để vượt qua màn hình hỏi đồng ý cookie của Google
+        if let consentCookie = HTTPCookie(properties: [
+            .domain: ".youtube.com",
+            .path: "/",
+            .name: "SOCS",
+            .value: "CAI",
+            .secure: "TRUE",
+            .expires: Date().addingTimeInterval(31_536_000)
+        ]) {
+            await store.setCookie(consentCookie)
+        }
+
         let savedCookies = cookieStorage.loadCookies()
         guard !savedCookies.isEmpty else { return }
 
-        let store = WKWebsiteDataStore.default().httpCookieStore
         for cookie in savedCookies {
             await store.setCookie(cookie)
         }

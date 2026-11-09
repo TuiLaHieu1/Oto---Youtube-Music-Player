@@ -163,6 +163,10 @@ public final class PlayerViewModel {
     private func setupPlayerBridge() {
         SingletonPlayerWebView.shared.onPositionUpdate = { [weak self] cur, _ in
             guard let self, self.isPlaying else { return }
+            let clockPos = self.clock.currentPosition()
+            if abs(clockPos - cur) > 0.5 {
+                self.clock.seek(to: cur)
+            }
             self.currentPosition = cur
             NowPlayingManager.shared.updateNowPlaying(
                 song: self.currentSong,

@@ -24,6 +24,7 @@
 		A10100102CE0000100000001 /* Oto/Services/WebKit/CookieStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200102CE0000100000001 /* Oto/Services/WebKit/CookieStorage.swift */; };
 		A10100112CE0000100000001 /* Oto/Services/WebKit/WebKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200112CE0000100000001 /* Oto/Services/WebKit/WebKitManager.swift */; };
 		A10100122CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200122CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView.swift */; };
+		A10100352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift */; };
 		A10100132CE0000100000001 /* Oto/Presentation/Auth/AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200132CE0000100000001 /* Oto/Presentation/Auth/AuthView.swift */; };
 		A10100202CE0000100000001 /* Oto/Services/API/YTMusicClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200202CE0000100000001 /* Oto/Services/API/YTMusicClient.swift */; };
 		A10100212CE0000100000001 /* Oto/ViewModels/SearchViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200212CE0000100000001 /* Oto/ViewModels/SearchViewModel.swift */; };
@@ -63,6 +64,7 @@
 		A10200322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/LikedSongsView.swift; sourceTree = SOURCE_ROOT; };
 		A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/API/YTMusicParsers.swift; sourceTree = SOURCE_ROOT; };
 		A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/PlayerWebViewContainer.swift; sourceTree = SOURCE_ROOT; };
+		A10200352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/PlayerBridgeScript.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -83,6 +85,7 @@
 				A10200102CE0000100000001 /* Oto/Services/WebKit/CookieStorage.swift */,
 				A10200112CE0000100000001 /* Oto/Services/WebKit/WebKitManager.swift */,
 				A10200122CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView.swift */,
+				A10200352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift */,
 				A10200132CE0000100000001 /* Oto/Presentation/Auth/AuthView.swift */,
 				A10200202CE0000100000001 /* Oto/Services/API/YTMusicClient.swift */,
 				A10200212CE0000100000001 /* Oto/ViewModels/SearchViewModel.swift */,
@@ -255,6 +258,7 @@
 				A10100322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift in Sources */,
 				A10100332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift in Sources */,
 				A10100342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift in Sources */,
+				A10100352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

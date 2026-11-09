@@ -63,12 +63,11 @@ public final class PlayerViewModel {
         let gen = playbackGeneration
 
         AudioSessionManager.shared.activateSession()
-        clock.play(from: 0, rate: 1.0)
+        clock.pause(at: 0)
         playbackState = .playing(song: song, position: 0)
         currentPosition = 0
         SingletonPlayerWebView.shared.loadVideo(id: song.id, startSeconds: 0, generation: gen)
         NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: true, currentTime: 0)
-        startPositionTracking()
     }
 
     /// Khởi tạo hàng đợi mới từ danh sách bài hát và bắt đầu phát từ vị trí chỉ định.

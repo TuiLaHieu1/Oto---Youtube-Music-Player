@@ -17,7 +17,10 @@ enum PlayerBridgeScript {
 
       const style = document.createElement('style');
       style.textContent = `
-        html, body { overflow: hidden !important; background-color: #000 !important; }
+        html, body {
+          overflow: hidden !important;
+          background-color: #000 !important;
+        }
         ytmusic-popup-container, ytmusic-dialog, ytmusic-mealbar-promo-renderer,
         ytmusic-guide-renderer, ytmusic-nav-bar, #nav-bar-background {
           display: none !important;
@@ -26,6 +29,7 @@ enum PlayerBridgeScript {
       document.head.appendChild(style);
 
       let boundVideo = null;
+      window.__otoUserPaused = false;
 
       function isAdActive() {
         const mp = document.getElementById('movie_player');
@@ -40,11 +44,42 @@ enum PlayerBridgeScript {
         return false;
       }
 
+      function attemptPlay(v) {
+        if (!v || window.__otoUserPaused) return;
+        v.muted = false;
+        v.volume = 1.0;
+
+        const mp = document.getElementById('movie_player');
+        if (mp) {
+          if (typeof mp.unMute === 'function') mp.unMute();
+          if (typeof mp.setVolume === 'function') mp.setVolume(100);
+          if (typeof mp.playVideo === 'function') mp.playVideo();
+        }
+
+        const player = document.querySelector('ytmusic-player');
+        if (player && player.playerApi) {
+          if (typeof player.playerApi.unMute === 'function') player.playerApi.unMute();
+          if (typeof player.playerApi.setVolume === 'function') player.playerApi.setVolume(100);
+          if (typeof player.playerApi.playVideo === 'function') player.playerApi.playVideo();
+        }
+
+        const p = v.play();
+        if (p && typeof p.catch === 'function') {
+          p.catch(function() {
+            const playBtn = document.querySelector('#play-pause-button') ||
+                            document.querySelector('.play-pause-button') ||
+                            document.querySelector('[slot="player-bar"] .play-pause-button') ||
+                            document.querySelector('.ytmusicPlayerControlsPlayPauseButton button');
+            if (playBtn) playBtn.click();
+          });
+        }
+      }
+
       function hookVideo(v) {
         if (!v || v === boundVideo) return;
         boundVideo = v;
-        v.muted = false;
-        v.volume = 1.0;
+
+        attemptPlay(v);
 
         v.addEventListener('play', function() {
           post('stateChange', { state: 1, generation: window.__otoCurrentGeneration || 0 });
@@ -55,6 +90,9 @@ enum PlayerBridgeScript {
         v.addEventListener('pause', function() {
           if (!isAdActive()) {
             post('stateChange', { state: 2, generation: window.__otoCurrentGeneration || 0 });
+            if (!window.__otoUserPaused && !v.ended) {
+              setTimeout(function() { attemptPlay(v); }, 300);
+            }
           }
         });
         v.addEventListener('ended', function() {
@@ -78,51 +116,37 @@ enum PlayerBridgeScript {
             generation: window.__otoCurrentGeneration || 0
           });
         });
-
-        if (window.__otoWantsPlay && v.paused) {
-          v.play().catch(function() {
-            const playBtn = document.querySelector('#play-pause-button') ||
-                            document.querySelector('.play-pause-button');
-            if (playBtn) playBtn.click();
-          });
-        }
       }
 
       const observer = new MutationObserver(function() {
         const v = document.querySelector('video');
-        if (v && v !== boundVideo) hookVideo(v);
+        if (v) hookVideo(v);
       });
       observer.observe(document.documentElement, { childList: true, subtree: true });
 
       setInterval(function() {
         const v = document.querySelector('video');
-        if (v && v !== boundVideo) hookVideo(v);
+        if (v) {
+          hookVideo(v);
+          if (v.paused && !window.__otoUserPaused && !isAdActive()) {
+            attemptPlay(v);
+          }
+        }
+
+        const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button');
+        if (skipBtn) skipBtn.click();
 
         const app = document.querySelector('ytmusic-app');
-        if (app && typeof app.resolveCommand === 'function' && !window.__otoAppReady) {
+        if (app && !window.__otoAppReady) {
           window.__otoAppReady = true;
           post('ready');
         }
-      }, 250);
+      }, 200);
 
       window.otoPlayer = {
         loadVideo: function(id, startSeconds, generation) {
-          window.__otoWantsPlay = true;
+          window.__otoUserPaused = false;
           window.__otoCurrentGeneration = generation || 0;
-
-          const app = document.querySelector('ytmusic-app');
-          if (app && typeof app.resolveCommand === 'function') {
-            try {
-              app.resolveCommand({ watchEndpoint: { videoId: id } });
-              if (startSeconds && startSeconds > 0) {
-                setTimeout(function() {
-                  const v = document.querySelector('video');
-                  if (v) v.currentTime = startSeconds;
-                }, 400);
-              }
-              return;
-            } catch(e) {}
-          }
 
           const mp = document.getElementById('movie_player');
           if (mp && typeof mp.loadVideoById === 'function') {
@@ -133,22 +157,25 @@ enum PlayerBridgeScript {
             } catch(e) {}
           }
 
+          const app = document.querySelector('ytmusic-app');
+          if (app && typeof app.resolveCommand === 'function') {
+            try {
+              app.resolveCommand({ watchEndpoint: { videoId: id } });
+              return;
+            } catch(e) {}
+          }
+
           window.location.href = 'https://music.youtube.com/watch?v=' + encodeURIComponent(id);
         },
 
         play: function() {
-          window.__otoWantsPlay = true;
+          window.__otoUserPaused = false;
           const v = document.querySelector('video');
-          if (v && v.paused) v.play().catch(function() {});
-          const mp = document.getElementById('movie_player');
-          if (mp && typeof mp.playVideo === 'function') mp.playVideo();
-          const playBtn = document.querySelector('#play-pause-button') ||
-                          document.querySelector('.play-pause-button');
-          if (playBtn && v && v.paused) playBtn.click();
+          attemptPlay(v);
         },
 
         pause: function() {
-          window.__otoWantsPlay = false;
+          window.__otoUserPaused = true;
           const v = document.querySelector('video');
           if (v && !v.paused) v.pause();
           const mp = document.getElementById('movie_player');
@@ -163,11 +190,7 @@ enum PlayerBridgeScript {
         }
       };
 
-      const app = document.querySelector('ytmusic-app');
-      if (app && typeof app.resolveCommand === 'function') {
-        window.__otoAppReady = true;
-        post('ready');
-      }
+      post('ready');
     })();
     """
 }

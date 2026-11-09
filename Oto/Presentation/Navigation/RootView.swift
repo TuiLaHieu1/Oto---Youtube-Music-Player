@@ -30,7 +30,6 @@ public struct RootView: View {
             // Gắn SingletonPlayerWebView vào view hierarchy nền để WebKit luôn duy trì render âm thanh
             PlayerWebViewContainer()
                 .frame(width: 320, height: 240)
-                .opacity(0.02)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
                 .zIndex(-1)

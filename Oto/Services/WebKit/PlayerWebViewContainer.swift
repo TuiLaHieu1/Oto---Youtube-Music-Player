@@ -18,5 +18,11 @@ public struct PlayerWebViewContainer: UIViewRepresentable {
         return container
     }
 
-    public func updateUIView(_ uiView: UIView, context: Context) {}
+    public func updateUIView(_ uiView: UIView, context: Context) {
+        if let webView = SingletonPlayerWebView.shared.webView, webView.superview == nil {
+            webView.frame = uiView.bounds
+            webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+            uiView.addSubview(webView)
+        }
+    }
 }

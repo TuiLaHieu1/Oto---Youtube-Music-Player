@@ -1,45 +1,23 @@
-# Oto — ảnh và video tham khảo
+# Oto — Tài liệu tham khảo thiết kế Figma (Atelier Light × Spectrum Dark)
 
-Thư mục dành cho đầu vào thiết kế. Chưa có ảnh/video nào được cung cấp tại thời điểm tạo tài liệu này.
+Nguồn tham chiếu thiết kế: [Figma Design Preview](https://www.figma.com/design/YDJTJvpM2bFNBJyHaN58Nc/Untitled?node-id=0-1&p=f&t=lHSFn7b7hIYrMCAB-0)
 
-## Nên cung cấp
+Hệ thống thiết kế Oto được chuẩn hóa từ 4 mockup cốt lõi:
 
-1. iPhone Now Playing: bố cục artwork, title, controls, progress, nền.
-2. iPhone lyrics: kích thước chữ, highlight, spacing, trạng thái cuộn tay.
-3. Mini player và chuyển cảnh sang full player.
-4. iPad player + lyrics ở màn hình rộng và cửa sổ hẹp.
-5. Home/search/library nếu có yêu cầu rõ về các màn hình này.
-6. Một ví dụ không thích, giải thích vì sao.
+1. **Atelier Home (Light Mode):**
+   - Nền kem sáng `#F7F4EF`, chữ `#201E1B`, màu nhấn cam đất `#A74328`.
+   - Cấu trúc thứ bậc: Quick Picks (Lựa chọn nhanh dạng thẻ ngang), Listen Again (Nghe lại gần đây dạng hàng), Recently Played (Đã phát gần đây).
+   - Mini Player nổi thanh lịch với viền separator `#E8E3DA` và bóng mờ tinh tế phía trên Tab Bar.
+2. **Atelier Fullscreen Player (Light Mode):**
+   - Bìa album vuông khổ lớn với bo góc 12pt và bóng đổ tự nhiên.
+   - Thanh trượt tiến trình với màu cam đất, chữ số thời gian monospaced.
+   - Cụm điều khiển phát/tạm dừng, lùi/tiến, xáo trộn, lặp lại có kích thước chạm tối thiểu 44×44 pt.
+   - Nút thu nhỏ (dismiss), xem Lời bài hát (Lyrics) và Hàng đợi (Queue).
+3. **Spectrum Home (Dark Mode):**
+   - Nền đêm sâu `#101117`, thẻ nội dung `#1D202A`, chữ trắng `#F7F8FC`, màu nhấn tím nhạt `#B9ADFF`.
+   - Giữ nguyên toàn bộ cấu trúc hình học, tỷ lệ khoảng cách và vị trí so với Atelier Home.
+4. **Spectrum Fullscreen Player (Dark Mode):**
+   - Nền tối sâu kết hợp ánh sáng mờ ambient từ bìa album, không làm rối mắt.
+   - Nút Play/Pause màu tím lavender nổi bật, các nút phụ màu xám tro dễ nhận diện.
 
-Không cần đủ tất cả để bắt đầu. Ảnh rõ nội dung và chú thích cụ thể hữu ích hơn số lượng nhiều. Một recording ngắn giúp mô tả gesture/animation mà ảnh tĩnh không diễn đạt được.
-
-## Cách lưu và chú thích
-
-Đặt tên dễ đọc, ví dụ `iphone-now-playing-01.png`, `ipad-lyrics-01.png`, `player-transition-01.mov`. Đây là tên gợi ý, chưa phải file đang tồn tại.
-
-Mỗi ảnh/video có thể đi kèm file Markdown cùng tên hoặc một đoạn mô tả trong chat:
-
-```text
-Tên file hoặc link:
-Nguồn / app / phiên bản (nếu biết):
-Thiết bị hoặc kích thước cửa sổ:
-Màn hình / trạng thái (playing, paused, loading...):
-Thích: tối đa ba điểm cụ thể
-Không thích / muốn đổi:
-Hành vi tương tác cần giữ:
-Mức độ: bắt buộc | cảm hứng | chỉ tham khảo
-Được phép dùng làm asset trong app? Có | Không | Chưa rõ
-```
-
-Nếu dùng video, thêm mốc thời gian của đoạn cần học, ví dụ `00:04–00:07: kéo player xuống, artwork chuyển về mini player`.
-
-## Cách agent sử dụng
-
-- Đọc chú thích trước, không coi mọi chi tiết trong ảnh là requirement.
-- Đề xuất một hướng thiết kế thống nhất trước khi xây toàn bộ màn hình. Mockup là đề xuất cho tới khi người dùng chọn.
-- Tách yếu tố bắt buộc, yếu tố cảm hứng và chi tiết hệ điều hành. Không hứa giống pixel trên mọi OS/kích thước.
-- Cần mô tả cả paused, buffering, error, no artwork, title dài, lyrics unavailable và Dynamic Type lớn, dù ảnh tham khảo chỉ có happy path.
-- Không tự lấy artwork/logo/font trong ảnh để đóng gói làm asset. Chỉ dùng tài sản có nguồn và quyền sử dụng phù hợp.
-- Che tài khoản, notification và dữ liệu cá nhân trước khi lưu. Video lớn có thể giữ ngoài repo và tham chiếu đường dẫn; không thêm Git LFS/dependency chỉ để chứa ảnh tham khảo.
-
-Sau khi chốt hướng, agent viết design spec có màu, typography, spacing, component states, behavior và fallback. Chưa có design spec cuối cùng ở giai đoạn này.
+Tham khảo chi tiết các quy chuẩn kỹ thuật tại [DESIGN.md](../DESIGN.md).

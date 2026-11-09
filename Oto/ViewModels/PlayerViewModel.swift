@@ -45,6 +45,10 @@ public final class PlayerViewModel {
         playbackState.isPlaying
     }
 
+    public var isBuffering: Bool {
+        playbackState.isBuffering
+    }
+
     public var isShuffleEnabled: Bool {
         queueManager.isShuffleEnabled
     }

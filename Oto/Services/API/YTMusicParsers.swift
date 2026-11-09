@@ -23,6 +23,7 @@ public enum YTMusicParsers {
 
         var quickPicks: [Song] = []
         var listenAgain: [Song] = []
+        var generalShelves: [Song] = []
 
         for section in sectionContents {
             guard let carousel = section["musicCarouselShelfRenderer"] as? [String: Any] else { continue }
@@ -33,7 +34,19 @@ public enum YTMusicParsers {
                 listenAgain.append(contentsOf: shelfSongs)
             } else if shelfTitle.contains("quick picks") || shelfTitle.contains("lựa chọn nhanh") {
                 quickPicks.append(contentsOf: shelfSongs)
+            } else {
+                generalShelves.append(contentsOf: shelfSongs)
             }
+        }
+
+        // Nếu người dùng chưa đăng nhập hoặc tiêu đề shelf khác biệt, tận dụng các shelf thật để hiển thị
+        if quickPicks.isEmpty && !generalShelves.isEmpty {
+            let splitIndex = min(generalShelves.count / 2, 8)
+            quickPicks = Array(generalShelves.prefix(splitIndex))
+            generalShelves.removeFirst(splitIndex)
+        }
+        if listenAgain.isEmpty && !generalShelves.isEmpty {
+            listenAgain = generalShelves
         }
 
         if quickPicks.isEmpty && listenAgain.isEmpty && !sectionContents.isEmpty {

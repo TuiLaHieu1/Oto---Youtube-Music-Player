@@ -6,8 +6,6 @@ public struct FullscreenPlayerView: View {
     @Bindable var playerVM: PlayerViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var lyricsVM = LyricsViewModel()
-    @State private var isScrubbing: Bool = false
-    @State private var scrubPosition: TimeInterval = 0
 
     public init(playerVM: PlayerViewModel) {
         self.playerVM = playerVM
@@ -151,14 +149,22 @@ private extension FullscreenPlayerView {
         HStack {
             VStack(alignment: .leading, spacing: 4) {
                 Text(playerVM.currentSong?.title ?? "Chưa phát")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(.title2, design: .default, weight: .bold))
                     .lineLimit(1)
                     .foregroundStyle(OtoTheme.primaryText)
 
-                Text(playerVM.currentSong?.artist ?? "Oto Music")
-                    .font(.system(size: 17, weight: .medium))
-                    .lineLimit(1)
-                    .foregroundStyle(OtoTheme.secondaryText)
+                HStack(spacing: 6) {
+                    Text(playerVM.currentSong?.artist ?? "Oto Music")
+                        .font(OtoTheme.subtitleFont)
+                        .lineLimit(1)
+                        .foregroundStyle(OtoTheme.secondaryText)
+
+                    if playerVM.isBuffering {
+                        ProgressView()
+                            .tint(OtoTheme.accent)
+                            .scaleEffect(0.7)
+                    }
+                }
             }
             Spacer()
         }
@@ -168,105 +174,30 @@ private extension FullscreenPlayerView {
     // MARK: - Scrubber
 
     private var scrubberView: some View {
-        VStack(spacing: OtoTheme.spacing8) {
-            let duration = playerVM.currentSong?.duration ?? 0
-            let displayedTime = isScrubbing ? scrubPosition : playerVM.currentPosition
-            Slider(
-                value: Binding(
-                    get: { displayedTime },
-                    set: { scrubPosition = $0 }
-                ),
-                in: 0...max(1.0, duration),
-                onEditingChanged: { editing in
-                    isScrubbing = editing
-                    if !editing {
-                        #if os(iOS)
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        #endif
-                        playerVM.seek(to: scrubPosition)
-                    } else {
-                        scrubPosition = playerVM.currentPosition
-                    }
-                }
-            )
-            .tint(OtoTheme.accent)
-
-            HStack {
-                Text(formatTime(displayedTime))
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(OtoTheme.secondaryText)
-                Spacer()
-                Text("-\(formatTime(max(0, duration - displayedTime)))")
-                    .font(.system(size: 12, weight: .medium, design: .monospaced))
-                    .foregroundStyle(OtoTheme.secondaryText)
+        OtoScrubber(
+            currentTime: playerVM.currentPosition,
+            duration: playerVM.currentSong?.duration ?? 0,
+            onSeek: { seekTime in
+                playerVM.seek(to: seekTime)
             }
-        }
+        )
         .padding(.horizontal, OtoTheme.spacing32)
     }
 
     // MARK: - Controls
 
     private var transportControls: some View {
-        HStack(spacing: 36) {
-            Button {
-                #if os(iOS)
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                #endif
-                playerVM.toggleShuffle()
-            } label: {
-                Image(systemName: "shuffle")
-                    .font(.system(size: 20))
-                    .foregroundStyle(playerVM.isShuffleEnabled ? OtoTheme.accent : OtoTheme.secondaryText)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
-            }
-
-            Button {
-                #if os(iOS)
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                #endif
-                playerVM.previous()
-            } label: {
-                Image(systemName: "backward.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(OtoTheme.primaryText)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
-            }
-
-            Button {
-                #if os(iOS)
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                #endif
-                playerVM.togglePlayPause()
-            } label: {
-                Image(systemName: playerVM.isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: 64))
-                    .foregroundStyle(OtoTheme.accent)
-            }
-
-            Button {
-                #if os(iOS)
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                #endif
-                playerVM.next()
-            } label: {
-                Image(systemName: "forward.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(OtoTheme.primaryText)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
-            }
-
-            Button {
-                #if os(iOS)
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                #endif
-                playerVM.toggleRepeat()
-            } label: {
-                Image(systemName: repeatIconName)
-                    .font(.system(size: 20))
-                    .foregroundStyle(playerVM.repeatMode != .off ? OtoTheme.accent : OtoTheme.secondaryText)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
-            }
-        }
+        OtoPlaybackControls(
+            isPlaying: playerVM.isPlaying,
+            isShuffleEnabled: playerVM.isShuffleEnabled,
+            isRepeatEnabled: playerVM.repeatMode != .off,
+            playButtonSize: 64,
+            onShuffle: { playerVM.toggleShuffle() },
+            onPrevious: { playerVM.previous() },
+            onTogglePlayPause: { playerVM.togglePlayPause() },
+            onNext: { playerVM.next() },
+            onRepeat: { playerVM.toggleRepeat() }
+        )
         .padding(.vertical, 4)
     }
 
@@ -299,22 +230,6 @@ private extension FullscreenPlayerView {
             }
         }
         .padding(.bottom, OtoTheme.spacing16)
-    }
-
-    private var repeatIconName: String {
-        switch playerVM.repeatMode {
-        case .off, .all:
-            return "repeat"
-        case .one:
-            return "repeat.1"
-        }
-    }
-
-    private func formatTime(_ time: TimeInterval) -> String {
-        let totalSeconds = Int(max(0, time))
-        let minutes = totalSeconds / 60
-        let seconds = totalSeconds % 60
-        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 

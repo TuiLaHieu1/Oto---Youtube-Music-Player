@@ -47,6 +47,13 @@ public enum PlaybackState: Sendable, Equatable {
         return false
     }
 
+    public var isBuffering: Bool {
+        if case .buffering = self {
+            return true
+        }
+        return false
+    }
+
     public var currentPosition: TimeInterval {
         switch self {
         case .playing(_, let position),

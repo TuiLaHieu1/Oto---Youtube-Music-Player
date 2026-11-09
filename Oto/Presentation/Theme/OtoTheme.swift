@@ -117,8 +117,41 @@ public enum OtoTheme {
     public static let spacing8: CGFloat = 8
     public static let spacing12: CGFloat = 12
     public static let spacing16: CGFloat = 16
+    public static let spacing20: CGFloat = 20
     public static let spacing24: CGFloat = 24
     public static let spacing32: CGFloat = 32
+    public static let spacing40: CGFloat = 40
+
+    // MARK: - Typography (Dynamic Type Text Styles)
+
+    /// Tiêu đề màn hình chính (Trang chủ, Thư viện, Tìm kiếm)
+    public static let largeTitleFont = Font.system(.largeTitle, design: .default, weight: .bold)
+
+    /// Tiêu đề phân nhóm (Lựa chọn nhanh, Nghe lại gần đây, Đã phát gần đây)
+    public static let sectionTitleFont = Font.system(.title3, design: .default, weight: .bold)
+
+    /// Tên bài hát hiển thị trong hàng danh sách
+    public static let rowTitleFont = Font.system(.body, design: .default, weight: .medium)
+
+    /// Tên bài hát hiển thị trong thẻ vuông (Card)
+    public static let cardTitleFont = Font.system(.subheadline, design: .default, weight: .semibold)
+
+    /// Tên nghệ sĩ hoặc mô tả phụ
+    public static let subtitleFont = Font.system(.subheadline, design: .default, weight: .regular)
+
+    /// Thông tin chú thích nhỏ, thời lượng bài hát
+    public static let captionFont = Font.system(.caption, design: .default, weight: .regular)
+
+    /// Chữ số thời gian định dạng monospaced (tránh nhảy số khi chạy nhạc)
+    public static let timeFont = Font.system(.caption, design: .monospaced, weight: .medium)
+
+    /// Nhãn nút bấm hành động chính
+    public static let buttonFont = Font.system(.headline, design: .default, weight: .semibold)
+
+    // MARK: - Shadows
+
+    /// Bóng đổ nhẹ cho thẻ nội dung
+    public static let cardShadowColor = dynamicColor(light: "D8D2C6", dark: "000000")
 
     // MARK: - Motion Tokens
 

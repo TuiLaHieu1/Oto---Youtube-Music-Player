@@ -27,7 +27,7 @@ public struct AuthView: View {
                 if isLoading {
                     ProgressView()
                         .progressViewStyle(.linear)
-                        .tint(.red)
+                        .tint(OtoTheme.accent)
                 }
             }
             .navigationTitle("Đăng nhập Google")
@@ -37,12 +37,14 @@ public struct AuthView: View {
                     Button("Đóng") {
                         dismiss()
                     }
+                    .foregroundStyle(OtoTheme.secondaryText)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         webView?.reload()
                     } label: {
                         Image(systemName: "arrow.clockwise")
+                            .foregroundStyle(OtoTheme.accent)
                     }
                 }
             }

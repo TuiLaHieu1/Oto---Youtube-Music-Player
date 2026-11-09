@@ -1,7 +1,7 @@
 import SwiftUI
 import OtoCore
 
-/// Màn hình danh sách phát tiếp theo (Queue / Up Next).
+/// Màn hình danh sách phát tiếp theo (Queue / Up Next) theo phong cách Atelier × Spectrum.
 public struct QueueView: View {
     @Bindable var playerVM: PlayerViewModel
 
@@ -11,59 +11,126 @@ public struct QueueView: View {
 
     public var body: some View {
         NavigationStack {
-            List {
-                Section("Đang phát") {
-                    if let currentSong = playerVM.currentSong {
-                        HStack(spacing: 12) {
-                            Image(systemName: "speaker.wave.3.fill")
-                                .foregroundStyle(Color.accentColor)
+            ZStack {
+                OtoTheme.background.ignoresSafeArea()
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(currentSong.title)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(.primary)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: OtoTheme.spacing24) {
+                        // Section: Đang phát
+                        if let currentSong = playerVM.currentSong {
+                            VStack(alignment: .leading, spacing: OtoTheme.spacing8) {
+                                Text("ĐANG PHÁT")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(OtoTheme.secondaryText)
+                                    .padding(.horizontal, OtoTheme.spacing16)
 
-                                Text(currentSong.artist)
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-                }
+                                HStack(spacing: OtoTheme.spacing12) {
+                                    Image(systemName: "speaker.wave.3.fill")
+                                        .font(.system(size: 16, weight: .bold))
+                                        .foregroundStyle(OtoTheme.accent)
 
-                Section("Tiếp theo trong hàng đợi") {
-                    let items = playerVM.queueManager.items
-                    let currentIndex = playerVM.queueManager.currentIndex ?? 0
-                    let upcomingIndices = Array(items.indices.filter { $0 > currentIndex })
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(currentSong.title)
+                                            .font(.system(size: 15, weight: .semibold))
+                                            .foregroundStyle(OtoTheme.accent)
+                                            .lineLimit(1)
 
-                    if upcomingIndices.isEmpty {
-                        Text("Không có bài hát tiếp theo")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
-                    } else {
-                        ForEach(upcomingIndices, id: \.self) { index in
-                            let item = items[index]
-                            HStack(spacing: 12) {
-                                Text("\(index - currentIndex)")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 24, alignment: .leading)
-
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.song.title)
-                                        .font(.system(size: 15, weight: .medium))
-
-                                    Text(item.song.artist)
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(.secondary)
+                                        Text(currentSong.artist)
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(OtoTheme.secondaryText)
+                                            .lineLimit(1)
+                                    }
+                                    Spacer()
                                 }
+                                .padding(.horizontal, OtoTheme.spacing16)
+                                .padding(.vertical, 12)
+                                .background(
+                                    RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
+                                        .fill(OtoTheme.accentSurface)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
+                                                .stroke(OtoTheme.accent.opacity(0.3), lineWidth: 0.5)
+                                        )
+                                )
+                                .padding(.horizontal, OtoTheme.spacing16)
                             }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                playerVM.playQueueItem(at: index)
+                        }
+
+                        // Section: Tiếp theo trong hàng đợi
+                        VStack(alignment: .leading, spacing: OtoTheme.spacing8) {
+                            Text("TIẾP THEO TRONG HÀNG ĐỢI")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(OtoTheme.secondaryText)
+                                .padding(.horizontal, OtoTheme.spacing16)
+
+                            let items = playerVM.queueManager.items
+                            let currentIndex = playerVM.queueManager.currentIndex ?? 0
+                            let upcomingIndices = Array(items.indices.filter { $0 > currentIndex })
+
+                            if upcomingIndices.isEmpty {
+                                HStack {
+                                    Spacer()
+                                    Text("Không có bài hát tiếp theo")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(OtoTheme.secondaryText)
+                                        .padding(.vertical, OtoTheme.spacing24)
+                                    Spacer()
+                                }
+                            } else {
+                                LazyVStack(spacing: OtoTheme.spacing8) {
+                                    ForEach(upcomingIndices, id: \.self) { index in
+                                        let item = items[index]
+                                        Button {
+                                            #if os(iOS)
+                                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                            #endif
+                                            playerVM.playQueueItem(at: index)
+                                        } label: {
+                                            HStack(spacing: OtoTheme.spacing12) {
+                                                Text("\(index - currentIndex)")
+                                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                                                    .foregroundStyle(OtoTheme.secondaryText)
+                                                    .frame(width: 24, alignment: .leading)
+
+                                                VStack(alignment: .leading, spacing: 2) {
+                                                    Text(item.song.title)
+                                                        .font(.system(size: 15, weight: .medium))
+                                                        .foregroundStyle(OtoTheme.primaryText)
+                                                        .lineLimit(1)
+
+                                                    Text(item.song.artist)
+                                                        .font(.system(size: 13))
+                                                        .foregroundStyle(OtoTheme.secondaryText)
+                                                        .lineLimit(1)
+                                                }
+
+                                                Spacer()
+                                            }
+                                            .padding(.horizontal, OtoTheme.spacing16)
+                                            .padding(.vertical, 10)
+                                            .frame(minHeight: OtoTheme.minTouchTarget)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
+                                                    .fill(OtoTheme.surface)
+                                                    .overlay(
+                                                    RoundedRectangle(
+                                                        cornerRadius: OtoTheme.cardRadius,
+                                                        style: .continuous
+                                                    )
+                                                    .stroke(OtoTheme.separator, lineWidth: 0.5)
+                                                    )
+                                            )
+                                            .contentShape(Rectangle())
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                                .padding(.horizontal, OtoTheme.spacing16)
                             }
                         }
                     }
+                    .padding(.top, OtoTheme.spacing16)
+                    .padding(.bottom, OtoTheme.spacing32)
                 }
             }
             .navigationTitle("Hàng đợi")
@@ -73,7 +140,8 @@ public struct QueueView: View {
                     Button("Xong") {
                         playerVM.showQueue = false
                     }
-                    .fontWeight(.semibold)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(OtoTheme.accent)
                 }
             }
         }

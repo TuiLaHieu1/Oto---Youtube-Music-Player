@@ -1,7 +1,7 @@
 import SwiftUI
 import OtoCore
 
-/// Thanh MiniPlayer nổi đặc trưng phong cách Apple Music.
+/// Thanh MiniPlayer nổi đặc trưng phong cách Apple Music kết hợp hệ màu Atelier × Spectrum.
 public struct MiniPlayerView: View {
     @Bindable var playerVM: PlayerViewModel
 
@@ -12,14 +12,14 @@ public struct MiniPlayerView: View {
     public var body: some View {
         if let song = playerVM.currentSong {
             VStack(spacing: 0) {
-                // Thanh tiến trình mỏng ở đỉnh
+                // Thanh tiến trình mỏng ở đỉnh dùng màu Accent theo theme
                 GeometryReader { geo in
                     let progress = song.duration > 0 ? min(1.0, playerVM.currentPosition / song.duration) : 0
                     ZStack(alignment: .leading) {
                         Rectangle()
-                            .fill(Color.secondary.opacity(0.2))
+                            .fill(OtoTheme.secondaryText.opacity(0.2))
                         Rectangle()
-                            .fill(Color.accentColor)
+                            .fill(OtoTheme.accent)
                             .frame(width: max(0, geo.size.width * progress))
                     }
                 }
@@ -31,28 +31,28 @@ public struct MiniPlayerView: View {
                         image.resizable().scaledToFill()
                     } placeholder: {
                         ZStack {
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .fill(Color.secondary.opacity(0.15))
+                            RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous)
+                                .fill(OtoTheme.secondaryText.opacity(0.15))
                             Image(systemName: "music.note")
                                 .font(.system(size: 18))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(OtoTheme.secondaryText)
                         }
                     }
                     .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                    .clipShape(RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous))
+                    .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
 
                     // Song Info
                     VStack(alignment: .leading, spacing: 2) {
                         Text(song.title)
                             .font(.system(size: 15, weight: .semibold))
                             .lineLimit(1)
-                            .foregroundStyle(.primary)
+                            .foregroundStyle(OtoTheme.primaryText)
 
                         Text(song.artist)
                             .font(.system(size: 13))
                             .lineLimit(1)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(OtoTheme.secondaryText)
                     }
 
                     Spacer()
@@ -63,13 +63,13 @@ public struct MiniPlayerView: View {
                             #if os(iOS)
                             UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                             #endif
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            withAnimation(OtoTheme.standardSpring) {
                                 playerVM.togglePlayPause()
                             }
                         } label: {
                             Image(systemName: playerVM.isPlaying ? "pause.fill" : "play.fill")
                                 .font(.system(size: 20))
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(OtoTheme.primaryText)
                         }
                         .buttonStyle(.plain)
 
@@ -77,13 +77,13 @@ public struct MiniPlayerView: View {
                             #if os(iOS)
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             #endif
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            withAnimation(OtoTheme.standardSpring) {
                                 playerVM.next()
                             }
                         } label: {
                             Image(systemName: "forward.fill")
                                 .font(.system(size: 18))
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(OtoTheme.primaryText)
                         }
                         .buttonStyle(.plain)
                     }
@@ -92,9 +92,13 @@ public struct MiniPlayerView: View {
                 .padding(.vertical, 8)
             }
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(.regularMaterial)
-                    .shadow(color: .black.opacity(0.15), radius: 12, x: 0, y: 4)
+                RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
+                    .fill(OtoTheme.surface)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
+                            .stroke(OtoTheme.separator, lineWidth: 0.5)
+                    )
+                    .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
             )
             .padding(.horizontal, 12)
             .contentShape(Rectangle())
@@ -102,7 +106,7 @@ public struct MiniPlayerView: View {
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 #endif
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                withAnimation(OtoTheme.smoothSpring) {
                     playerVM.isExpanded = true
                 }
             }

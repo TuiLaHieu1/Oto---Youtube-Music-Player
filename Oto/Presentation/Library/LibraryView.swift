@@ -1,7 +1,7 @@
 import SwiftUI
 import OtoCore
 
-/// Màn hình thư viện nhạc cá nhân và cài đặt ứng dụng.
+/// Màn hình thư viện nhạc cá nhân và cài đặt ứng dụng theo chuẩn Atelier × Spectrum.
 public struct LibraryView: View {
     @Bindable var playerVM: PlayerViewModel
     @State private var libraryVM = LibraryViewModel()
@@ -22,12 +22,12 @@ public struct LibraryView: View {
                         } label: {
                             HStack {
                                 Label("Bài hát đã thích", systemImage: "heart.fill")
-                                    .foregroundStyle(.pink)
+                                    .foregroundStyle(OtoTheme.accent)
                                 Spacer()
                                 if !libraryVM.likedSongs.isEmpty {
                                     Text("\(libraryVM.likedSongs.count)")
                                         .font(.system(size: 14))
-                                        .foregroundStyle(.secondary)
+                                        .foregroundStyle(OtoTheme.secondaryText)
                                 }
                             }
                         }
@@ -37,21 +37,21 @@ public struct LibraryView: View {
                         } label: {
                             HStack {
                                 Label("Bài hát đã thích", systemImage: "heart.fill")
-                                    .foregroundStyle(.pink)
+                                    .foregroundStyle(OtoTheme.accent)
                                 Spacer()
                                 Text("Cần đăng nhập")
                                     .font(.system(size: 13))
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(OtoTheme.secondaryText)
                             }
                         }
                     }
 
                     Label("Danh sách phát", systemImage: "music.note.list")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(OtoTheme.secondaryText)
                     Label("Album", systemImage: "square.stack")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(OtoTheme.secondaryText)
                     Label("Nghệ sĩ", systemImage: "music.mic")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(OtoTheme.secondaryText)
                 }
 
                 Section("Bộ nhớ đệm & Cài đặt") {
@@ -60,13 +60,14 @@ public struct LibraryView: View {
                         Spacer()
                         Text(libraryVM.cacheSizeString)
                             .font(.system(size: 14, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(OtoTheme.secondaryText)
                     }
 
                     Button(role: .destructive) {
                         showClearAlert = true
                     } label: {
                         Label("Xóa bộ nhớ đệm", systemImage: "trash")
+                            .foregroundStyle(OtoTheme.error)
                     }
                     .confirmationDialog(
                         "Bạn có chắc muốn xóa toàn bộ bộ nhớ đệm và ảnh bìa không?",
@@ -95,25 +96,38 @@ public struct LibraryView: View {
                             }
                         } label: {
                             Text("Đăng xuất tài khoản")
+                                .foregroundStyle(OtoTheme.error)
                         }
                     } else {
                         Button {
                             playerVM.showAuth = true
                         } label: {
                             Label("Đăng nhập tài khoản Google", systemImage: "person.crop.circle.badge.plus")
+                                .foregroundStyle(OtoTheme.accent)
                         }
                     }
                 }
 
                 Section("Thông tin") {
                     HStack {
+                        Text("Chế độ giao diện")
+                        Spacer()
+                        Text("Atelier Light × Spectrum Dark")
+                            .font(.system(size: 13))
+                            .foregroundStyle(OtoTheme.secondaryText)
+                    }
+
+                    HStack {
                         Text("Phiên bản")
                         Spacer()
                         Text("1.0.0 (Swift 6 Native)")
-                            .foregroundStyle(.secondary)
+                            .font(.system(size: 13))
+                            .foregroundStyle(OtoTheme.secondaryText)
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(OtoTheme.background.ignoresSafeArea())
             .navigationTitle("Thư viện")
             .onAppear {
                 hasSession = CookieStorage.shared.hasValidSession

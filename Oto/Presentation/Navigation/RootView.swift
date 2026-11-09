@@ -36,6 +36,7 @@ public struct RootView: View {
 
             mainContentView
         }
+        .background(OtoTheme.background.ignoresSafeArea())
         .fullScreenCover(isPresented: $playerVM.isExpanded) {
             FullscreenPlayerView(playerVM: playerVM)
         }
@@ -101,6 +102,7 @@ public struct RootView: View {
                         }
                         .tag(TabItem.library)
                 }
+                .tint(OtoTheme.accent)
 
                 // MiniPlayer nổi thanh lịch phía trên TabBar chuẩn Apple Music
                 MiniPlayerView(playerVM: playerVM)

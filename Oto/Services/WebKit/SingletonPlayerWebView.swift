@@ -111,6 +111,18 @@ public final class SingletonPlayerWebView: NSObject {
         webView?.callAsyncJavaScript(jsCode, arguments: ["position": position], in: nil, in: .page)
     }
 
+    /// Tải lại YouTube Music sau khi đăng nhập thành công để nạp phiên mới.
+    public func reloadAfterLogin() {
+        Task { @MainActor in
+            await WebKitManager.shared.restoreSession()
+            if let homeURL = URL(string: "https://music.youtube.com") {
+                isBridgeReady = false
+                webView?.load(URLRequest(url: homeURL))
+                logger.info("Đã nạp lại YouTube Music với phiên cookie mới sau đăng nhập.")
+            }
+        }
+    }
+
     private func checkReadyAndFlush() {
         let jsCheck = """
         (function() {

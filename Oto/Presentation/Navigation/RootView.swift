@@ -41,7 +41,9 @@ public struct RootView: View {
             FullscreenPlayerView(playerVM: playerVM)
         }
         .sheet(isPresented: $playerVM.showAuth) {
-            AuthView()
+            AuthView {
+                SingletonPlayerWebView.shared.reloadAfterLogin()
+            }
         }
     }
 

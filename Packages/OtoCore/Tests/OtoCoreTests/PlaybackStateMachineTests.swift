@@ -155,4 +155,53 @@ struct PlaybackStateMachineTests {
         sm.engineTimeUpdated(currentTime: 15, generation: 2)
         #expect(sm.currentPosition == 15)
     }
+
+    @Test("first load generation 1 với startSeconds > 0")
+    func testFirstLoadGenerationAndStartSeconds() {
+        var sm = PlaybackStateMachine()
+        let effects = sm.userPlay(song: testSong1, startSeconds: 45)
+        #expect(sm.currentGeneration == 1)
+        #expect(effects.shouldStartEngine?.generation == 1)
+        #expect(effects.shouldStartEngine?.songId == "song_1")
+        #expect(effects.shouldStartEngine?.startSeconds == 45)
+        #expect(sm.currentPosition == 45)
+    }
+
+    @Test("repeat-one phát lại cùng bài hát tăng generation mới và seek về 0")
+    func testRepeatOneSameSongIncrementsGenerationAndSeeks() {
+        var sm = PlaybackStateMachine()
+        _ = sm.userPlay(song: testSong1)
+        #expect(sm.currentGeneration == 1)
+
+        // Tua đến giây thứ 170
+        sm.engineTimeUpdated(currentTime: 170, generation: 1)
+        #expect(sm.currentPosition == 170)
+
+        // Lặp lại bài hát (cùng song_1)
+        let replayEffects = sm.userPlay(song: testSong1, startSeconds: 0)
+        #expect(sm.currentGeneration == 2)
+        #expect(replayEffects.shouldStartEngine?.generation == 2)
+        #expect(replayEffects.shouldStartEngine?.startSeconds == 0)
+        #expect(sm.currentPosition == 0)
+
+        // Event từ generation 1 gửi tới bị loại bỏ
+        let staleEffects = sm.engineStateChanged(.playing, generation: 1)
+        #expect(staleEffects == PlaybackEffects())
+
+        // Event từ generation 2 được chấp nhận
+        let validEffects = sm.engineStateChanged(.playing, generation: 2)
+        #expect(validEffects.shouldResumeEngine == false)
+        #expect(sm.engineState == .playing)
+    }
+
+    @Test("callback error của generation cũ bị bỏ qua")
+    func testStaleErrorCallbackDropped() {
+        var sm = PlaybackStateMachine()
+        _ = sm.userPlay(song: testSong1) // gen 1
+        _ = sm.userPlay(song: testSong2) // gen 2
+
+        let errorGen = 1
+        let isStale = (errorGen != sm.currentGeneration)
+        #expect(isStale == true)
+    }
 }

@@ -42,7 +42,10 @@ public struct RootView: View {
         }
         .sheet(isPresented: $playerVM.showAuth) {
             AuthView {
-                SingletonPlayerWebView.shared.reloadAfterLogin()
+                Task { @MainActor in
+                    await SessionStore.shared.handleSignInSuccess()
+                    SingletonPlayerWebView.shared.reloadAfterLogin()
+                }
             }
         }
     }

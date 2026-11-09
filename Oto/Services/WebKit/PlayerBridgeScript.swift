@@ -2,7 +2,10 @@ import Foundation
 
 /// Chứa JavaScript bridge nhúng vào YouTube Music Web để điều khiển phát nhạc native.
 enum PlayerBridgeScript {
-    static let source = """
+    static let source = bridgeJavaScript
+}
+
+private let bridgeJavaScript = """
     (function() {
       if (window.__otoScriptInjected) return;
       window.__otoScriptInjected = true;
@@ -30,6 +33,8 @@ enum PlayerBridgeScript {
 
       let boundVideo = null;
       window.__otoUserPaused = false;
+      window.__otoCurrentGeneration = 0;
+      window.__otoCurrentVideoId = '';
 
       try {
         localStorage.setItem('yt-player-volume', JSON.stringify({
@@ -88,14 +93,26 @@ enum PlayerBridgeScript {
         attemptPlay(v);
 
         v.addEventListener('play', function() {
-          post('stateChange', { state: 1, generation: window.__otoCurrentGeneration || 0 });
+          post('stateChange', {
+            state: 1,
+            generation: window.__otoCurrentGeneration || 0,
+            videoId: window.__otoCurrentVideoId || ''
+          });
         });
         v.addEventListener('playing', function() {
-          post('stateChange', { state: 1, generation: window.__otoCurrentGeneration || 0 });
+          post('stateChange', {
+            state: 1,
+            generation: window.__otoCurrentGeneration || 0,
+            videoId: window.__otoCurrentVideoId || ''
+          });
         });
         v.addEventListener('pause', function() {
           if (!isAdActive()) {
-            post('stateChange', { state: 2, generation: window.__otoCurrentGeneration || 0 });
+            post('stateChange', {
+              state: 2,
+              generation: window.__otoCurrentGeneration || 0,
+              videoId: window.__otoCurrentVideoId || ''
+            });
             if (!window.__otoUserPaused && !v.ended) {
               setTimeout(function() { attemptPlay(v); }, 300);
             }
@@ -103,8 +120,15 @@ enum PlayerBridgeScript {
         });
         v.addEventListener('ended', function() {
           if (!isAdActive()) {
-            post('stateChange', { state: 0, generation: window.__otoCurrentGeneration || 0 });
-            post('trackEnded', { generation: window.__otoCurrentGeneration || 0 });
+            post('stateChange', {
+              state: 0,
+              generation: window.__otoCurrentGeneration || 0,
+              videoId: window.__otoCurrentVideoId || ''
+            });
+            post('trackEnded', {
+              generation: window.__otoCurrentGeneration || 0,
+              videoId: window.__otoCurrentVideoId || ''
+            });
           }
         });
         v.addEventListener('timeupdate', function() {
@@ -112,14 +136,16 @@ enum PlayerBridgeScript {
             post('timeUpdate', {
               currentTime: Number(v.currentTime) || 0,
               duration: Number(v.duration) || 0,
-              generation: window.__otoCurrentGeneration || 0
+              generation: window.__otoCurrentGeneration || 0,
+              videoId: window.__otoCurrentVideoId || ''
             });
           }
         });
         v.addEventListener('error', function() {
           post('error', {
             code: v.error ? v.error.code : -1,
-            generation: window.__otoCurrentGeneration || 0
+            generation: window.__otoCurrentGeneration || 0,
+            videoId: window.__otoCurrentVideoId || ''
           });
         });
       }
@@ -139,9 +165,6 @@ enum PlayerBridgeScript {
           }
         }
 
-        const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button');
-        if (skipBtn) skipBtn.click();
-
         const app = document.querySelector('ytmusic-app');
         if (app && !window.__otoAppReady) {
           window.__otoAppReady = true;
@@ -153,6 +176,7 @@ enum PlayerBridgeScript {
         loadVideo: function(id, startSeconds, generation) {
           window.__otoUserPaused = false;
           window.__otoCurrentGeneration = generation || 0;
+          window.__otoCurrentVideoId = id;
 
           const mp = document.getElementById('movie_player');
           if (mp && typeof mp.loadVideoById === 'function') {
@@ -172,6 +196,47 @@ enum PlayerBridgeScript {
           }
 
           window.location.href = 'https://music.youtube.com/watch?v=' + encodeURIComponent(id);
+        },
+
+        adoptLoadedVideo: function(id, startSeconds, generation, shouldPlay) {
+          window.__otoCurrentGeneration = generation || 0;
+          window.__otoCurrentVideoId = id;
+          window.__otoUserPaused = !shouldPlay;
+
+          const v = document.querySelector('video');
+          if (v) {
+            if (typeof startSeconds === 'number' && startSeconds > 0) {
+              v.currentTime = startSeconds;
+            }
+            if (shouldPlay) {
+              attemptPlay(v);
+            }
+          }
+        },
+
+        adoptCurrentVideo: function(id, startSeconds, generation, shouldPlay) {
+          window.__otoCurrentGeneration = generation || 0;
+          window.__otoCurrentVideoId = id;
+          window.__otoUserPaused = !shouldPlay;
+
+          const v = document.querySelector('video');
+          if (v) {
+            if (typeof startSeconds === 'number' && startSeconds >= 0) {
+              v.currentTime = startSeconds;
+            }
+            if (shouldPlay) {
+              attemptPlay(v);
+            }
+          }
+          const mp = document.getElementById('movie_player');
+          if (mp) {
+            if (typeof startSeconds === 'number' && startSeconds >= 0 && typeof mp.seekTo === 'function') {
+              mp.seekTo(startSeconds, true);
+            }
+            if (shouldPlay && typeof mp.playVideo === 'function') {
+              mp.playVideo();
+            }
+          }
         },
 
         play: function() {
@@ -199,4 +264,3 @@ enum PlayerBridgeScript {
       post('ready');
     })();
     """
-}

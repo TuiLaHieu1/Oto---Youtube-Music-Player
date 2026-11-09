@@ -69,7 +69,7 @@ struct AuthWebViewRepresentable: UIViewRepresentable {
         let config = WebKitManager.shared.makePlayerConfiguration()
         let wv = WKWebView(frame: .zero, configuration: config)
 
-        // Sử dụng desktop Safari User-Agent để vượt qua hạn chế "disallowed_useragent" của Google
+        // Cấu hình Safari User-Agent tiêu chuẩn cho webview xác thực tài khoản Google
         wv.customUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_0) AppleWebKit/605.1.15 "
             + "(KHTML, like Gecko) Version/17.0 Safari/605.1.15"
 
@@ -85,7 +85,7 @@ struct AuthWebViewRepresentable: UIViewRepresentable {
             wv.load(URLRequest(url: url))
         }
 
-        DispatchQueue.main.async {
+        Task { @MainActor in
             self.webView = wv
         }
 

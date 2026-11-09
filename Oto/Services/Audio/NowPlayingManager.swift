@@ -16,11 +16,12 @@ public final class NowPlayingManager: @unchecked Sendable {
         setupRemoteCommands()
     }
 
-    /// Cập nhật thông tin bài hát đang phát lên NowPlayingInfoCenter.
+    /// Cập nhật thông tin bài hát đang phát lên NowPlayingInfoCenter với hỗ trợ runtime duration.
     public func updateNowPlaying(
         song: Song?,
         isPlaying: Bool,
-        currentTime: TimeInterval
+        currentTime: TimeInterval,
+        duration: TimeInterval? = nil
     ) {
         #if os(iOS)
         guard let song = song else {
@@ -28,10 +29,17 @@ public final class NowPlayingManager: @unchecked Sendable {
             return
         }
 
+        let totalDuration: TimeInterval
+        if let customDuration = duration, customDuration > 0 {
+            totalDuration = customDuration
+        } else {
+            totalDuration = song.duration
+        }
+
         var info: [String: Any] = [
             MPMediaItemPropertyTitle: song.title,
             MPMediaItemPropertyArtist: song.artist,
-            MPMediaItemPropertyPlaybackDuration: song.duration,
+            MPMediaItemPropertyPlaybackDuration: totalDuration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
             MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0
         ]

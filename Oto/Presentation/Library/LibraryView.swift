@@ -5,7 +5,7 @@ import OtoCore
 public struct LibraryView: View {
     @Bindable var playerVM: PlayerViewModel
     @State private var libraryVM = LibraryViewModel()
-    @State private var hasSession: Bool = CookieStorage.shared.hasValidSession
+    @State private var sessionStore = SessionStore.shared
     @State private var showClearAlert: Bool = false
 
     public init(playerVM: PlayerViewModel) {
@@ -16,7 +16,7 @@ public struct LibraryView: View {
         NavigationStack {
             List {
                 Section("Nội dung") {
-                    if hasSession {
+                    if sessionStore.isAuthenticated {
                         NavigationLink {
                             LikedSongsView(playerVM: playerVM, libraryVM: libraryVM)
                         } label: {
@@ -79,7 +79,7 @@ public struct LibraryView: View {
                 }
 
                 Section("Tài khoản") {
-                    if hasSession {
+                    if sessionStore.isAuthenticated {
                         HStack {
                             Label("Đã kết nối YouTube Music", systemImage: "checkmark.seal.fill")
                                 .foregroundStyle(OtoTheme.success)
@@ -87,8 +87,7 @@ public struct LibraryView: View {
                         }
                         Button(role: .destructive) {
                             Task {
-                                await WebKitManager.shared.clearSession()
-                                hasSession = false
+                                await sessionStore.signOut(playerVM: playerVM)
                                 libraryVM.likedSongs = []
                             }
                         } label: {
@@ -127,11 +126,11 @@ public struct LibraryView: View {
             .background(OtoTheme.background.ignoresSafeArea())
             .navigationTitle("Thư viện")
             .onAppear {
-                hasSession = CookieStorage.shared.hasValidSession
+                sessionStore.refreshSessionState()
                 libraryVM.updateCacheSize()
             }
             .task {
-                if hasSession && libraryVM.likedSongs.isEmpty {
+                if sessionStore.isAuthenticated && libraryVM.likedSongs.isEmpty {
                     await libraryVM.loadLikedSongs()
                 }
             }

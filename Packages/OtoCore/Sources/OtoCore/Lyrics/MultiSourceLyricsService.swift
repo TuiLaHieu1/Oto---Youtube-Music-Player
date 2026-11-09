@@ -5,6 +5,8 @@ import Foundation
 public actor MultiSourceLyricsService {
     private let providers: [LyricsProvider]
     private var cache: [String: LyricsDocument] = [:]
+    private var cacheKeys: [String] = []
+    private let maxCacheSize = 100
     private var currentGeneration: UInt64 = 0
 
     public init(providers: [LyricsProvider] = [LRCLibProvider()]) {
@@ -35,7 +37,7 @@ public actor MultiSourceLyricsService {
 
             // Nếu tìm thấy lời đồng bộ (.synced) hoặc bài không lời (.instrumental) -> đạt tiêu chuẩn cao nhất
             if doc.type == .synced || doc.type == .instrumental {
-                cache[song.id] = doc
+                saveToCache(songId: song.id, doc: doc)
                 return doc
             }
 
@@ -50,17 +52,29 @@ public actor MultiSourceLyricsService {
         }
 
         if let fallbackPlain = bestPlainLyrics {
-            cache[song.id] = fallbackPlain
+            saveToCache(songId: song.id, doc: fallbackPlain)
             return fallbackPlain
         }
 
         let noneDoc = LyricsDocument(type: .none)
-        cache[song.id] = noneDoc
+        saveToCache(songId: song.id, doc: noneDoc)
         return noneDoc
+    }
+
+    private func saveToCache(songId: String, doc: LyricsDocument) {
+        if cache[songId] == nil {
+            if cacheKeys.count >= maxCacheSize {
+                let oldest = cacheKeys.removeFirst()
+                cache.removeValue(forKey: oldest)
+            }
+            cacheKeys.append(songId)
+        }
+        cache[songId] = doc
     }
 
     /// Xóa toàn bộ bộ nhớ đệm lời bài hát.
     public func clearCache() {
         cache.removeAll()
+        cacheKeys.removeAll()
     }
 }

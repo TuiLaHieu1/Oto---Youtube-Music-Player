@@ -59,6 +59,13 @@ public final class InterpolatedClock: @unchecked Sendable {
         return calculatePosition(now: now)
     }
 
+    /// Trạng thái đang chạy của đồng hồ (rate > 0).
+    public var isPlaying: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return rate > 0
+    }
+
     private func calculatePosition(now: ContinuousClock.Instant) -> TimeInterval {
         guard rate > 0, let anchor = anchorInstant else {
             return basePosition

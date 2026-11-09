@@ -176,7 +176,7 @@ private extension FullscreenPlayerView {
     private var scrubberView: some View {
         OtoScrubber(
             currentTime: playerVM.currentPosition,
-            duration: playerVM.currentSong?.duration ?? 0,
+            duration: playerVM.effectiveDuration,
             onSeek: { seekTime in
                 playerVM.seek(to: seekTime)
             }

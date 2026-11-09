@@ -77,12 +77,12 @@ public struct PlaybackStateMachine: Sendable {
 
     // MARK: - User Intent Actions
 
-    /// Người dùng chọn phát một bài hát cụ thể.
-    public mutating func userPlay(song: Song) -> PlaybackEffects {
+    /// Người dùng chọn phát một bài hát cụ thể (hỗ trợ vị trí bắt đầu startSeconds).
+    public mutating func userPlay(song: Song, startSeconds: TimeInterval = 0) -> PlaybackEffects {
         userIntent = .playing
         interruptionState = .active
         currentSong = song
-        currentPosition = 0
+        currentPosition = startSeconds
         currentGeneration += 1
         hasEndedForCurrentTrack = false
         engineState = .buffering
@@ -91,7 +91,7 @@ public struct PlaybackStateMachine: Sendable {
         effects.shouldActivateSession = true
         effects.shouldStartEngine = PlaybackEffects.StartEnginePayload(
             songId: song.id,
-            startSeconds: 0,
+            startSeconds: startSeconds,
             generation: currentGeneration
         )
         return effects

@@ -6,6 +6,7 @@ public struct OtoMiniPlayer: View {
     public let song: Song?
     public let isPlaying: Bool
     public let currentPosition: TimeInterval
+    public let duration: TimeInterval
     public let onTogglePlayPause: () -> Void
     public let onNext: () -> Void
     public let onExpand: () -> Void
@@ -14,6 +15,7 @@ public struct OtoMiniPlayer: View {
         song: Song?,
         isPlaying: Bool,
         currentPosition: TimeInterval,
+        duration: TimeInterval = 0,
         onTogglePlayPause: @escaping () -> Void,
         onNext: @escaping () -> Void,
         onExpand: @escaping () -> Void
@@ -21,6 +23,7 @@ public struct OtoMiniPlayer: View {
         self.song = song
         self.isPlaying = isPlaying
         self.currentPosition = currentPosition
+        self.duration = duration
         self.onTogglePlayPause = onTogglePlayPause
         self.onNext = onNext
         self.onExpand = onExpand
@@ -65,8 +68,8 @@ public struct OtoMiniPlayer: View {
 
     private var progressBar: some View {
         GeometryReader { geo in
-            let duration = song?.duration ?? 0
-            let progress = duration > 0 ? min(1.0, currentPosition / duration) : 0
+            let totalDuration = duration > 0 ? duration : (song?.duration ?? 0)
+            let progress = totalDuration > 0 ? min(1.0, currentPosition / totalDuration) : 0
             ZStack(alignment: .leading) {
                 Rectangle()
                     .fill(OtoTheme.secondaryText.opacity(0.15))

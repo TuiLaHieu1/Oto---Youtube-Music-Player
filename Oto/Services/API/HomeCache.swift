@@ -42,16 +42,18 @@ public final class HomeCache {
             .appendingPathComponent("home_feed_\(accountScopeKey).json")
     }
 
-    /// Lưu dữ liệu trang chủ vào bộ đệm tệp cục bộ theo tài khoản.
+    /// Lưu dữ liệu trang chủ vào bộ đệm tệp cục bộ theo tài khoản ngoài MainActor.
     public func saveFeed(quickPicks: [Song], listenAgain: [Song]) {
         guard let url = cacheFileURL else { return }
         let cached = CachedHomeFeed(quickPicks: quickPicks, listenAgain: listenAgain)
-        do {
-            let data = try JSONEncoder().encode(cached)
-            try data.write(to: url, options: .atomic)
-            logger.info("Đã lưu bộ đệm trang chủ theo phân vùng tài khoản.")
-        } catch {
-            logger.error("Không thể ghi bộ đệm trang chủ: \(error.localizedDescription)")
+        Task.detached(priority: .utility) { [logger = self.logger] in
+            do {
+                let data = try JSONEncoder().encode(cached)
+                try data.write(to: url, options: .atomic)
+                logger.info("Đã lưu bộ đệm trang chủ theo phân vùng tài khoản.")
+            } catch {
+                logger.error("Không thể ghi bộ đệm trang chủ: \(error.localizedDescription)")
+            }
         }
     }
 

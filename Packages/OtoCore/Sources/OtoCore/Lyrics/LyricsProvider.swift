@@ -71,6 +71,8 @@ public final class LRCLibProvider: LyricsProvider {
                 return nil
             }
             return parseResponseData(data)
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             return nil
         }
@@ -130,6 +132,8 @@ public final class LRCLibProvider: LyricsProvider {
 
             guard let match = bestMatch else { return nil }
             return makeDocument(from: match)
+        } catch is CancellationError {
+            throw CancellationError()
         } catch {
             return nil
         }

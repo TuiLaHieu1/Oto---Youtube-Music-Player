@@ -14,6 +14,7 @@ public struct MiniPlayerView: View {
             song: playerVM.currentSong,
             isPlaying: playerVM.isPlaying,
             currentPosition: playerVM.currentPosition,
+            duration: playerVM.effectiveDuration,
             onTogglePlayPause: {
                 playerVM.togglePlayPause()
             },

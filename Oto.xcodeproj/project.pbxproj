@@ -45,6 +45,7 @@
 		A10100462CE0000100000001 /* Oto/Presentation/Components/OtoErrorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200462CE0000100000001 /* Oto/Presentation/Components/OtoErrorState.swift */; };
 		A10100472CE0000100000001 /* Oto/Presentation/Components/OtoLoadingSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200472CE0000100000001 /* Oto/Presentation/Components/OtoLoadingSkeleton.swift */; };
 		A10100482CE0000100000001 /* Oto/Presentation/Components/OtoMiniPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200482CE0000100000001 /* Oto/Presentation/Components/OtoMiniPlayer.swift */; };
+		A10100492CE0000100000001 /* Oto/Services/Session/SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200492CE0000100000001 /* Oto/Services/Session/SessionStore.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -87,6 +88,7 @@
 		A10200462CE0000100000001 /* Oto/Presentation/Components/OtoErrorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Components/OtoErrorState.swift; sourceTree = SOURCE_ROOT; };
 		A10200472CE0000100000001 /* Oto/Presentation/Components/OtoLoadingSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Components/OtoLoadingSkeleton.swift; sourceTree = SOURCE_ROOT; };
 		A10200482CE0000100000001 /* Oto/Presentation/Components/OtoMiniPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Components/OtoMiniPlayer.swift; sourceTree = SOURCE_ROOT; };
+		A10200492CE0000100000001 /* Oto/Services/Session/SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/Session/SessionStore.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -190,6 +192,7 @@
 				A102000D2CE0000100000001 /* Oto/Services/Audio/NowPlayingManager.swift */,
 				A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */,
 				A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */,
+				A10200492CE0000100000001 /* Oto/Services/Session/SessionStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -303,6 +306,7 @@
 				A10100462CE0000100000001 /* Oto/Presentation/Components/OtoErrorState.swift in Sources */,
 				A10100472CE0000100000001 /* Oto/Presentation/Components/OtoLoadingSkeleton.swift in Sources */,
 				A10100482CE0000100000001 /* Oto/Presentation/Components/OtoMiniPlayer.swift in Sources */,
+				A10100492CE0000100000001 /* Oto/Services/Session/SessionStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

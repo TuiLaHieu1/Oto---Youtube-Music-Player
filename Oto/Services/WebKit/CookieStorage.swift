@@ -36,16 +36,20 @@ private struct CodableCookie: Codable {
 }
 
 /// Quản lý lưu trữ cookie phiên làm việc Google/YouTube an toàn trong iOS Keychain.
-public final class CookieStorage: @unchecked Sendable {
+public final class CookieStorage: Sendable {
     public static let shared = CookieStorage()
     private let logger = Logger(subsystem: "com.oto.music", category: "CookieStorage")
     private let keychainService = "com.oto.music.auth-cookies"
     private let keychainAccount = "google-session"
+    private let lock = NSLock()
 
     private init() {}
 
     /// Lưu danh sách cookie phiên làm việc vào Keychain (mã hoá an toàn).
     public func saveCookies(_ cookies: [HTTPCookie]) {
+        lock.lock()
+        defer { lock.unlock() }
+
         let authCookies = cookies.filter { isRelevantAuthCookie($0.name) }
         guard !authCookies.isEmpty else { return }
 
@@ -68,16 +72,24 @@ public final class CookieStorage: @unchecked Sendable {
                 var newQuery = query
                 newQuery[kSecValueData as String] = data
                 newQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-                SecItemAdd(newQuery as CFDictionary, nil)
+                let addStatus = SecItemAdd(newQuery as CFDictionary, nil)
+                if addStatus != errSecSuccess {
+                    logger.error("Lỗi SecItemAdd Keychain: \(addStatus)")
+                }
+            } else if status != errSecSuccess {
+                logger.error("Lỗi SecItemUpdate Keychain: \(status)")
             }
             logger.info("Đã lưu an toàn phiên làm việc vào Keychain.")
         } catch {
-            logger.error("Không thể mã hoá cookie để lưu Keychain.")
+            logger.error("Không thể mã hoá cookie để lưu Keychain: \(error.localizedDescription)")
         }
     }
 
     /// Tải danh sách cookie phiên từ Keychain.
     public func loadCookies() -> [HTTPCookie] {
+        lock.lock()
+        defer { lock.unlock() }
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
@@ -104,6 +116,9 @@ public final class CookieStorage: @unchecked Sendable {
 
     /// Xoá sạch phiên đăng nhập trong Keychain.
     public func clearCookies() {
+        lock.lock()
+        defer { lock.unlock() }
+
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: keychainService,
@@ -113,11 +128,22 @@ public final class CookieStorage: @unchecked Sendable {
         logger.info("Đã xoá cookie phiên làm việc.")
     }
 
-    /// Kiểm tra đã có phiên đăng nhập hợp lệ hay chưa.
+    /// Kiểm tra đã có phiên đăng nhập hợp lệ hay chưa, bao gồm kiểm tra hạn dùng (expiry) và domain.
     public var hasValidSession: Bool {
         let cookies = loadCookies()
-        let names = Set(cookies.map(\.name))
-        return names.contains("SAPISID") || names.contains("SID")
+        let now = Date()
+        let validCookies = cookies.filter { cookie in
+            if let expires = cookie.expiresDate, expires < now {
+                return false
+            }
+            let domain = cookie.domain.lowercased()
+            guard domain.contains("youtube.com") || domain.contains("google.com") else {
+                return false
+            }
+            return true
+        }
+        let names = Set(validCookies.map(\.name))
+        return names.contains("SAPISID") || names.contains("SID") || names.contains("__Secure-3PAPISID")
     }
 
     /// Lọc các cookie cốt lõi cần thiết cho xác thực YouTube Music.

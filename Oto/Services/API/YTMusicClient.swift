@@ -39,8 +39,15 @@ public final class YTMusicClient: Sendable {
     private let session: URLSession
     private let sessionFence = SessionFence()
 
-    public init(session: URLSession = .shared) {
-        self.session = session
+    public init(session: URLSession? = nil) {
+        if let session = session {
+            self.session = session
+        } else {
+            let config = URLSessionConfiguration.default
+            config.timeoutIntervalForRequest = 15.0
+            config.timeoutIntervalForResource = 30.0
+            self.session = URLSession(configuration: config)
+        }
     }
 
     /// Tìm kiếm danh sách bài hát theo từ khóa trên YouTube Music.

@@ -45,29 +45,35 @@ public final class LibraryViewModel {
         }
     }
 
-    /// Cập nhật dung lượng bộ nhớ đệm cache trên đĩa.
+    /// Cập nhật dung lượng bộ nhớ đệm cache trên đĩa ngoài MainActor.
     public func updateCacheSize() {
-        var totalBytes: Int64 = 0
+        Task.detached(priority: .utility) {
+            var totalBytes: Int64 = 0
 
-        if let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
-            if let enumerator = FileManager.default.enumerator(
-                at: cacheDir,
-                includingPropertiesForKeys: [.fileSizeKey],
-                options: [.skipsHiddenFiles]
-            ) {
-                for case let fileURL as URL in enumerator {
-                    if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
-                       let fileSize = resourceValues.fileSize {
-                        totalBytes += Int64(fileSize)
+            if let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
+                if let enumerator = FileManager.default.enumerator(
+                    at: cacheDir,
+                    includingPropertiesForKeys: [.fileSizeKey],
+                    options: [.skipsHiddenFiles]
+                ) {
+                    while let fileURL = enumerator.nextObject() as? URL {
+                        if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+                           let fileSize = resourceValues.fileSize {
+                            totalBytes += Int64(fileSize)
+                        }
                     }
                 }
             }
-        }
 
-        let formatter = ByteCountFormatter()
-        formatter.allowedUnits = [.useKB, .useMB]
-        formatter.countStyle = .file
-        cacheSizeString = formatter.string(fromByteCount: totalBytes)
+            let formatter = ByteCountFormatter()
+            formatter.allowedUnits = [.useKB, .useMB]
+            formatter.countStyle = .file
+            let formatted = formatter.string(fromByteCount: totalBytes)
+
+            await MainActor.run { [weak self] in
+                self?.cacheSizeString = formatted
+            }
+        }
     }
 
     /// Xóa toàn bộ bộ nhớ đệm ứng dụng.

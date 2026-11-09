@@ -14,25 +14,27 @@ public final class LyricsViewModel {
     private let lyricsService: MultiSourceLyricsService
     private var currentSongID: String?
     private var scrollResetTask: Task<Void, Never>?
+    private var fetchLyricsTask: Task<Void, Never>?
 
     public init(lyricsService: MultiSourceLyricsService = MultiSourceLyricsService()) {
         self.lyricsService = lyricsService
     }
 
-    /// Tải lời bài hát khi đổi bài.
+    /// Tải lời bài hát khi đổi bài, tự động hủy bỏ yêu cầu đang xử lý của bài trước.
     public func loadLyrics(for song: Song) {
         if currentSongID == song.id && currentDocument.type != .none {
             return
         }
 
+        fetchLyricsTask?.cancel()
         currentSongID = song.id
         isLoading = true
         currentDocument = LyricsDocument(type: .none)
         activeLineIndex = nil
 
-        Task {
+        fetchLyricsTask = Task {
             let doc = await lyricsService.resolveLyrics(for: song)
-            guard currentSongID == song.id else { return }
+            guard !Task.isCancelled, currentSongID == song.id else { return }
             self.currentDocument = doc
             self.isLoading = false
         }

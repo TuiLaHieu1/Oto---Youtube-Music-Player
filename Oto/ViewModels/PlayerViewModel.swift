@@ -49,6 +49,17 @@ public final class PlayerViewModel {
         playbackState.isBuffering
     }
 
+    /// Thời lượng phát thực tế đo được từ WebKit engine, bù đắp trường hợp API không trả duration.
+    public var runtimeDuration: TimeInterval?
+
+    /// Thời lượng phát hiệu lực ưu tiên runtime duration từ media player.
+    public var effectiveDuration: TimeInterval {
+        if let runtime = runtimeDuration, runtime > 0 {
+            return runtime
+        }
+        return currentSong?.duration ?? 0
+    }
+
     public var isShuffleEnabled: Bool {
         queueManager.isShuffleEnabled
     }
@@ -143,9 +154,11 @@ public final class PlayerViewModel {
     public func toggleRepeat() {
         queueManager.toggleRepeat()
     }
+}
 
-    // MARK: - Side Effects Dispatcher
+// MARK: - Side Effects Dispatcher & Observers
 
+extension PlayerViewModel {
     private func applyEffects(_ effects: PlaybackEffects) {
         // 1. Kích hoạt AudioSession bất đồng bộ ngoài main thread khi có yêu cầu
         if effects.shouldActivateSession {
@@ -160,6 +173,7 @@ public final class PlayerViewModel {
 
         // 2. Nạp bài hát mới vào WebKit engine
         if let payload = effects.shouldStartEngine {
+            runtimeDuration = nil
             clock.pause(at: payload.startSeconds)
             SingletonPlayerWebView.shared.loadVideo(
                 id: payload.songId,
@@ -204,11 +218,10 @@ public final class PlayerViewModel {
         NowPlayingManager.shared.updateNowPlaying(
             song: currentSong,
             isPlaying: isPlaying,
-            currentTime: currentPosition
+            currentTime: currentPosition,
+            duration: effectiveDuration
         )
     }
-
-    // MARK: - Observer & Bridge Wireup
 
     private func setupAudioSessionObserver() {
         AudioSessionObserver.shared.onInterruptionBegan = { [weak self] in
@@ -232,47 +245,85 @@ public final class PlayerViewModel {
 
     private func setupPlayerBridge() {
         SingletonPlayerWebView.shared.onPlaybackStateChange = { [weak self] (stateCode, gen) in
-            guard let self else { return }
-            let engineState: EnginePlaybackState
-            switch stateCode {
-            case 1:
-                engineState = .playing
-            case 2:
-                engineState = .paused
-            default:
-                engineState = .buffering
-            }
-
-            let effects = self.stateMachine.engineStateChanged(engineState, generation: gen)
-            self.applyEffects(effects)
+            self?.handleBridgeStateChange(stateCode: stateCode, generation: gen)
         }
 
-        SingletonPlayerWebView.shared.onPositionUpdate = { [weak self] (cur, _, gen) in
-            guard let self else { return }
-            self.stateMachine.engineTimeUpdated(currentTime: cur, generation: gen)
-            let clockPos = self.clock.currentPosition()
-            if abs(clockPos - cur) > 0.5 {
-                self.clock.seek(to: cur)
-            }
-            self.currentPosition = cur
-            NowPlayingManager.shared.updateNowPlaying(
-                song: self.currentSong,
-                isPlaying: self.isPlaying,
-                currentTime: cur
-            )
+        SingletonPlayerWebView.shared.onPositionUpdate = { [weak self] (cur, dur, gen) in
+            self?.handleBridgePositionUpdate(current: cur, duration: dur, generation: gen)
         }
 
         SingletonPlayerWebView.shared.onTrackEnded = { [weak self] gen in
-            guard let self else { return }
-            let effects = self.stateMachine.engineTrackEnded(generation: gen)
-            self.applyEffects(effects)
+            self?.handleBridgeTrackEnded(generation: gen)
         }
 
-        SingletonPlayerWebView.shared.onError = { [weak self] code in
-            self?.logger.error("Lỗi playback YouTube Iframe: code \(code)")
-            if code == 100 || code == 101 || code == 150 || code == 152 {
-                self?.next()
+        SingletonPlayerWebView.shared.onError = { [weak self] (code, gen, trackId) in
+            self?.handleBridgeError(code: code, generation: gen, trackId: trackId)
+        }
+    }
+
+    private func handleBridgeStateChange(stateCode: Int, generation: Int) {
+        guard generation == stateMachine.currentGeneration else { return }
+
+        let engineState: EnginePlaybackState
+        switch stateCode {
+        case 1:
+            engineState = .playing
+        case 2:
+            engineState = .paused
+        default:
+            engineState = .buffering
+        }
+
+        let effects = stateMachine.engineStateChanged(engineState, generation: generation)
+        applyEffects(effects)
+
+        if engineState == .playing {
+            if !clock.isPlaying {
+                clock.play(from: currentPosition, rate: 1.0)
             }
+            startPositionTracking()
+        } else if engineState == .paused || engineState == .buffering {
+            clock.pause()
+        }
+    }
+
+    private func handleBridgePositionUpdate(current: TimeInterval, duration: TimeInterval, generation: Int) {
+        guard generation == stateMachine.currentGeneration else { return }
+
+        if duration > 0 {
+            runtimeDuration = duration
+        }
+
+        stateMachine.engineTimeUpdated(currentTime: current, generation: generation)
+        let clockPos = clock.currentPosition()
+        if abs(clockPos - current) > 0.5 {
+            clock.seek(to: current)
+        }
+        currentPosition = current
+        NowPlayingManager.shared.updateNowPlaying(
+            song: currentSong,
+            isPlaying: isPlaying,
+            currentTime: current,
+            duration: effectiveDuration
+        )
+    }
+
+    private func handleBridgeTrackEnded(generation: Int) {
+        guard generation == stateMachine.currentGeneration else { return }
+        let effects = stateMachine.engineTrackEnded(generation: generation)
+        applyEffects(effects)
+    }
+
+    private func handleBridgeError(code: Int, generation: Int, trackId: String) {
+        guard generation == stateMachine.currentGeneration else {
+            logger.warning(
+                "Bỏ qua lỗi playback từ gen cũ \(generation) (hiện tại: \(self.stateMachine.currentGeneration))"
+            )
+            return
+        }
+        logger.error("Lỗi playback YouTube Web (code: \(code), track: \(trackId), gen: \(generation))")
+        if code == 100 || code == 101 || code == 150 || code == 152 {
+            next()
         }
     }
 

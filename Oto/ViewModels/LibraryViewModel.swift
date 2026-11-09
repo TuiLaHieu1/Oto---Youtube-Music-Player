@@ -1,0 +1,75 @@
+import Foundation
+import Observation
+import OtoCore
+import os
+
+/// Quản lý dữ liệu Thư viện và danh sách bài hát yêu thích.
+@MainActor
+@Observable
+public final class LibraryViewModel {
+    public var likedSongs: [Song] = []
+    public var isLoading: Bool = false
+    public var errorMessage: String?
+    public var cacheSizeString: String = "0 KB"
+
+    private let logger = Logger(subsystem: "com.oto.music", category: "LibraryViewModel")
+    private let client: YTMusicClient
+
+    public init(client: YTMusicClient = .shared) {
+        self.client = client
+        updateCacheSize()
+    }
+
+    /// Tải danh sách bài hát đã thích nếu người dùng đã đăng nhập.
+    public func loadLikedSongs() async {
+        guard CookieStorage.shared.hasValidSession else {
+            likedSongs = []
+            return
+        }
+
+        isLoading = true
+        errorMessage = nil
+
+        do {
+            let songs = try await client.fetchLikedSongs()
+            likedSongs = songs
+            isLoading = false
+        } catch {
+            logger.error("Lỗi tải bài hát đã thích: \(error.localizedDescription)")
+            errorMessage = error.localizedDescription
+            isLoading = false
+        }
+    }
+
+    /// Cập nhật dung lượng bộ nhớ đệm cache trên đĩa.
+    public func updateCacheSize() {
+        var totalBytes: Int64 = 0
+
+        if let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first {
+            if let enumerator = FileManager.default.enumerator(
+                at: cacheDir,
+                includingPropertiesForKeys: [.fileSizeKey],
+                options: [.skipsHiddenFiles]
+            ) {
+                for case let fileURL as URL in enumerator {
+                    if let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+                       let fileSize = resourceValues.fileSize {
+                        totalBytes += Int64(fileSize)
+                    }
+                }
+            }
+        }
+
+        let formatter = ByteCountFormatter()
+        formatter.allowedUnits = [.useKB, .useMB]
+        formatter.countStyle = .file
+        cacheSizeString = formatter.string(fromByteCount: totalBytes)
+    }
+
+    /// Xóa toàn bộ bộ nhớ đệm ứng dụng.
+    public func clearAllCache() {
+        HomeCache.shared.clear()
+        URLCache.shared.removeAllCachedResponses()
+        updateCacheSize()
+    }
+}

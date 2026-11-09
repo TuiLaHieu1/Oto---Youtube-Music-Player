@@ -129,6 +129,35 @@
         "xcodebuild -scheme Oto -destination 'generic/platform=iOS' -derivedDataPath /tmp/DerivedData CODE_SIGNING_ALLOWED=NO build"
       ],
       "commit_message": "feat(home): tích hợp danh mục YouTube Music và cache nội dung Home feed"
+    },
+    {
+      "id": "S4-002",
+      "title": "Triển khai Thư viện cá nhân (Liked Songs) và Cài đặt (Settings)",
+      "status": "COMPLETED",
+      "prompt": "Tích hợp nạp bài hát đã thích từ YouTube Music (FEmusic_liked_videos) vào LibraryView, hỗ trợ phát trực tiếp danh sách yêu thích và cài đặt bộ nhớ đệm theo PROJECT_PLAN.",
+      "references": [
+        "AGENTS.md",
+        "PROJECT_PLAN.md"
+      ],
+      "acceptance_criteria": [
+        "Nạp danh sách bài hát đã thích từ YouTube Music khi đã đăng nhập",
+        "Hiển thị thông báo và nút đăng nhập nếu đang ở chế độ khách",
+        "Cho phép phát ngay bài hát yêu thích và nạp toàn bộ danh sách vào hàng đợi",
+        "Cung cấp chức năng xem dung lượng và xóa bộ nhớ đệm cache an toàn"
+      ],
+      "allowed_paths": [
+        "Oto/**",
+        "Oto.xcodeproj/**",
+        "Packages/**",
+        "Tests/**",
+        "runner/backlog.json"
+      ],
+      "checks": [
+        "TMPDIR=/tmp CLANG_MODULE_CACHE_PATH=/tmp/clang-cache swift test --package-path Packages/OtoCore --disable-sandbox",
+        "swiftlint lint --strict",
+        "xcodebuild -scheme Oto -destination 'generic/platform=iOS' -derivedDataPath /tmp/DerivedData CODE_SIGNING_ALLOWED=NO build"
+      ],
+      "commit_message": "feat(library): tích hợp bài hát đã thích và quản lý bộ nhớ đệm"
     }
   ]
 }

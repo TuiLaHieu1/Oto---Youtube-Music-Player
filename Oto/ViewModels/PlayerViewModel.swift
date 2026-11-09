@@ -56,6 +56,15 @@ public final class PlayerViewModel {
         startPositionTracking()
     }
 
+    /// Khởi tạo hàng đợi mới từ danh sách bài hát và bắt đầu phát từ vị trí chỉ định.
+    public func playQueue(songs: [Song], startIndex: Int = 0) {
+        guard !songs.isEmpty else { return }
+        queueManager.setQueue(songs: songs, startIndex: startIndex)
+        if let targetSong = queueManager.currentSong {
+            play(song: targetSong)
+        }
+    }
+
     /// Tiếp tục phát.
     public func resume() {
         guard let song = currentSong else { return }

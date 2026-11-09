@@ -7,4 +7,5 @@ __pycache__/
 .build/
 *.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcworkspace/xcuserdata/
 .swiftpm/

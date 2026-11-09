@@ -1,0 +1,29 @@
+excluded:
+  - .build
+  - Packages/OtoCore/.build
+  - DerivedData
+  - Tests/RunnerTests
+  - runner
+  - Scripts
+
+line_length:
+  warning: 120
+  error: 160
+
+identifier_name:
+  min_length:
+    warning: 2
+    error: 1
+  excluded:
+    - id
+    - vm
+    - to
+    - up
+
+function_body_length:
+  warning: 60
+  error: 100
+
+cyclomatic_complexity:
+  warning: 15
+  error: 20

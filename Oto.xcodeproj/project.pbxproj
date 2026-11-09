@@ -1,0 +1,414 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A10100012CE0000100000001 /* OtoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200012CE0000100000001 /* OtoApp.swift */; };
+		A10100022CE0000100000001 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200022CE0000100000001 /* RootView.swift */; };
+		A10100032CE0000100000001 /* HomeFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200032CE0000100000001 /* HomeFeedView.swift */; };
+		A10100042CE0000100000001 /* LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200042CE0000100000001 /* LibraryView.swift */; };
+		A10100052CE0000100000001 /* MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200052CE0000100000001 /* MiniPlayerView.swift */; };
+		A10100062CE0000100000001 /* FullscreenPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200062CE0000100000001 /* FullscreenPlayerView.swift */; };
+		A10100072CE0000100000001 /* QueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200072CE0000100000001 /* QueueView.swift */; };
+		A10100082CE0000100000001 /* SyncedLyricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200082CE0000100000001 /* SyncedLyricsView.swift */; };
+		A10100092CE0000100000001 /* PlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200092CE0000100000001 /* PlayerViewModel.swift */; };
+		A101000A2CE0000100000001 /* LyricsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A102000A2CE0000100000001 /* LyricsViewModel.swift */; };
+		A101000B2CE0000100000001 /* HomeViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A102000B2CE0000100000001 /* HomeViewModel.swift */; };
+		A101000C2CE0000100000001 /* AudioSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A102000C2CE0000100000001 /* AudioSessionManager.swift */; };
+		A101000D2CE0000100000001 /* NowPlayingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A102000D2CE0000100000001 /* NowPlayingManager.swift */; };
+		A101000E2CE0000100000001 /* OtoCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10400012CE0000100000001 /* OtoCore */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A10200002CE0000100000001 /* Oto.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Oto.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A10200012CE0000100000001 /* OtoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/App/OtoApp.swift; sourceTree = SOURCE_ROOT; };
+		A10200022CE0000100000001 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Navigation/RootView.swift; sourceTree = SOURCE_ROOT; };
+		A10200032CE0000100000001 /* HomeFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Home/HomeFeedView.swift; sourceTree = SOURCE_ROOT; };
+		A10200042CE0000100000001 /* LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/LibraryView.swift; sourceTree = SOURCE_ROOT; };
+		A10200052CE0000100000001 /* MiniPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/MiniPlayerView.swift; sourceTree = SOURCE_ROOT; };
+		A10200062CE0000100000001 /* FullscreenPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/FullscreenPlayerView.swift; sourceTree = SOURCE_ROOT; };
+		A10200072CE0000100000001 /* QueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/QueueView.swift; sourceTree = SOURCE_ROOT; };
+		A10200082CE0000100000001 /* SyncedLyricsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Lyrics/SyncedLyricsView.swift; sourceTree = SOURCE_ROOT; };
+		A10200092CE0000100000001 /* PlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/ViewModels/PlayerViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A102000A2CE0000100000001 /* LyricsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/ViewModels/LyricsViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A102000B2CE0000100000001 /* HomeViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/ViewModels/HomeViewModel.swift; sourceTree = SOURCE_ROOT; };
+		A102000C2CE0000100000001 /* AudioSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/Audio/AudioSessionManager.swift; sourceTree = SOURCE_ROOT; };
+		A102000D2CE0000100000001 /* NowPlayingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/Audio/NowPlayingManager.swift; sourceTree = SOURCE_ROOT; };
+		A102000E2CE0000100000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Oto/Info.plist; sourceTree = SOURCE_ROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10300012CE0000100000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A101000E2CE0000100000001 /* OtoCore in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A10500002CE0000100000001 = {
+			isa = PBXGroup;
+			children = (
+				A10500012CE0000100000001 /* Oto */,
+				A10500062CE0000100000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A10500012CE0000100000001 /* Oto */ = {
+			isa = PBXGroup;
+			children = (
+				A10500022CE0000100000001 /* App */,
+				A10500032CE0000100000001 /* Presentation */,
+				A10500042CE0000100000001 /* ViewModels */,
+				A10500052CE0000100000001 /* Services */,
+				A102000E2CE0000100000001 /* Info.plist */,
+			);
+			path = Oto;
+			sourceTree = "<group>";
+		};
+		A10500022CE0000100000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				A10200012CE0000100000001 /* OtoApp.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A10500032CE0000100000001 /* Presentation */ = {
+			isa = PBXGroup;
+			children = (
+				A10200022CE0000100000001 /* RootView.swift */,
+				A10200032CE0000100000001 /* HomeFeedView.swift */,
+				A10200042CE0000100000001 /* LibraryView.swift */,
+				A10200052CE0000100000001 /* MiniPlayerView.swift */,
+				A10200062CE0000100000001 /* FullscreenPlayerView.swift */,
+				A10200072CE0000100000001 /* QueueView.swift */,
+				A10200082CE0000100000001 /* SyncedLyricsView.swift */,
+			);
+			path = Presentation;
+			sourceTree = "<group>";
+		};
+		A10500042CE0000100000001 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				A10200092CE0000100000001 /* PlayerViewModel.swift */,
+				A102000A2CE0000100000001 /* LyricsViewModel.swift */,
+				A102000B2CE0000100000001 /* HomeViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A10500052CE0000100000001 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				A102000C2CE0000100000001 /* AudioSessionManager.swift */,
+				A102000D2CE0000100000001 /* NowPlayingManager.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A10500062CE0000100000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A10200002CE0000100000001 /* Oto.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A10600012CE0000100000001 /* Oto */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A10700022CE0000100000001 /* Build configuration list for PBXNativeTarget "Oto" */;
+			buildPhases = (
+				A10800012CE0000100000001 /* Sources */,
+				A10300012CE0000100000001 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Oto;
+			packageProductDependencies = (
+				A10400012CE0000100000001 /* OtoCore */,
+			);
+			productName = Oto;
+			productReference = A10200002CE0000100000001 /* Oto.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A10900012CE0000100000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A10600012CE0000100000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A10700012CE0000100000001 /* Build configuration list for PBXProject "Oto" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A10500002CE0000100000001;
+			packageReferences = (
+				A10A00012CE0000100000001 /* XCLocalSwiftPackageReference "Packages/OtoCore" */,
+			);
+			productRefGroup = A10500062CE0000100000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A10600012CE0000100000001 /* Oto */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A10800012CE0000100000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A10100012CE0000100000001 /* OtoApp.swift in Sources */,
+				A10100022CE0000100000001 /* RootView.swift in Sources */,
+				A10100032CE0000100000001 /* HomeFeedView.swift in Sources */,
+				A10100042CE0000100000001 /* LibraryView.swift in Sources */,
+				A10100052CE0000100000001 /* MiniPlayerView.swift in Sources */,
+				A10100062CE0000100000001 /* FullscreenPlayerView.swift in Sources */,
+				A10100072CE0000100000001 /* QueueView.swift in Sources */,
+				A10100082CE0000100000001 /* SyncedLyricsView.swift in Sources */,
+				A10100092CE0000100000001 /* PlayerViewModel.swift in Sources */,
+				A101000A2CE0000100000001 /* LyricsViewModel.swift in Sources */,
+				A101000B2CE0000100000001 /* HomeViewModel.swift in Sources */,
+				A101000C2CE0000100000001 /* AudioSessionManager.swift in Sources */,
+				A101000D2CE0000100000001 /* NowPlayingManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A10B00012CE0000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDEFINED_VARIABLES = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		A10B00022CE0000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDEFINED_VARIABLES = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_VERSION = 6.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A10B00032CE0000100000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Oto/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.oto.music;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A10B00042CE0000100000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Oto/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.oto.music;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_STRICT_CONCURRENCY = complete;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A10700012CE0000100000001 /* Build configuration list for PBXProject "Oto" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10B00012CE0000100000001 /* Debug */,
+				A10B00022CE0000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A10700022CE0000100000001 /* Build configuration list for PBXNativeTarget "Oto" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A10B00032CE0000100000001 /* Debug */,
+				A10B00042CE0000100000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A10A00012CE0000100000001 /* XCLocalSwiftPackageReference "Packages/OtoCore" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/OtoCore;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A10400012CE0000100000001 /* OtoCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10A00012CE0000100000001 /* XCLocalSwiftPackageReference "Packages/OtoCore" */;
+			productName = OtoCore;
+		};
+/* End XCSwiftPackageProductDependency section */
+
+	};
+	rootObject = A10900012CE0000100000001 /* Project object */;
+}

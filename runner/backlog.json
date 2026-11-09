@@ -3,7 +3,7 @@
     {
       "id": "S1-001",
       "title": "Tạo foundation iOS và iPadOS",
-      "status": "DRAFT",
+      "status": "COMPLETED",
       "prompt": "Tạo Xcode project universal tối thiểu, local Swift package OtoCore, app shell Home và unit test nền tảng theo PROJECT_PLAN. Chưa tích hợp YouTube Music hoặc chạy thiết bị thật.",
       "references": [
         "AGENTS.md",
@@ -27,10 +27,48 @@
         "AGENTS.md",
         "GEMINI.md",
         "PROJECT_PLAN.md",
-        ".gitignore"
+        ".gitignore",
+        ".swiftlint.yml",
+        "runner/backlog.json"
       ],
-      "checks": [],
+      "checks": [
+        "TMPDIR=/tmp CLANG_MODULE_CACHE_PATH=/tmp/clang-cache swift test --package-path Packages/OtoCore --disable-sandbox",
+        "swiftlint lint --strict",
+        "xcodebuild -scheme Oto -destination 'generic/platform=iOS' -derivedDataPath /tmp/DerivedData CODE_SIGNING_ALLOWED=NO build"
+      ],
       "commit_message": "feat: tạo nền tảng Oto cho iOS và iPadOS"
+    },
+    {
+      "id": "S2-001",
+      "title": "Khảo sát tính khả thi Auth và Playback trên iOS",
+      "status": "READY",
+      "prompt": "Xây dựng module kiểm chứng tính khả thi phát âm thanh nền (AVAudioSession/SingletonPlayerWebView) và cơ chế phiên người dùng YouTube Music theo docs/PLAYBACK_FEASIBILITY.md.",
+      "references": [
+        "AGENTS.md",
+        "PROJECT_PLAN.md",
+        "docs/PLAYBACK_FEASIBILITY.md",
+        "docs/KASET_PORTING_AUDIT.md"
+      ],
+      "acceptance_criteria": [
+        "Cung cấp WebKitManager và SingletonPlayerWebView với JS Bridge phát nhạc không reload DOM",
+        "Cung cấp CookieStorage/Keychain an toàn không log auth token",
+        "Không crash khi thay đổi audio route hoặc gián đoạn cuộc gọi",
+        "Tuân thủ Swift 6 Concurrency và Apple frameworks tối giản"
+      ],
+      "allowed_paths": [
+        "Oto/**",
+        "Oto.xcodeproj/**",
+        "Packages/**",
+        "Tests/**",
+        "docs/**",
+        "runner/backlog.json"
+      ],
+      "checks": [
+        "TMPDIR=/tmp CLANG_MODULE_CACHE_PATH=/tmp/clang-cache swift test --package-path Packages/OtoCore --disable-sandbox",
+        "swiftlint lint --strict",
+        "xcodebuild -scheme Oto -destination 'generic/platform=iOS' -derivedDataPath /tmp/DerivedData CODE_SIGNING_ALLOWED=NO build"
+      ],
+      "commit_message": "feat(playback): khảo sát auth và singleton webview playback"
     }
   ]
 }

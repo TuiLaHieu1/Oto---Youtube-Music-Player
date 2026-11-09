@@ -4,4 +4,7 @@ DerivedData/
 *.xcresult
 __pycache__/
 *.pyc
-
+.build/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+.swiftpm/

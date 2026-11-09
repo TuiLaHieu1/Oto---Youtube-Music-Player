@@ -27,13 +27,14 @@ public struct RootView: View {
 
     public var body: some View {
         ZStack {
-            mainContentView
-
-            // Gắn SingletonPlayerWebView vào view hierarchy ngăn chặn WebKit bị treo nền
+            // Gắn SingletonPlayerWebView vào view hierarchy nền để WebKit luôn duy trì render âm thanh
             PlayerWebViewContainer()
-                .frame(width: 1, height: 1)
+                .frame(width: 320, height: 240)
+                .opacity(0.005)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
+
+            mainContentView
         }
         .fullScreenCover(isPresented: $playerVM.isExpanded) {
             FullscreenPlayerView(playerVM: playerVM)
@@ -41,6 +42,17 @@ public struct RootView: View {
         .sheet(isPresented: $playerVM.showAuth) {
             AuthView()
         }
+    }
+
+    private var miniPlayerBottomPadding: CGFloat {
+        #if os(iOS)
+        let scenes = UIApplication.shared.connectedScenes
+        let windowScene = scenes.first as? UIWindowScene
+        let bottom = windowScene?.windows.first?.safeAreaInsets.bottom ?? 34
+        return 49 + (bottom > 0 ? bottom : 12) + 8
+        #else
+        return 60
+        #endif
     }
 
     @ViewBuilder
@@ -88,9 +100,9 @@ public struct RootView: View {
                         .tag(TabItem.library)
                 }
 
-                // MiniPlayer nổi phía trên TabBar
+                // MiniPlayer nổi thanh lịch phía trên TabBar chuẩn Apple Music
                 MiniPlayerView(playerVM: playerVM)
-                    .padding(.bottom, 54)
+                    .padding(.bottom, miniPlayerBottomPadding)
             }
         }
     }

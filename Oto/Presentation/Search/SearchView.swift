@@ -60,9 +60,11 @@ public struct SearchView: View {
             ForEach(searchVM.searchResults) { song in
                 let isCurrent = playerVM.currentSong?.id == song.id && playerVM.isPlaying
                 Button {
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    #endif
                     let index = searchVM.searchResults.firstIndex(of: song) ?? 0
-                    playerVM.queueManager.setQueue(songs: searchVM.searchResults, startIndex: index)
-                    playerVM.play(song: song)
+                    playerVM.playQueue(songs: searchVM.searchResults, startIndex: index)
                 } label: {
                     HStack(spacing: 12) {
                         AsyncImage(url: song.artworkURL) { image in
@@ -99,6 +101,6 @@ public struct SearchView: View {
             }
         }
         .listStyle(.plain)
-        .padding(.bottom, 60) // Khoảng trống cho MiniPlayer
+        .padding(.bottom, 160) // Khoảng trống cho MiniPlayer nổi trên TabBar
     }
 }

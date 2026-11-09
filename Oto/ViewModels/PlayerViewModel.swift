@@ -1,6 +1,7 @@
 import Foundation
 import SwiftUI
 import OtoCore
+import os
 
 /// ViewModel quản lý toàn bộ trạng thái phát nhạc và hàng đợi trên MainActor.
 @MainActor
@@ -16,6 +17,7 @@ public final class PlayerViewModel {
     public let queueManager: QueueManager
     public let clock: InterpolatedClock
 
+    private let logger = Logger(subsystem: "com.oto.music", category: "PlayerViewModel")
     private var playbackGeneration: Int = 0
     private var hasAdvancedCurrentTrack: Bool = false
     private var positionTimerTask: Task<Void, Never>?
@@ -171,6 +173,30 @@ public final class PlayerViewModel {
 
         SingletonPlayerWebView.shared.onTrackEnded = { [weak self] in
             self?.advanceOnce()
+        }
+
+        SingletonPlayerWebView.shared.onPlaybackStateChange = { [weak self] state in
+            guard let self else { return }
+            if state == 1 { // YT.PlayerState.PLAYING
+                if !self.isPlaying, let song = self.currentSong {
+                    self.clock.play(from: self.currentPosition, rate: 1.0)
+                    self.playbackState = .playing(song: song, position: self.currentPosition)
+                    self.startPositionTracking()
+                }
+            } else if state == 2 { // YT.PlayerState.PAUSED
+                if self.isPlaying, let song = self.currentSong {
+                    self.clock.pause()
+                    self.playbackState = .paused(song: song, position: self.currentPosition)
+                    self.stopPositionTracking()
+                }
+            }
+        }
+
+        SingletonPlayerWebView.shared.onError = { [weak self] code in
+            self?.logger.error("Lỗi playback YouTube Iframe: code \(code)")
+            if code == 100 || code == 101 || code == 150 || code == 152 {
+                self?.advanceOnce()
+            }
         }
     }
 

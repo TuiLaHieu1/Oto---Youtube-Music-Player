@@ -41,7 +41,7 @@ public final class SingletonPlayerWebView: NSObject {
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
 
-        let baseURL = URL(string: "https://music.youtube.com")
+        let baseURL = URL(string: "https://com.oto.music")
         wv.loadHTMLString(Self.playerBridgeHTML, baseURL: baseURL)
         self.webView = wv
         logger.info("SingletonPlayerWebView đã được khởi tạo và nạp HTML bridge.")
@@ -51,9 +51,10 @@ public final class SingletonPlayerWebView: NSObject {
     <!DOCTYPE html>
     <html>
     <head>
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="viewport"
+            content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
       <style>
-        body { margin: 0; background: black; overflow: hidden; }
+        body { margin: 0; background: black; overflow: hidden; width: 100vw; height: 100vh; }
         #player { width: 100vw; height: 100vh; }
       </style>
     </head>
@@ -70,11 +71,15 @@ public final class SingletonPlayerWebView: NSObject {
 
         function onYouTubeIframeAPIReady() {
           player = new YT.Player('player', {
+            width: '100%',
+            height: '100%',
             playerVars: {
               'autoplay': 1,
               'playsinline': 1,
               'controls': 0,
-              'origin': 'https://music.youtube.com'
+              'rel': 0,
+              'enablejsapi': 1,
+              'origin': 'https://com.oto.music'
             },
             events: {
               'onReady': onPlayerReady,
@@ -87,7 +92,7 @@ public final class SingletonPlayerWebView: NSObject {
         function onPlayerReady(event) {
           window.webkit.messageHandlers.otoPlayback.postMessage({ type: 'ready' });
           setInterval(function() {
-            if (player && player.getCurrentTime) {
+            if (player && typeof player.getCurrentTime === 'function') {
               var cur = player.getCurrentTime() || 0;
               var dur = player.getDuration() || 0;
               window.webkit.messageHandlers.otoPlayback.postMessage({
@@ -119,18 +124,21 @@ public final class SingletonPlayerWebView: NSObject {
         window.otoPlayer = {
           loadVideo: function(id, startSeconds, generation) {
             activeGeneration = generation || 0;
-            if (player && player.loadVideoById) {
+            if (player && typeof player.loadVideoById === 'function') {
               player.loadVideoById({ videoId: id, startSeconds: startSeconds || 0 });
+              if (typeof player.playVideo === 'function') {
+                player.playVideo();
+              }
             }
           },
           play: function() {
-            if (player && player.playVideo) player.playVideo();
+            if (player && typeof player.playVideo === 'function') player.playVideo();
           },
           pause: function() {
-            if (player && player.pauseVideo) player.pauseVideo();
+            if (player && typeof player.pauseVideo === 'function') player.pauseVideo();
           },
           seekTo: function(seconds) {
-            if (player && player.seekTo) player.seekTo(seconds, true);
+            if (player && typeof player.seekTo === 'function') player.seekTo(seconds, true);
           }
         };
       </script>
@@ -195,7 +203,7 @@ extension SingletonPlayerWebView: WKScriptMessageHandler {
 
         // 2. Kiểm tra origin
         let host = message.frameInfo.securityOrigin.host
-        guard host.isEmpty || host == "music.youtube.com" || host == "localhost" else {
+        guard host.isEmpty || host == "com.oto.music" || host == "music.youtube.com" || host == "localhost" else {
             logger.warning("Bỏ qua message từ origin không được ủy quyền: \(host)")
             return
         }

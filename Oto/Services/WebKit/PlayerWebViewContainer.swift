@@ -7,9 +7,8 @@ public struct PlayerWebViewContainer: UIViewRepresentable {
     public init() {}
 
     public func makeUIView(context: Context) -> UIView {
-        let container = UIView(frame: CGRect(x: 0, y: 0, width: 1, height: 1))
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: 320, height: 240))
         container.isUserInteractionEnabled = false
-        container.alpha = 0.01
 
         if let webView = SingletonPlayerWebView.shared.webView {
             webView.frame = container.bounds

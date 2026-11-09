@@ -60,6 +60,9 @@ public struct MiniPlayerView: View {
                     // Controls
                     HStack(spacing: 16) {
                         Button {
+                            #if os(iOS)
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            #endif
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                 playerVM.togglePlayPause()
                             }
@@ -71,6 +74,9 @@ public struct MiniPlayerView: View {
                         .buttonStyle(.plain)
 
                         Button {
+                            #if os(iOS)
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            #endif
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                                 playerVM.next()
                             }
@@ -93,6 +99,9 @@ public struct MiniPlayerView: View {
             .padding(.horizontal, 12)
             .contentShape(Rectangle())
             .onTapGesture {
+                #if os(iOS)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                #endif
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
                     playerVM.isExpanded = true
                 }

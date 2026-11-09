@@ -66,6 +66,9 @@ public struct HomeFeedView: View {
                                                 let isCurrent = (playerVM.currentSong?.id == song.id)
                                                     && playerVM.isPlaying
                                                 SongCardView(song: song, isPlaying: isCurrent) {
+                                                    #if os(iOS)
+                                                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                                    #endif
                                                     let index = homeVM.quickPicks.firstIndex(of: song) ?? 0
                                                     playerVM.playQueue(songs: homeVM.quickPicks, startIndex: index)
                                                 }
@@ -88,6 +91,9 @@ public struct HomeFeedView: View {
                                             let isCurrent = (playerVM.currentSong?.id == song.id)
                                                 && playerVM.isPlaying
                                             SongRowView(song: song, isPlaying: isCurrent) {
+                                                #if os(iOS)
+                                                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                                                #endif
                                                 let index = homeVM.listenAgain.firstIndex(of: song) ?? 0
                                                 playerVM.playQueue(songs: homeVM.listenAgain, startIndex: index)
                                             }
@@ -98,7 +104,7 @@ public struct HomeFeedView: View {
                             }
                         }
                         .padding(.top, 16)
-                        .padding(.bottom, 90) // Khoảng trống cho MiniPlayer
+                        .padding(.bottom, 160) // Khoảng trống cho MiniPlayer nổi trên TabBar
                     }
                 }
             }

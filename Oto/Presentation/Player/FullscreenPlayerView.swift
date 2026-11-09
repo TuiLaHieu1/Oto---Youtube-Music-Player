@@ -42,13 +42,17 @@ public struct FullscreenPlayerView: View {
                         // Chế độ đĩa nhạc (Artwork)
                         Spacer()
 
-                        ZStack {
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .fill(Color.secondary.opacity(0.2))
+                        AsyncImage(url: playerVM.currentSong?.artworkURL) { image in
+                            image.resizable().scaledToFill()
+                        } placeholder: {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.2))
 
-                            Image(systemName: "music.note")
-                                .font(.system(size: 80))
-                                .foregroundStyle(.secondary)
+                                Image(systemName: "music.note")
+                                    .font(.system(size: 80))
+                                    .foregroundStyle(.secondary)
+                            }
                         }
                         .frame(
                             width: min(geo.size.width - 64, 340),

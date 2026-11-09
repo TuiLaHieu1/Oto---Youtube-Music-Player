@@ -9,11 +9,13 @@ public struct RootView: View {
 
     public enum TabItem: String, Hashable, CaseIterable {
         case home = "Trang chủ"
+        case search = "Tìm kiếm"
         case library = "Thư viện"
 
         var icon: String {
             switch self {
             case .home: return "house.fill"
+            case .search: return "magnifyingglass"
             case .library: return "square.stack.fill"
             }
         }
@@ -55,6 +57,12 @@ public struct RootView: View {
                             }
                             .tag(TabItem.home)
 
+                        SearchView(playerVM: playerVM)
+                            .tabItem {
+                                Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
+                            }
+                            .tag(TabItem.search)
+
                         LibraryView(playerVM: playerVM)
                             .tabItem {
                                 Label(TabItem.library.rawValue, systemImage: TabItem.library.icon)
@@ -81,6 +89,8 @@ public struct RootView: View {
         switch tab {
         case .home:
             HomeFeedView(playerVM: playerVM)
+        case .search:
+            SearchView(playerVM: playerVM)
         case .library:
             LibraryView(playerVM: playerVM)
         }

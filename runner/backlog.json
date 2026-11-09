@@ -73,7 +73,7 @@
     {
       "id": "S3-001",
       "title": "Triển khai luồng Vertical Slice (Tìm kiếm -> Phát nhạc -> Lời -> Chuyển bài)",
-      "status": "READY",
+      "status": "COMPLETED",
       "prompt": "Triển khai màn hình tìm kiếm, kết nối YTMusicClient, tích hợp phát nhạc vào SingletonPlayerWebView, đồng bộ lời bài hát qua MultiSourceLyricsService và tự chuyển bài khi kết thúc theo PROJECT_PLAN.",
       "references": [
         "AGENTS.md",
@@ -100,6 +100,35 @@
         "xcodebuild -scheme Oto -destination 'generic/platform=iOS' -derivedDataPath /tmp/DerivedData CODE_SIGNING_ALLOWED=NO build"
       ],
       "commit_message": "feat(slice): hoàn thiện vertical slice tìm kiếm, phát nhạc và lời đồng bộ"
+    },
+    {
+      "id": "S4-001",
+      "title": "Hoàn thiện Home Feed với danh mục từ YouTube Music và Cache metadata",
+      "status": "READY",
+      "prompt": "Tích hợp Home feed từ Innertube browse API vào HomeViewModel, hiển thị Quick Picks và Listen Again thực tế cùng bộ nhớ đệm an toàn theo PROJECT_PLAN.",
+      "references": [
+        "AGENTS.md",
+        "PROJECT_PLAN.md"
+      ],
+      "acceptance_criteria": [
+        "Nạp dữ liệu Home feed thực tế từ YouTube Music qua YTMusicClient",
+        "Có giao diện placeholder thanh lịch khi đang tải dữ liệu",
+        "Lưu cache an toàn cục bộ tránh gọi API lặp lại không cần thiết",
+        "Không crash và hỗ trợ xoay ngang/dọc trên iPadOS và iPhone"
+      ],
+      "allowed_paths": [
+        "Oto/**",
+        "Oto.xcodeproj/**",
+        "Packages/**",
+        "Tests/**",
+        "runner/backlog.json"
+      ],
+      "checks": [
+        "TMPDIR=/tmp CLANG_MODULE_CACHE_PATH=/tmp/clang-cache swift test --package-path Packages/OtoCore --disable-sandbox",
+        "swiftlint lint --strict",
+        "xcodebuild -scheme Oto -destination 'generic/platform=iOS' -derivedDataPath /tmp/DerivedData CODE_SIGNING_ALLOWED=NO build"
+      ],
+      "commit_message": "feat(home): tích hợp danh mục YouTube Music và cache nội dung Home feed"
     }
   ]
 }

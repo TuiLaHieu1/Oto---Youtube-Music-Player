@@ -27,12 +27,16 @@ public struct MiniPlayerView: View {
 
                 HStack(spacing: 12) {
                     // Artwork Thumbnail
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Color.secondary.opacity(0.15))
-                        Image(systemName: "music.note")
-                            .font(.system(size: 18))
-                            .foregroundStyle(.secondary)
+                    AsyncImage(url: song.artworkURL) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .fill(Color.secondary.opacity(0.15))
+                            Image(systemName: "music.note")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     .frame(width: 44, height: 44)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))

@@ -187,7 +187,7 @@ public final class PlayerViewModel {
         SingletonPlayerWebView.shared.onPlaybackStateChange = { [weak self] state in
             guard let self else { return }
             if state == 1 { // YT.PlayerState.PLAYING
-                if !self.isPlaying, let song = self.currentSong {
+                if let song = self.currentSong {
                     self.clock.play(from: self.currentPosition, rate: 1.0)
                     self.playbackState = .playing(song: song, position: self.currentPosition)
                     self.startPositionTracking()

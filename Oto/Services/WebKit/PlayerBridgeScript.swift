@@ -31,6 +31,12 @@ enum PlayerBridgeScript {
       let boundVideo = null;
       window.__otoUserPaused = false;
 
+      try {
+        localStorage.setItem('yt-player-volume', JSON.stringify({
+          data: JSON.stringify({ volume: 100, muted: false })
+        }));
+      } catch(e) {}
+
       function isAdActive() {
         const mp = document.getElementById('movie_player');
         if (mp && mp.classList && (mp.classList.contains('ad-showing') || mp.classList.contains('ad-interrupting'))) {

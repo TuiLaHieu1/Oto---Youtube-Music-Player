@@ -21,6 +21,7 @@ public final class SingletonPlayerWebView: NSObject {
     private var isBridgeReady: Bool = false
     private var pendingLoad: PendingPlayback?
     public private(set) var currentGeneration: Int = 0
+    private var currentLoadedVideoId: String?
 
     public var onPlaybackStateChange: ((Int) -> Void)?
     public var onPositionUpdate: ((TimeInterval, TimeInterval) -> Void)?
@@ -71,12 +72,19 @@ public final class SingletonPlayerWebView: NSObject {
     public func loadVideo(id: String, startSeconds: TimeInterval = 0, generation: Int = 0) {
         currentGeneration = generation
 
+        if id == currentLoadedVideoId, isBridgeReady {
+            logger.info("Video \(id) đã được nạp sẵn, gọi play().")
+            play()
+            return
+        }
+
         let watchURLString = "https://music.youtube.com/watch?v=\(id)"
         guard let watchURL = URL(string: watchURLString) else { return }
 
         let isAlreadyOnWatch = webView?.url?.path.contains("watch") == true
 
         guard isBridgeReady, isAlreadyOnWatch else {
+            currentLoadedVideoId = id
             pendingLoad = PendingPlayback(id: id, startSeconds: startSeconds, generation: generation)
             logger.info("Nạp trực tiếp URL phát nhạc: \(watchURLString) (gen: \(generation)).")
             isBridgeReady = false
@@ -84,6 +92,7 @@ public final class SingletonPlayerWebView: NSObject {
             return
         }
 
+        currentLoadedVideoId = id
         let jsCode = "if (window.otoPlayer) window.otoPlayer.loadVideo(id, startSeconds, generation);"
         let arguments: [String: Any] = [
             "id": id,
@@ -134,24 +143,33 @@ public final class SingletonPlayerWebView: NSObject {
         isBridgeReady = true
         if let pending = pendingLoad {
             pendingLoad = nil
-            loadVideo(
-                id: pending.id,
-                startSeconds: pending.startSeconds,
-                generation: pending.generation
-            )
+            if webView?.url?.absoluteString.contains(pending.id) == true {
+                logger.info("Trang watch của \(pending.id) đã nạp xong, kích hoạt play().")
+                play()
+            } else {
+                loadVideo(
+                    id: pending.id,
+                    startSeconds: pending.startSeconds,
+                    generation: pending.generation
+                )
+            }
         }
     }
 
     // MARK: - Message Handlers
 
     fileprivate func handleMessageBody(_ body: [String: Any], type: String) {
+        logger.info("JS Bridge message: \(type)")
         switch type {
         case "ready":
             isBridgeReady = true
-            logger.info("JS Bridge YouTube Music đã sẵn sàng.")
             if let pending = pendingLoad {
                 pendingLoad = nil
-                loadVideo(id: pending.id, startSeconds: pending.startSeconds, generation: pending.generation)
+                if webView?.url?.absoluteString.contains(pending.id) == true {
+                    play()
+                } else {
+                    loadVideo(id: pending.id, startSeconds: pending.startSeconds, generation: pending.generation)
+                }
             }
         case "stateChange":
             handleStateChange(body)

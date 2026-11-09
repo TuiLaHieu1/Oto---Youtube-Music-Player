@@ -18,6 +18,8 @@ public struct SearchView: View {
                 Group {
                     if searchVM.isLoading && searchVM.searchResults.isEmpty {
                         loadingView
+                    } else if searchVM.errorMessage != nil && searchVM.searchResults.isEmpty {
+                        errorStateView
                     } else if searchVM.searchResults.isEmpty {
                         emptyStateView
                     } else {
@@ -67,6 +69,38 @@ public struct SearchView: View {
                 .padding(.horizontal, OtoTheme.spacing32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var errorStateView: some View {
+        VStack(spacing: OtoTheme.spacing16) {
+            Image(systemName: "wifi.exclamationmark")
+                .font(.system(size: 44, weight: .medium))
+                .foregroundStyle(OtoTheme.error)
+                .accessibilityHidden(true)
+
+            VStack(spacing: OtoTheme.spacing8) {
+                Text("Không thể tìm kiếm")
+                    .font(.headline)
+                    .foregroundStyle(OtoTheme.primaryText)
+                Text(searchVM.errorMessage ?? "Đã xảy ra lỗi không xác định.")
+                    .font(.subheadline)
+                    .foregroundStyle(OtoTheme.secondaryText)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.horizontal, OtoTheme.spacing32)
+
+            Button {
+                searchVM.retry()
+            } label: {
+                Label("Thử lại", systemImage: "arrow.clockwise")
+                    .font(.headline)
+                    .frame(minWidth: 120, minHeight: OtoTheme.minTouchTarget)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(OtoTheme.accent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
     }
 
     private var resultsListView: some View {

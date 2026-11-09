@@ -41,7 +41,8 @@ public final class SingletonPlayerWebView: NSObject {
         let wv = WKWebView(frame: .zero, configuration: config)
         wv.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15"
 
-        let baseURL = URL(string: "https://com.oto.music")
+        let bundleId = Bundle.main.bundleIdentifier ?? "com.hieu.oto"
+        let baseURL = URL(string: "https://\(bundleId)")
         wv.loadHTMLString(Self.playerBridgeHTML, baseURL: baseURL)
         self.webView = wv
         logger.info("SingletonPlayerWebView đã được khởi tạo và nạp HTML bridge.")
@@ -79,7 +80,7 @@ public final class SingletonPlayerWebView: NSObject {
               'controls': 0,
               'rel': 0,
               'enablejsapi': 1,
-              'origin': 'https://com.oto.music'
+              'origin': window.location.origin
             },
             events: {
               'onReady': onPlayerReady,
@@ -203,7 +204,8 @@ extension SingletonPlayerWebView: WKScriptMessageHandler {
 
         // 2. Kiểm tra origin
         let host = message.frameInfo.securityOrigin.host
-        guard host.isEmpty || host == "com.oto.music" || host == "music.youtube.com" || host == "localhost" else {
+        let bundleHost = Bundle.main.bundleIdentifier ?? "com.hieu.oto"
+        guard host.isEmpty || host == bundleHost || host == "com.oto.music" || host == "localhost" else {
             logger.warning("Bỏ qua message từ origin không được ủy quyền: \(host)")
             return
         }

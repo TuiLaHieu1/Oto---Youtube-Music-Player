@@ -39,33 +39,12 @@ public final class YTMusicClient: Sendable {
             throw YTMusicError.invalidURL
         }
 
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.timeoutInterval = 10.0
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.setValue("https://music.youtube.com", forHTTPHeaderField: "Origin")
-        request.setValue("https://music.youtube.com/", forHTTPHeaderField: "Referer")
-        request.setValue(
-            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
-            forHTTPHeaderField: "User-Agent"
-        )
-
-        // Đính kèm xác thực SAPISIDHASH nếu người dùng đã đăng nhập
-        attachAuthHeaders(to: &request)
-
+        var request = makeBaseRequest(url: url)
         let bodyPayload: [String: Any] = [
-            "context": [
-                "client": [
-                    "clientName": "WEB_REMIX",
-                    "clientVersion": "1.20241014.01.00",
-                    "hl": "vi",
-                    "gl": "VN"
-                ]
-            ],
+            "context": clientContext,
             "query": trimmed,
             "params": "EgWKAQIIAWoMEA4QChADEAQQCRAF" // Lọc chỉ lấy bài hát (Songs only)
         ]
-
         request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
 
         do {
@@ -80,17 +59,66 @@ public final class YTMusicClient: Sendable {
         }
     }
 
-    // MARK: - Auth Helpers
+    /// Nạp danh mục trang chủ (Home feed) từ YouTube Music.
+    public func fetchHomeFeed() async throws -> (quickPicks: [Song], listenAgain: [Song]) {
+        guard let url = URL(string: "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false") else {
+            throw YTMusicError.invalidURL
+        }
+
+        var request = makeBaseRequest(url: url)
+        let bodyPayload: [String: Any] = [
+            "context": clientContext,
+            "browseId": "FEmusic_home"
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
+
+        do {
+            let (data, response) = try await session.data(for: request)
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
+                throw YTMusicError.invalidResponse
+            }
+            return parseHomeSections(from: data)
+        } catch {
+            logger.error("Lỗi gọi Innertube browse API: \(error.localizedDescription)")
+            throw YTMusicError.networkError(error.localizedDescription)
+        }
+    }
+
+    // MARK: - Request Builder
+
+    private var clientContext: [String: Any] {
+        [
+            "client": [
+                "clientName": "WEB_REMIX",
+                "clientVersion": "1.20241014.01.00",
+                "hl": "vi",
+                "gl": "VN"
+            ]
+        ]
+    }
+
+    private func makeBaseRequest(url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.timeoutInterval = 10.0
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("https://music.youtube.com", forHTTPHeaderField: "Origin")
+        request.setValue("https://music.youtube.com/", forHTTPHeaderField: "Referer")
+        request.setValue(
+            "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+            forHTTPHeaderField: "User-Agent"
+        )
+        attachAuthHeaders(to: &request)
+        return request
+    }
 
     private func attachAuthHeaders(to request: inout URLRequest) {
         let cookies = CookieStorage.shared.loadCookies()
         guard !cookies.isEmpty else { return }
 
-        // Đính kèm Cookie header
         let cookieHeader = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
         request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
 
-        // Tạo chữ ký SAPISIDHASH nếu có cookie SAPISID hoặc __Secure-3PAPISID
         if let sapisidCookie = cookies.first(where: { $0.name == "SAPISID" || $0.name == "__Secure-3PAPISID" }) {
             let timestamp = Int(Date().timeIntervalSince1970)
             let origin = "https://music.youtube.com"
@@ -102,7 +130,44 @@ public final class YTMusicClient: Sendable {
         }
     }
 
-    // MARK: - Response Parser
+    // MARK: - Home Parser
+
+    private func parseHomeSections(from data: Data) -> (quickPicks: [Song], listenAgain: [Song]) {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let contents = json["contents"] as? [String: Any],
+              let browseResults = contents["singleColumnBrowseResultsRenderer"] as? [String: Any],
+              let tabs = browseResults["tabs"] as? [[String: Any]],
+              let firstTab = tabs.first,
+              let tabRenderer = firstTab["tabRenderer"] as? [String: Any],
+              let tabContent = tabRenderer["content"] as? [String: Any],
+              let sectionList = tabContent["sectionListRenderer"] as? [String: Any],
+              let sectionContents = sectionList["contents"] as? [[String: Any]] else {
+            return ([], [])
+        }
+
+        var allSongs: [Song] = []
+        for section in sectionContents {
+            if let carousel = section["musicCarouselShelfRenderer"] as? [String: Any],
+               let items = carousel["contents"] as? [[String: Any]] {
+                for item in items {
+                    if let renderer = item["musicResponsiveListItemRenderer"] as? [String: Any],
+                       let song = parseResponsiveListItem(renderer) {
+                        allSongs.append(song)
+                    } else if let renderer = item["musicTwoRowItemRenderer"] as? [String: Any],
+                              let song = parseTwoRowItem(renderer) {
+                        allSongs.append(song)
+                    }
+                }
+            }
+        }
+
+        let half = allSongs.count / 2
+        let quick = Array(allSongs.prefix(max(4, half)))
+        let listen = Array(allSongs.dropFirst(max(4, half)))
+        return (quick, listen)
+    }
+
+    // MARK: - Search Parser
 
     private func parseSongs(from data: Data) -> [Song] {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -111,8 +176,6 @@ public final class YTMusicClient: Sendable {
         }
 
         var results: [Song] = []
-
-        // Tìm sectionListRenderer từ tabbedSearchResultsRenderer hoặc trực tiếp
         let sectionLists = extractSectionLists(from: contents)
         for section in sectionLists {
             guard let shelfContents = section["contents"] as? [[String: Any]] else { continue }
@@ -131,8 +194,6 @@ public final class YTMusicClient: Sendable {
                 }
             }
         }
-
-        logger.info("Đã phân tích thành công \(results.count) bài hát từ kết quả tìm kiếm.")
         return results
     }
 
@@ -156,36 +217,30 @@ public final class YTMusicClient: Sendable {
             return nil
         }
 
-        // 1. Video ID
         var videoId: String?
         if let playlistItemData = renderer["playlistItemData"] as? [String: Any] {
             videoId = playlistItemData["videoId"] as? String
         }
 
-        // 2. Title từ flex column 0
         let col0 = flexColumns[0]["musicResponsiveListItemFlexColumnRenderer"] as? [String: Any]
-        let col0Text = col0?["text"] as? [String: Any]
-        let col0Runs = col0Text?["runs"] as? [[String: Any]]
+        let col0Runs = (col0?["text"] as? [String: Any])?["runs"] as? [[String: Any]]
         let title = col0Runs?.first?["text"] as? String ?? ""
 
         if videoId == nil, let runs = col0Runs, let firstRun = runs.first {
-            if let nav = firstRun["navigationEndpoint"] as? [String: Any],
-               let watch = nav["watchEndpoint"] as? [String: Any] {
-                videoId = watch["videoId"] as? String
-            }
+            let nav = firstRun["navigationEndpoint"] as? [String: Any]
+            let watch = nav?["watchEndpoint"] as? [String: Any]
+            videoId = watch?["videoId"] as? String
         }
 
         guard let id = videoId, !id.isEmpty, !title.isEmpty else { return nil }
 
-        // 3. Artist & Album từ flex column 1
         var artist = "Nhiều nghệ sĩ"
         var album: String?
         var duration: TimeInterval = 0
 
         if flexColumns.count > 1 {
             let col1 = flexColumns[1]["musicResponsiveListItemFlexColumnRenderer"] as? [String: Any]
-            let col1Text = col1?["text"] as? [String: Any]
-            let col1Runs = col1Text?["runs"] as? [[String: Any]] ?? []
+            let col1Runs = (col1?["text"] as? [String: Any])?["runs"] as? [[String: Any]] ?? []
 
             if !col1Runs.isEmpty {
                 artist = col1Runs[0]["text"] as? String ?? "Nhiều nghệ sĩ"
@@ -198,25 +253,50 @@ public final class YTMusicClient: Sendable {
             }
         }
 
-        // 4. Artwork URL
-        var artworkURL: URL?
-        if let thumbnail = renderer["thumbnail"] as? [String: Any],
-           let musicThumb = thumbnail["musicThumbnailRenderer"] as? [String: Any],
-           let thumbObj = musicThumb["thumbnail"] as? [String: Any],
-           let thumbs = thumbObj["thumbnails"] as? [[String: Any]],
-           let lastThumb = thumbs.last,
-           let urlStr = lastThumb["url"] as? String {
-            artworkURL = URL(string: urlStr)
-        }
-
         return Song(
             id: id,
             title: title,
             artist: artist,
             album: album,
             duration: duration,
-            artworkURL: artworkURL
+            artworkURL: extractThumbnailURL(from: renderer["thumbnail"] as? [String: Any])
         )
+    }
+
+    private func parseTwoRowItem(_ renderer: [String: Any]) -> Song? {
+        let nav = renderer["navigationEndpoint"] as? [String: Any]
+        let watch = nav?["watchEndpoint"] as? [String: Any]
+        guard let videoId = watch?["videoId"] as? String, !videoId.isEmpty else {
+            return nil
+        }
+
+        let titleRuns = (renderer["title"] as? [String: Any])?["runs"] as? [[String: Any]]
+        let title = titleRuns?.first?["text"] as? String ?? ""
+        guard !title.isEmpty else { return nil }
+
+        let subRuns = (renderer["subtitle"] as? [String: Any])?["runs"] as? [[String: Any]]
+        let artist = subRuns?.first?["text"] as? String ?? "Nhiều nghệ sĩ"
+
+        return Song(
+            id: videoId,
+            title: title,
+            artist: artist,
+            album: nil,
+            duration: 0,
+            artworkURL: extractThumbnailURL(from: renderer["thumbnailRenderer"] as? [String: Any])
+        )
+    }
+
+    private func extractThumbnailURL(from container: [String: Any]?) -> URL? {
+        guard let container else { return nil }
+        let musicThumb = container["musicThumbnailRenderer"] as? [String: Any]
+        let thumbObj = (musicThumb?["thumbnail"] as? [String: Any]) ?? (container["thumbnail"] as? [String: Any])
+        let thumbs = thumbObj?["thumbnails"] as? [[String: Any]]
+        guard let lastThumb = thumbs?.last,
+              let urlStr = lastThumb["url"] as? String else {
+            return nil
+        }
+        return URL(string: urlStr)
     }
 
     private func parseDurationString(_ text: String) -> TimeInterval {

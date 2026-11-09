@@ -58,6 +58,12 @@ public struct HomeFeedView: View {
                 .padding(.bottom, 90) // Khoảng trống cho MiniPlayer
             }
             .navigationTitle("Trang chủ")
+            .refreshable {
+                await homeVM.loadFeed()
+            }
+            .task {
+                await homeVM.loadFeed()
+            }
         }
     }
 }
@@ -71,14 +77,14 @@ private struct SongCardView: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 8) {
                 ZStack(alignment: .bottomTrailing) {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(Color.secondary.opacity(0.15))
-                        .frame(width: 150, height: 150)
-
-                    Image(systemName: "music.note")
-                        .font(.system(size: 36))
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    AsyncImage(url: song.artworkURL) { image in
+                        image.resizable().scaledToFill()
+                    } placeholder: {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.secondary.opacity(0.15))
+                    }
+                    .frame(width: 150, height: 150)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                     if isPlaying {
                         Image(systemName: "speaker.wave.3.fill")
@@ -113,14 +119,14 @@ private struct SongRowView: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: 14) {
-                ZStack {
+                AsyncImage(url: song.artworkURL) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
                         .fill(Color.secondary.opacity(0.15))
-                    Image(systemName: isPlaying ? "speaker.wave.3.fill" : "music.note")
-                        .font(.system(size: 16))
-                        .foregroundStyle(isPlaying ? Color.accentColor : Color.secondary)
                 }
                 .frame(width: 48, height: 48)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(song.title)

@@ -104,7 +104,7 @@
     {
       "id": "S4-001",
       "title": "Hoàn thiện Home Feed với danh mục từ YouTube Music và Cache metadata",
-      "status": "READY",
+      "status": "COMPLETED",
       "prompt": "Tích hợp Home feed từ Innertube browse API vào HomeViewModel, hiển thị Quick Picks và Listen Again thực tế cùng bộ nhớ đệm an toàn theo PROJECT_PLAN.",
       "references": [
         "AGENTS.md",

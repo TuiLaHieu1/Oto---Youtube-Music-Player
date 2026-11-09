@@ -68,12 +68,17 @@ public final class SingletonPlayerWebView: NSObject {
 
     /// Nạp và phát bài hát mới qua callAsyncJavaScript an toàn không có nguy cơ JS injection.
     public func loadVideo(id: String, startSeconds: TimeInterval = 0, generation: Int = 0) {
+        guard Self.isValidVideoID(id), startSeconds.isFinite, startSeconds >= 0 else {
+            logger.error("Từ chối lệnh phát có tham số không hợp lệ.")
+            onError?(-1)
+            return
+        }
         currentGeneration = generation
         guard isBridgeReady else {
             pendingLoad = PendingPlayback(id: id, startSeconds: startSeconds, generation: generation)
             logger.info("Bridge chưa sẵn sàng, đã lưu lệnh phát vào hàng đợi (id: \(id)).")
-            if let currentURL = webView?.url?.absoluteString, !currentURL.contains("music.youtube.com") {
-                if let watchURL = URL(string: "https://music.youtube.com/watch?v=\(id)") {
+            if webView?.url?.host != "music.youtube.com" {
+                if let watchURL = Self.watchURL(videoID: id) {
                     webView?.load(URLRequest(url: watchURL))
                 }
             }
@@ -107,6 +112,7 @@ public final class SingletonPlayerWebView: NSObject {
 
     /// Nhảy đến vị trí thời gian chỉ định.
     public func seek(to position: TimeInterval) {
+        guard position.isFinite, position >= 0 else { return }
         let jsCode = "if (window.otoPlayer) window.otoPlayer.seekTo(position);"
         webView?.callAsyncJavaScript(jsCode, arguments: ["position": position], in: nil, in: .page)
     }
@@ -147,6 +153,21 @@ public final class SingletonPlayerWebView: NSObject {
         }
     }
 
+    private static func isValidVideoID(_ id: String) -> Bool {
+        id.count == 11 && id.unicodeScalars.allSatisfy {
+            CharacterSet.alphanumerics.contains($0) || $0 == "_" || $0 == "-"
+        }
+    }
+
+    private static func watchURL(videoID: String) -> URL? {
+        var components = URLComponents()
+        components.scheme = "https"
+        components.host = "music.youtube.com"
+        components.path = "/watch"
+        components.queryItems = [URLQueryItem(name: "v", value: videoID)]
+        return components.url
+    }
+
     // MARK: - Message Handlers
 
     fileprivate func handleMessageBody(_ body: [String: Any], type: String) {
@@ -165,38 +186,39 @@ public final class SingletonPlayerWebView: NSObject {
         case "trackEnded":
             handleTrackEnded(body)
         case "error":
-            if let code = body["code"] as? Int {
-                onError?(code)
-            }
+            handleError(body)
         default:
             break
         }
     }
 
     private func handleStateChange(_ body: [String: Any]) {
-        if let gen = body["generation"] as? Int, gen != currentGeneration {
-            return
-        }
-        if let stateCode = body["state"] as? Int {
-            onPlaybackStateChange?(stateCode)
-        }
+        guard let gen = body["generation"] as? Int,
+              gen == currentGeneration,
+              let stateCode = body["state"] as? Int else { return }
+        onPlaybackStateChange?(stateCode)
     }
 
     private func handleTimeUpdate(_ body: [String: Any]) {
-        if let gen = body["generation"] as? Int, gen != currentGeneration {
-            return
-        }
-        if let cur = body["currentTime"] as? Double,
-           let dur = body["duration"] as? Double {
-            onPositionUpdate?(cur, dur)
-        }
+        guard let gen = body["generation"] as? Int,
+              gen == currentGeneration,
+              let cur = body["currentTime"] as? Double,
+              let dur = body["duration"] as? Double,
+              cur.isFinite, dur.isFinite, cur >= 0, dur >= 0 else { return }
+        onPositionUpdate?(cur, dur)
     }
 
     private func handleTrackEnded(_ body: [String: Any]) {
-        if let gen = body["generation"] as? Int, gen != currentGeneration {
-            return
-        }
+        guard let gen = body["generation"] as? Int,
+              gen == currentGeneration else { return }
         onTrackEnded?()
+    }
+
+    private func handleError(_ body: [String: Any]) {
+        guard let gen = body["generation"] as? Int,
+              gen == currentGeneration,
+              let code = body["code"] as? Int else { return }
+        onError?(code)
     }
 }
 
@@ -213,7 +235,7 @@ extension SingletonPlayerWebView: WKNavigationDelegate {
         logger.error("WebContent process bị terminate bởi iOS, đang khởi động lại...")
         isBridgeReady = false
         if let currentSongId = pendingLoad?.id {
-            if let watchURL = URL(string: "https://music.youtube.com/watch?v=\(currentSongId)") {
+            if let watchURL = Self.watchURL(videoID: currentSongId) {
                 webView.load(URLRequest(url: watchURL))
             }
         } else if let homeURL = URL(string: "https://music.youtube.com") {
@@ -228,19 +250,14 @@ extension SingletonPlayerWebView: WKScriptMessageHandler {
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) {
-        guard message.frameInfo.isMainFrame else {
+        guard message.name == "otoPlayback", message.frameInfo.isMainFrame else {
             logger.warning("Bỏ qua message không xuất phát từ main frame.")
             return
         }
 
-        let host = message.frameInfo.securityOrigin.host
-        let bundleHost = Bundle.main.bundleIdentifier ?? "com.hieu.oto"
-        let isTrusted = host.isEmpty
-            || host == "music.youtube.com"
-            || host.hasSuffix(".youtube.com")
-            || host == bundleHost
-            || host == "localhost"
-        guard isTrusted else {
+        let origin = message.frameInfo.securityOrigin
+        guard origin.protocol == "https", origin.host == "music.youtube.com" else {
+            let host = origin.host
             logger.warning("Bỏ qua message từ origin không được ủy quyền: \(host)")
             return
         }

@@ -29,14 +29,10 @@ public enum YTMusicParsers {
             let (shelfTitle, shelfSongs) = parseCarouselShelf(carousel)
             guard !shelfSongs.isEmpty else { continue }
 
-            if shelfTitle.contains("listen") || shelfTitle.contains("lại") || shelfTitle.contains("nghe") {
+            if shelfTitle.contains("listen again") || shelfTitle.contains("nghe lại") {
                 listenAgain.append(contentsOf: shelfSongs)
-            } else if shelfTitle.contains("quick") || shelfTitle.contains("nhanh") || shelfTitle.contains("chọn") {
+            } else if shelfTitle.contains("quick picks") || shelfTitle.contains("lựa chọn nhanh") {
                 quickPicks.append(contentsOf: shelfSongs)
-            } else if quickPicks.isEmpty {
-                quickPicks = shelfSongs
-            } else if listenAgain.isEmpty {
-                listenAgain = shelfSongs
             }
         }
 
@@ -122,6 +118,9 @@ public enum YTMusicParsers {
 
         var results: [Song] = []
         let sectionLists = extractSectionLists(from: contents)
+        guard !sectionLists.isEmpty else {
+            throw YTMusicError.parsingError
+        }
         for section in sectionLists {
             guard let shelfContents = section["contents"] as? [[String: Any]] else { continue }
             for container in shelfContents {

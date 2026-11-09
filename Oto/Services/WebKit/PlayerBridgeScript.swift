@@ -98,9 +98,6 @@ enum PlayerBridgeScript {
         const v = document.querySelector('video');
         if (v && v !== boundVideo) hookVideo(v);
 
-        const skipBtn = document.querySelector('.ytp-ad-skip-button, .ytp-ad-skip-button-modern, .ytp-skip-ad-button');
-        if (skipBtn) skipBtn.click();
-
         const app = document.querySelector('ytmusic-app');
         if (app && typeof app.resolveCommand === 'function' && !window.__otoAppReady) {
           window.__otoAppReady = true;

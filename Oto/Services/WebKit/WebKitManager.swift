@@ -45,6 +45,7 @@ public final class WebKitManager {
 
     /// Đăng xuất và dọn dẹp toàn bộ dữ liệu web của phiên người dùng.
     public func clearSession() async {
+        await YTMusicClient.shared.invalidateSession()
         cookieStorage.clearCookies()
         HomeCache.shared.clear()
         let dataStore = WKWebsiteDataStore.default()

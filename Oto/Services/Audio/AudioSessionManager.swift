@@ -3,13 +3,14 @@ import AVFoundation
 import os
 
 /// Quản lý cấu hình âm thanh nền, gián đoạn cuộc gọi/siri và thay đổi cổng cắm tai nghe.
-public final class AudioSessionManager: @unchecked Sendable {
+@MainActor
+public final class AudioSessionManager {
     public static let shared = AudioSessionManager()
     private let logger = Logger(subsystem: "com.oto.music", category: "AudioSessionManager")
 
-    public var onInterruptionBegan: (@Sendable () -> Void)?
-    public var onInterruptionEnded: (@Sendable (_ shouldResume: Bool) -> Void)?
-    public var onHeadphonesUnplugged: (@Sendable () -> Void)?
+    public var onInterruptionBegan: (() -> Void)?
+    public var onInterruptionEnded: ((_ shouldResume: Bool) -> Void)?
+    public var onHeadphonesUnplugged: (() -> Void)?
 
     private init() {
         setupNotifications()
@@ -35,7 +36,13 @@ public final class AudioSessionManager: @unchecked Sendable {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            self?.handleInterruption(notification)
+            guard let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt else {
+                return
+            }
+            let optionsValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            Task { @MainActor [weak self] in
+                self?.handleInterruption(typeValue: typeValue, optionsValue: optionsValue)
+            }
         }
 
         NotificationCenter.default.addObserver(
@@ -43,16 +50,19 @@ public final class AudioSessionManager: @unchecked Sendable {
             object: nil,
             queue: .main
         ) { [weak self] notification in
-            self?.handleRouteChange(notification)
+            guard let reasonValue = notification.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt else {
+                return
+            }
+            Task { @MainActor [weak self] in
+                self?.handleRouteChange(reasonValue: reasonValue)
+            }
         }
         #endif
     }
 
     #if os(iOS)
-    private func handleInterruption(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
-              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+    private func handleInterruption(typeValue: UInt, optionsValue: UInt) {
+        guard let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
             return
         }
 
@@ -60,7 +70,6 @@ public final class AudioSessionManager: @unchecked Sendable {
         case .began:
             onInterruptionBegan?()
         case .ended:
-            let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
             let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
             let shouldResume = options.contains(.shouldResume)
             onInterruptionEnded?(shouldResume)
@@ -69,10 +78,8 @@ public final class AudioSessionManager: @unchecked Sendable {
         }
     }
 
-    private func handleRouteChange(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
-              let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
+    private func handleRouteChange(reasonValue: UInt) {
+        guard let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
             return
         }
 

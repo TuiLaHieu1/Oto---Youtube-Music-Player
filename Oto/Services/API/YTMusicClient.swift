@@ -6,14 +6,26 @@ import os
 /// Lỗi phát sinh trong quá trình tương tác với YouTube Music Innertube API.
 public enum YTMusicError: Error, LocalizedError {
     case invalidURL
-    case networkError(String)
+    case transport(String)
+    case authenticationExpired
+    case permissionDenied
+    case rateLimited(retryAfter: TimeInterval?)
+    case serverError(statusCode: Int)
     case invalidResponse
     case parsingError
 
     public var errorDescription: String? {
         switch self {
         case .invalidURL: return "Đường dẫn API không hợp lệ."
-        case .networkError(let msg): return "Lỗi kết nối mạng: \(msg)"
+        case .transport(let message): return "Lỗi kết nối mạng: \(message)"
+        case .authenticationExpired: return "Phiên đăng nhập đã hết hạn."
+        case .permissionDenied: return "Tài khoản không có quyền truy cập nội dung này."
+        case .rateLimited(let retryAfter):
+            if let retryAfter {
+                return "YouTube Music đang giới hạn yêu cầu. Thử lại sau \(Int(retryAfter)) giây."
+            }
+            return "YouTube Music đang giới hạn yêu cầu. Vui lòng thử lại sau."
+        case .serverError: return "YouTube Music đang tạm thời gặp sự cố."
         case .invalidResponse: return "Máy chủ trả về phản hồi không hợp lệ."
         case .parsingError: return "Không thể phân tích dữ liệu bài hát."
         }
@@ -25,6 +37,7 @@ public final class YTMusicClient: Sendable {
     public static let shared = YTMusicClient()
     private let logger = Logger(subsystem: "com.oto.music", category: "YTMusicClient")
     private let session: URLSession
+    private let sessionFence = SessionFence()
 
     public init(session: URLSession = .shared) {
         self.session = session
@@ -47,18 +60,8 @@ public final class YTMusicClient: Sendable {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
 
-        do {
-            let (data, response) = try await session.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                throw YTMusicError.invalidResponse
-            }
-            return try YTMusicParsers.parseSongs(from: data)
-        } catch let ytError as YTMusicError {
-            throw ytError
-        } catch {
-            logger.error("Lỗi gọi Innertube search API: \(error.localizedDescription)")
-            throw YTMusicError.networkError(error.localizedDescription)
-        }
+        let data = try await perform(request, operation: "search")
+        return try YTMusicParsers.parseSongs(from: data)
     }
 
     /// Nạp danh mục trang chủ (Home feed) từ YouTube Music.
@@ -74,18 +77,8 @@ public final class YTMusicClient: Sendable {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
 
-        do {
-            let (data, response) = try await session.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                throw YTMusicError.invalidResponse
-            }
-            return try YTMusicParsers.parseHomeSections(from: data)
-        } catch let ytError as YTMusicError {
-            throw ytError
-        } catch {
-            logger.error("Lỗi gọi Innertube browse API: \(error.localizedDescription)")
-            throw YTMusicError.networkError(error.localizedDescription)
-        }
+        let data = try await perform(request, operation: "home")
+        return try YTMusicParsers.parseHomeSections(from: data)
     }
 
     /// Nạp danh sách bài hát đã thích (Liked Songs) từ tài khoản YouTube Music.
@@ -105,18 +98,15 @@ public final class YTMusicClient: Sendable {
         ]
         request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
 
-        do {
-            let (data, response) = try await session.data(for: request)
-            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
-                throw YTMusicError.invalidResponse
-            }
-            return try YTMusicParsers.parsePlaylistOrShelfSongs(from: data)
-        } catch let ytError as YTMusicError {
-            throw ytError
-        } catch {
-            logger.error("Lỗi gọi Innertube liked songs API: \(error.localizedDescription)")
-            throw YTMusicError.networkError(error.localizedDescription)
-        }
+        let data = try await perform(request, operation: "liked-songs")
+        return try YTMusicParsers.parsePlaylistOrShelfSongs(from: data)
+    }
+
+    /// Chặn callback của phiên cũ và hủy request đang chạy trước khi xóa thông tin đăng nhập.
+    public func invalidateSession() async {
+        await sessionFence.invalidate()
+        let tasks = await session.allTasks
+        tasks.forEach { $0.cancel() }
     }
 
     // MARK: - Request Builder
@@ -163,5 +153,70 @@ public final class YTMusicClient: Sendable {
                 .joined()
             request.setValue("SAPISIDHASH \(timestamp)_\(hash)", forHTTPHeaderField: "Authorization")
         }
+    }
+
+    private func perform(_ request: URLRequest, operation: String) async throws -> Data {
+        let generation = await sessionFence.snapshot()
+        do {
+            let (data, response) = try await session.data(for: request)
+            try Task.checkCancellation()
+            guard await sessionFence.isCurrent(generation) else {
+                throw CancellationError()
+            }
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw YTMusicError.invalidResponse
+            }
+            switch httpResponse.statusCode {
+            case 200...299:
+                return data
+            case 401:
+                throw YTMusicError.authenticationExpired
+            case 403:
+                throw YTMusicError.permissionDenied
+            case 429:
+                throw YTMusicError.rateLimited(
+                    retryAfter: Self.retryAfter(from: httpResponse.value(forHTTPHeaderField: "Retry-After"))
+                )
+            case 500...599:
+                throw YTMusicError.serverError(statusCode: httpResponse.statusCode)
+            default:
+                throw YTMusicError.invalidResponse
+            }
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as YTMusicError {
+            throw error
+        } catch {
+            logger.error("Innertube \(operation, privacy: .public) thất bại do lỗi vận chuyển.")
+            throw YTMusicError.transport(error.localizedDescription)
+        }
+    }
+
+    private static func retryAfter(from value: String?) -> TimeInterval? {
+        guard let value else { return nil }
+        if let seconds = TimeInterval(value), seconds >= 0 {
+            return seconds
+        }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "EEE',' dd MMM yyyy HH':'mm':'ss z"
+        guard let retryDate = formatter.date(from: value) else { return nil }
+        return max(0, retryDate.timeIntervalSinceNow)
+    }
+}
+
+private actor SessionFence {
+    private var generation: UInt = 0
+
+    func snapshot() -> UInt { generation }
+
+    func invalidate() {
+        generation &+= 1
+    }
+
+    func isCurrent(_ candidate: UInt) -> Bool {
+        candidate == generation
     }
 }

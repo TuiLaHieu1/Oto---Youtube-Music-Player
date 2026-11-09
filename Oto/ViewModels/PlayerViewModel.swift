@@ -52,6 +52,12 @@ public final class PlayerViewModel {
 
     /// Bắt đầu phát một bài hát cụ thể và cập nhật hàng đợi.
     public func play(song: Song) {
+        queueManager.setQueue(songs: [song])
+        startPlayback(song: song)
+    }
+
+    /// Bắt đầu engine cho bài mà QueueManager đã chọn, không làm mất phần còn lại của hàng đợi.
+    private func startPlayback(song: Song) {
         playbackGeneration += 1
         hasAdvancedCurrentTrack = false
         let gen = playbackGeneration
@@ -70,14 +76,14 @@ public final class PlayerViewModel {
         guard !songs.isEmpty else { return }
         queueManager.setQueue(songs: songs, startIndex: startIndex)
         if let targetSong = queueManager.currentSong {
-            play(song: targetSong)
+            startPlayback(song: targetSong)
         }
     }
 
     /// Phát bài hát tại một vị trí cụ thể trong hàng đợi và cập nhật currentIndex.
     public func playQueueItem(at index: Int) {
         if let targetSong = queueManager.skipToIndex(index) {
-            play(song: targetSong)
+            startPlayback(song: targetSong)
         }
     }
 
@@ -115,7 +121,7 @@ public final class PlayerViewModel {
     /// Chuyển bài tiếp theo trong queue.
     public func next() {
         if let nextSong = queueManager.next() {
-            play(song: nextSong)
+            startPlayback(song: nextSong)
         } else {
             pause()
             seek(to: 0)
@@ -127,7 +133,7 @@ public final class PlayerViewModel {
         if currentPosition > 3.0 {
             seek(to: 0)
         } else if let prevSong = queueManager.previous() {
-            play(song: prevSong)
+            startPlayback(song: prevSong)
         } else {
             seek(to: 0)
         }

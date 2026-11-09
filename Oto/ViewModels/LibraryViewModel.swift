@@ -34,6 +34,10 @@ public final class LibraryViewModel {
             let songs = try await client.fetchLikedSongs()
             likedSongs = songs
             isLoading = false
+        } catch is CancellationError {
+            // Sign-out hoặc view lifecycle đã hủy request; giữ trạng thái sạch.
+            likedSongs = []
+            isLoading = false
         } catch {
             logger.error("Lỗi tải bài hát đã thích: \(error.localizedDescription)")
             errorMessage = error.localizedDescription

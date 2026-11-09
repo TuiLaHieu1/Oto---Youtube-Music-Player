@@ -17,7 +17,8 @@ public struct CachedHomeFeed: Codable, Sendable {
 }
 
 /// Bộ nhớ đệm tệp cục bộ lưu trữ dữ liệu trang chủ an toàn, tách biệt theo tài khoản người dùng với TTL 15 phút.
-public final class HomeCache: @unchecked Sendable {
+@MainActor
+public final class HomeCache {
     public static let shared = HomeCache()
     private let logger = Logger(subsystem: "com.oto.music", category: "HomeCache")
     private let fileManager = FileManager.default
@@ -29,7 +30,7 @@ public final class HomeCache: @unchecked Sendable {
     public var accountScopeKey: String {
         let cookies = CookieStorage.shared.loadCookies()
         if let authCookie = cookies.first(where: { $0.name == "SAPISID" || $0.name == "__Secure-3PAPISID" }) {
-            let digest = Insecure.SHA1.hash(data: Data(authCookie.value.utf8))
+            let digest = SHA256.hash(data: Data(authCookie.value.utf8))
             let hex = digest.map { String(format: "%02x", $0) }.joined()
             return "user_\(hex.prefix(12))"
         }
@@ -48,7 +49,7 @@ public final class HomeCache: @unchecked Sendable {
         do {
             let data = try JSONEncoder().encode(cached)
             try data.write(to: url, options: .atomic)
-            logger.info("Đã lưu bộ đệm trang chủ cho phân vùng [\(self.accountScopeKey)].")
+            logger.info("Đã lưu bộ đệm trang chủ theo phân vùng tài khoản.")
         } catch {
             logger.error("Không thể ghi bộ đệm trang chủ: \(error.localizedDescription)")
         }
@@ -64,10 +65,10 @@ public final class HomeCache: @unchecked Sendable {
             let data = try Data(contentsOf: url)
             let cached = try JSONDecoder().decode(CachedHomeFeed.self, from: data)
             if Date().timeIntervalSince(cached.timestamp) > ttlSeconds {
-                logger.info("Bộ đệm trang chủ cho [\(self.accountScopeKey)] đã hết hạn.")
+                logger.info("Bộ đệm trang chủ đã hết hạn.")
                 return nil
             }
-            logger.info("Đã khôi phục dữ liệu từ bộ đệm trang chủ cho [\(self.accountScopeKey)].")
+            logger.info("Đã khôi phục dữ liệu từ bộ đệm trang chủ.")
             return cached
         } catch {
             logger.error("Không thể đọc bộ đệm trang chủ: \(error.localizedDescription)")

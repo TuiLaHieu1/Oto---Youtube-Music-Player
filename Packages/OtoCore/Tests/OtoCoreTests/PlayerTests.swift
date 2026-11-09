@@ -120,4 +120,35 @@ struct PlayerTests {
         #expect(queue.next() == nil)
         #expect(queue.previous()?.id == "s2")
     }
+
+    @Test("QueueManager giữ đúng queue item khi bài hát bị trùng metadata")
+    func testSkipToDuplicateQueueItem() {
+        let queue = QueueManager()
+        let duplicate = Song(id: "same", title: "Same", artist: "Artist", duration: 100)
+        queue.setQueue(songs: [duplicate, duplicate, duplicate], startIndex: 0)
+
+        let itemIDs = queue.items.map(\.id)
+        #expect(Set(itemIDs).count == 3)
+
+        #expect(queue.skipToIndex(1)?.id == "same")
+        #expect(queue.currentIndex == 1)
+        #expect(queue.items[queue.currentIndex ?? 0].id == itemIDs[1])
+        #expect(queue.next()?.id == "same")
+        #expect(queue.currentIndex == 2)
+    }
+
+    @Test("QueueManager không đổi vị trí khi index không hợp lệ")
+    func testSkipToInvalidIndex() {
+        let queue = QueueManager()
+        let songs = [
+            Song(id: "s1", title: "Song 1", artist: "A"),
+            Song(id: "s2", title: "Song 2", artist: "A")
+        ]
+        queue.setQueue(songs: songs, startIndex: 1)
+
+        #expect(queue.skipToIndex(-1) == nil)
+        #expect(queue.currentIndex == 1)
+        #expect(queue.skipToIndex(2) == nil)
+        #expect(queue.currentIndex == 1)
+    }
 }

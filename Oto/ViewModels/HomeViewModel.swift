@@ -43,6 +43,8 @@ public final class HomeViewModel {
                 self.listenAgain = feed.listenAgain
                 cache.saveFeed(quickPicks: feed.quickPicks, listenAgain: feed.listenAgain)
             }
+        } catch is CancellationError {
+            // Phiên cũ đã bị hủy hoặc view không còn hiển thị; không ghi lỗi trễ vào UI.
         } catch {
             errorMessage = error.localizedDescription
         }

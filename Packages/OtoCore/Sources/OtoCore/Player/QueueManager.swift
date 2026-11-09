@@ -1,7 +1,7 @@
 import Foundation
 
 /// Trình quản lý hàng đợi phát nhạc (Queue) hỗ trợ shuffle, repeat và bài hát trùng lặp.
-public final class QueueManager: @unchecked Sendable {
+public final class QueueManager {
     private let lock = NSLock()
     private var _items: [QueueItem] = []
     private var _originalItems: [QueueItem] = []

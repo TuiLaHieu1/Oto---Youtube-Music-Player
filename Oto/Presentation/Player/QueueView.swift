@@ -60,7 +60,7 @@ public struct QueueView: View {
                             }
                             .contentShape(Rectangle())
                             .onTapGesture {
-                                playerVM.play(song: item.song)
+                                playerVM.playQueueItem(at: index)
                             }
                         }
                     }

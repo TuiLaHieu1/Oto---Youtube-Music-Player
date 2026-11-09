@@ -159,6 +159,16 @@ public final class QueueManager: @unchecked Sendable {
         return _repeatMode
     }
 
+    /// Nhảy trực tiếp đến vị trí chỉ định trong hàng đợi và cập nhật currentIndex.
+    @discardableResult
+    public func skipToIndex(_ index: Int) -> Song? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard _items.indices.contains(index) else { return nil }
+        _currentIndex = index
+        return _items[index].song
+    }
+
     /// Chèn bài hát để phát tiếp theo (Play Next).
     public func insertNext(song: Song) {
         lock.lock()

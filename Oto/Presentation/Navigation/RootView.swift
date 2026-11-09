@@ -26,61 +26,72 @@ public struct RootView: View {
     }
 
     public var body: some View {
-        Group {
-            if horizontalSizeClass == .regular {
-                // Layout iPadOS (NavigationSplitView)
-                NavigationSplitView {
-                    List(selection: $selectedTab) {
-                        ForEach(TabItem.allCases, id: \.self) { tab in
-                            Label(tab.rawValue, systemImage: tab.icon)
-                                .tag(tab)
-                        }
-                    }
-                    .navigationTitle("Oto")
-                } detail: {
-                    ZStack(alignment: .bottom) {
-                        detailView(for: selectedTab ?? .home)
-                        MiniPlayerView(playerVM: playerVM)
-                            .padding(.bottom, 16)
-                    }
-                }
-            } else {
-                // Layout iPhone (TabView)
-                ZStack(alignment: .bottom) {
-                    TabView(selection: Binding(
-                        get: { selectedTab ?? .home },
-                        set: { selectedTab = $0 }
-                    )) {
-                        HomeFeedView(playerVM: playerVM)
-                            .tabItem {
-                                Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
-                            }
-                            .tag(TabItem.home)
+        ZStack {
+            mainContentView
 
-                        SearchView(playerVM: playerVM)
-                            .tabItem {
-                                Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
-                            }
-                            .tag(TabItem.search)
-
-                        LibraryView(playerVM: playerVM)
-                            .tabItem {
-                                Label(TabItem.library.rawValue, systemImage: TabItem.library.icon)
-                            }
-                            .tag(TabItem.library)
-                    }
-
-                    // MiniPlayer nổi phía trên TabBar
-                    MiniPlayerView(playerVM: playerVM)
-                        .padding(.bottom, 54)
-                }
-            }
+            // Gắn SingletonPlayerWebView vào view hierarchy ngăn chặn WebKit bị treo nền
+            PlayerWebViewContainer()
+                .frame(width: 1, height: 1)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
         .fullScreenCover(isPresented: $playerVM.isExpanded) {
             FullscreenPlayerView(playerVM: playerVM)
         }
         .sheet(isPresented: $playerVM.showAuth) {
             AuthView()
+        }
+    }
+
+    @ViewBuilder
+    private var mainContentView: some View {
+        if horizontalSizeClass == .regular {
+            // Layout iPadOS (NavigationSplitView)
+            NavigationSplitView {
+                List(selection: $selectedTab) {
+                    ForEach(TabItem.allCases, id: \.self) { tab in
+                        Label(tab.rawValue, systemImage: tab.icon)
+                            .tag(tab)
+                    }
+                }
+                .navigationTitle("Oto")
+            } detail: {
+                ZStack(alignment: .bottom) {
+                    detailView(for: selectedTab ?? .home)
+                    MiniPlayerView(playerVM: playerVM)
+                        .padding(.bottom, 16)
+                }
+            }
+        } else {
+            // Layout iPhone (TabView)
+            ZStack(alignment: .bottom) {
+                TabView(selection: Binding(
+                    get: { selectedTab ?? .home },
+                    set: { selectedTab = $0 }
+                )) {
+                    HomeFeedView(playerVM: playerVM)
+                        .tabItem {
+                            Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
+                        }
+                        .tag(TabItem.home)
+
+                    SearchView(playerVM: playerVM)
+                        .tabItem {
+                            Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
+                        }
+                        .tag(TabItem.search)
+
+                    LibraryView(playerVM: playerVM)
+                        .tabItem {
+                            Label(TabItem.library.rawValue, systemImage: TabItem.library.icon)
+                        }
+                        .tag(TabItem.library)
+                }
+
+                // MiniPlayer nổi phía trên TabBar
+                MiniPlayerView(playerVM: playerVM)
+                    .padding(.bottom, 54)
+            }
         }
     }
 

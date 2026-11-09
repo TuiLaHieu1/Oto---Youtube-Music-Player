@@ -1,8 +1,8 @@
 import Foundation
-import SwiftUI
+import Observation
 import OtoCore
 
-/// ViewModel cung cấp danh sách bài hát gợi ý cho màn hình Home, tích hợp bộ đệm an toàn.
+/// ViewModel quản lý dữ liệu hiển thị trên màn hình Trang chủ (Home Feed).
 @MainActor
 @Observable
 public final class HomeViewModel {
@@ -20,20 +20,18 @@ public final class HomeViewModel {
     ) {
         self.client = client
         self.cache = cache
-        loadCachedDataOrInitial()
+        loadCachedData()
     }
 
-    /// Khôi phục dữ liệu từ bộ đệm nếu có, hoặc dùng mock dự phòng ban đầu.
-    private func loadCachedDataOrInitial() {
+    /// Khôi phục dữ liệu từ bộ đệm tài khoản nếu có.
+    private func loadCachedData() {
         if let cached = cache.loadCachedFeed() {
             self.quickPicks = cached.quickPicks
             self.listenAgain = cached.listenAgain
-        } else {
-            loadInitialMockData()
         }
     }
 
-    /// Nạp dữ liệu mới nhất từ YouTube Music API.
+    /// Nạp dữ liệu mới nhất từ YouTube Music API thật, không dùng ID giả.
     public func loadFeed() async {
         isLoading = true
         errorMessage = nil
@@ -47,61 +45,8 @@ public final class HomeViewModel {
             }
         } catch {
             errorMessage = error.localizedDescription
-            if quickPicks.isEmpty {
-                loadInitialMockData()
-            }
         }
 
         isLoading = false
-    }
-
-    public func loadInitialMockData() {
-        quickPicks = [
-            Song(
-                id: "qp1",
-                title: "Ánh Sao Và Bầu Trời",
-                artist: "T.R.I, Cá",
-                album: "Ánh Sao Và Bầu Trời (Single)",
-                duration: 260.0
-            ),
-            Song(
-                id: "qp2",
-                title: "Đưa Em Về Nhà",
-                artist: "Grey D, Chillies",
-                album: "Dự Báo Thời Tiết Hôm Nay Mưa",
-                duration: 245.0
-            ),
-            Song(
-                id: "qp3",
-                title: "See You Again",
-                artist: "Wiz Khalifa, Charlie Puth",
-                album: "Furious 7 Soundtrack",
-                duration: 229.0
-            ),
-            Song(
-                id: "qp4",
-                title: "Counting Stars",
-                artist: "OneRepublic",
-                album: "Native",
-                duration: 257.0
-            )
-        ]
-
-        listenAgain = [
-            Song(
-                id: "la1",
-                title: "Chờ Đợi Có Đáng Sợ",
-                artist: "Andiez",
-                album: "Chờ Đợi Có Đáng Sợ (Single)",
-                duration: 275.0
-            ),
-            Song(
-                id: "la2",
-                title: "Shape of You",
-                artist: "Ed Sheeran",
-                album: "÷ (Divide)",
-                duration: 233.0
-            )
-        ]
     }
 }

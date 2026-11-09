@@ -33,11 +33,12 @@ public final class WebKitManager {
     /// Đăng xuất và dọn dẹp toàn bộ dữ liệu web của phiên người dùng.
     public func clearSession() async {
         cookieStorage.clearCookies()
+        HomeCache.shared.clear()
         let dataStore = WKWebsiteDataStore.default()
         let dataTypes = WKWebsiteDataStore.allWebsiteDataTypes()
         let records = await dataStore.dataRecords(ofTypes: dataTypes)
         await dataStore.removeData(ofTypes: dataTypes, for: records)
-        logger.info("Đã dọn dẹp sạch toàn bộ dữ liệu phiên WebKit.")
+        logger.info("Đã dọn dẹp sạch toàn bộ dữ liệu phiên WebKit và bộ đệm trang chủ.")
     }
 
     /// Tạo cấu hình WebView tối ưu cho phát nhạc nền không gián đoạn trên iOS/iPadOS.

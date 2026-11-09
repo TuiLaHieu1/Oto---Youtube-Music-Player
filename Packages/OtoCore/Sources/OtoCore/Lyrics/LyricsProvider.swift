@@ -105,20 +105,55 @@ public final class LRCLibProvider: LyricsProvider {
                 return nil
             }
 
-            // Tìm bài có duration gần nhất trong phạm vi sai số +/- 5 giây và ưu tiên có syncedLyrics
-            let bestMatch = items.first(where: { item in
+            // Lọc ra các kết quả đáp ứng tiêu chuẩn đối sánh tên bài và thời lượng (P1.12)
+            let matchingItems = items.filter { item in
+                isAcceptableMatch(
+                    item: item,
+                    expectedTitle: title,
+                    expectedArtist: artist,
+                    expectedDuration: duration
+                )
+            }
+
+            guard !matchingItems.isEmpty else {
+                return nil
+            }
+
+            // Ưu tiên bản có syncedLyrics và sai số thời lượng nhỏ nhất
+            let bestMatch = matchingItems.first(where: { item in
                 guard let synced = item.syncedLyrics, !synced.isEmpty else { return false }
                 if duration > 0, let itemDur = item.duration {
                     return abs(itemDur - duration) <= 5.0
                 }
                 return true
-            }) ?? items.first
+            }) ?? matchingItems.first
 
             guard let match = bestMatch else { return nil }
             return makeDocument(from: match)
         } catch {
             return nil
         }
+    }
+
+    private func isAcceptableMatch(
+        item: LRCLibResponse,
+        expectedTitle: String,
+        expectedArtist: String,
+        expectedDuration: TimeInterval
+    ) -> Bool {
+        guard let trackName = item.trackName else { return false }
+        let cleanTrack = TitleCleaner.clean(trackName).lowercased()
+        let cleanExpected = TitleCleaner.clean(expectedTitle).lowercased()
+
+        let titleMatches = cleanTrack.contains(cleanExpected) || cleanExpected.contains(cleanTrack)
+        guard titleMatches else { return false }
+
+        if expectedDuration > 0, let itemDur = item.duration {
+            if abs(itemDur - expectedDuration) > 5.0 {
+                return false
+            }
+        }
+        return true
     }
 
     private func parseResponseData(_ data: Data) -> LyricsDocument? {

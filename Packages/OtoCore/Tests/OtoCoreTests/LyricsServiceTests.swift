@@ -87,6 +87,38 @@ struct LyricsServiceTests {
         #expect(doc?.lines[0].text == "Lately I been, I been losing sleep")
     }
 
+    @Test("LRCLibProvider rejects mismatched search results")
+    func testLRCLibRejectsMismatchedSearch() async throws {
+        let mockTransport = MockHTTPTransport()
+        let mismatchedJSON = """
+        [
+            {
+                "id": 888,
+                "trackName": "Entirely Different Song",
+                "artistName": "Random Artist",
+                "duration": 500,
+                "syncedLyrics": "[00:10.00]Wrong lyrics"
+            }
+        ]
+        """
+        mockTransport.handler = { request in
+            guard let url = request.url else { fatalError("Missing URL") }
+            if url.path.contains("/api/get") {
+                let response = HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil)!
+                return (Data(), response)
+            } else {
+                let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+                return (Data(mismatchedJSON.utf8), response)
+            }
+        }
+
+        let provider = LRCLibProvider(transport: mockTransport)
+        let song = Song(id: "target", title: "Counting Stars", artist: "OneRepublic", duration: 257)
+
+        let doc = try await provider.fetchLyrics(for: song)
+        #expect(doc == nil)
+    }
+
     @Test("MultiSourceLyricsService prioritizes synced lyrics over plain lyrics")
     func testPriorityPipeline() async {
         final class PlainProvider: LyricsProvider, @unchecked Sendable {

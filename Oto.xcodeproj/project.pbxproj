@@ -32,6 +32,7 @@
 		A10100312CE0000100000001 /* LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200312CE0000100000001 /* LibraryViewModel.swift */; };
 		A10100322CE0000100000001 /* LikedSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200322CE0000100000001 /* LikedSongsView.swift */; };
 		A10100332CE0000100000001 /* YTMusicParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200332CE0000100000001 /* YTMusicParsers.swift */; };
+		A10100342CE0000100000001 /* PlayerWebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200342CE0000100000001 /* PlayerWebViewContainer.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -61,6 +62,7 @@
 		A10200312CE0000100000001 /* LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/ViewModels/LibraryViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A10200322CE0000100000001 /* LikedSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/LikedSongsView.swift; sourceTree = SOURCE_ROOT; };
 		A10200332CE0000100000001 /* YTMusicParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/API/YTMusicParsers.swift; sourceTree = SOURCE_ROOT; };
+		A10200342CE0000100000001 /* PlayerWebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/PlayerWebViewContainer.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,6 +137,7 @@
 				A102000C2CE0000100000001 /* AudioSessionManager.swift */,
 				A102000D2CE0000100000001 /* NowPlayingManager.swift */,
 				A10200332CE0000100000001 /* YTMusicParsers.swift */,
+				A10200342CE0000100000001 /* PlayerWebViewContainer.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -234,6 +237,7 @@
 				A10100312CE0000100000001 /* LibraryViewModel.swift in Sources */,
 				A10100322CE0000100000001 /* LikedSongsView.swift in Sources */,
 				A10100332CE0000100000001 /* YTMusicParsers.swift in Sources */,
+				A10100342CE0000100000001 /* PlayerWebViewContainer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

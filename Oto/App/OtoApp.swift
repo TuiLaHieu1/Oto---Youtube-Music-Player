@@ -10,8 +10,6 @@ struct OtoApp: App {
         let vm = PlayerViewModel()
         _playerVM = State(initialValue: vm)
 
-        AudioSessionManager.shared.activateSession()
-
         Task { @MainActor in
             await WebKitManager.shared.restoreSession()
         }

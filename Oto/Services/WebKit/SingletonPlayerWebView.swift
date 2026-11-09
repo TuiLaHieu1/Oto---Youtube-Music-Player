@@ -8,10 +8,17 @@ import os
 public final class SingletonPlayerWebView: NSObject {
     public static let shared = SingletonPlayerWebView()
 
+    private struct PendingPlayback {
+        let id: String
+        let startSeconds: TimeInterval
+        let generation: Int
+    }
+
     private let logger = Logger(subsystem: "com.oto.music", category: "SingletonPlayerWebView")
-    private var webView: WKWebView?
+    public private(set) var webView: WKWebView?
     private var isBridgeReady: Bool = false
-    private var pendingVideoId: String?
+    private var pendingLoad: PendingPlayback?
+    public private(set) var currentGeneration: Int = 0
 
     public var onPlaybackStateChange: ((Int) -> Void)?
     public var onPositionUpdate: ((TimeInterval, TimeInterval) -> Void)?
@@ -59,6 +66,8 @@ public final class SingletonPlayerWebView: NSObject {
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
 
         var player;
+        var activeGeneration = 0;
+
         function onYouTubeIframeAPIReady() {
           player = new YT.Player('player', {
             playerVars: {
@@ -84,7 +93,8 @@ public final class SingletonPlayerWebView: NSObject {
               window.webkit.messageHandlers.otoPlayback.postMessage({
                 type: 'timeUpdate',
                 currentTime: cur,
-                duration: dur
+                duration: dur,
+                generation: activeGeneration
               });
             }
           }, 250);
@@ -93,19 +103,22 @@ public final class SingletonPlayerWebView: NSObject {
         function onPlayerStateChange(event) {
           window.webkit.messageHandlers.otoPlayback.postMessage({
             type: 'stateChange',
-            state: event.data
+            state: event.data,
+            generation: activeGeneration
           });
         }
 
         function onPlayerError(event) {
           window.webkit.messageHandlers.otoPlayback.postMessage({
             type: 'error',
-            code: event.data
+            code: event.data,
+            generation: activeGeneration
           });
         }
 
         window.otoPlayer = {
-          loadVideo: function(id, startSeconds) {
+          loadVideo: function(id, startSeconds, generation) {
+            activeGeneration = generation || 0;
             if (player && player.loadVideoById) {
               player.loadVideoById({ videoId: id, startSeconds: startSeconds || 0 });
             }
@@ -125,19 +138,30 @@ public final class SingletonPlayerWebView: NSObject {
     </html>
     """
 
-    // MARK: - Playback Controls (Bridge JS)
+    // MARK: - Playback Controls (Safe JS Bridge)
 
-    /// Nạp và phát bài hát mới qua JS Bridge mà KHÔNG reload lại DOM.
-    public func loadVideo(id: String, startSeconds: TimeInterval = 0) {
+    /// Nạp và phát bài hát mới qua callAsyncJavaScript an toàn không có nguy cơ JS injection.
+    public func loadVideo(id: String, startSeconds: TimeInterval = 0, generation: Int = 0) {
+        currentGeneration = generation
         guard isBridgeReady else {
-            pendingVideoId = id
-            logger.info("Bridge chưa sẵn sàng, đã đưa track vào hàng đợi chờ phát.")
+            pendingLoad = PendingPlayback(id: id, startSeconds: startSeconds, generation: generation)
+            logger.info("Bridge chưa sẵn sàng, đã lưu lệnh phát vào hàng đợi.")
             return
         }
 
-        let js = "window.otoPlayer.loadVideo('\(id)', \(startSeconds));"
-        webView?.evaluateJavaScript(js)
-        logger.info("Đã gửi lệnh loadVideo qua JS bridge.")
+        let jsCode = "window.otoPlayer.loadVideo(id, startSeconds, generation);"
+        let arguments: [String: Any] = [
+            "id": id,
+            "startSeconds": startSeconds,
+            "generation": generation
+        ]
+
+        webView?.callAsyncJavaScript(jsCode, arguments: arguments, in: nil, in: .page) { [weak self] result in
+            if case .failure(let error) = result {
+                self?.logger.error("Lỗi thực thi callAsyncJavaScript loadVideo: \(error.localizedDescription)")
+            }
+        }
+        logger.info("Đã gửi lệnh loadVideo an toàn qua callAsyncJavaScript (gen: \(generation)).")
     }
 
     /// Tiếp tục phát nhạc.
@@ -152,7 +176,8 @@ public final class SingletonPlayerWebView: NSObject {
 
     /// Nhảy đến vị trí thời gian chỉ định.
     public func seek(to position: TimeInterval) {
-        webView?.evaluateJavaScript("window.otoPlayer.seekTo(\(position));")
+        let jsCode = "window.otoPlayer.seekTo(position);"
+        webView?.callAsyncJavaScript(jsCode, arguments: ["position": position], in: nil, in: .page)
     }
 }
 
@@ -162,6 +187,19 @@ extension SingletonPlayerWebView: WKScriptMessageHandler {
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) {
+        // 1. Chỉ chấp nhận message từ main frame, ngăn chặn frame giả mạo
+        guard message.frameInfo.isMainFrame else {
+            logger.warning("Bỏ qua message không xuất phát từ main frame.")
+            return
+        }
+
+        // 2. Kiểm tra origin
+        let host = message.frameInfo.securityOrigin.host
+        guard host.isEmpty || host == "music.youtube.com" || host == "localhost" else {
+            logger.warning("Bỏ qua message từ origin không được ủy quyền: \(host)")
+            return
+        }
+
         guard let body = message.body as? [String: Any],
               let type = body["type"] as? String else {
             return
@@ -171,29 +209,37 @@ extension SingletonPlayerWebView: WKScriptMessageHandler {
         case "ready":
             isBridgeReady = true
             logger.info("JS Bridge IFrame Player đã sẵn sàng.")
-            if let pending = pendingVideoId {
-                pendingVideoId = nil
-                loadVideo(id: pending)
+            if let pending = pendingLoad {
+                pendingLoad = nil
+                loadVideo(id: pending.id, startSeconds: pending.startSeconds, generation: pending.generation)
             }
 
         case "stateChange":
+            // Kiểm tra generation nếu có, bỏ qua event trễ của track cũ
+            if let gen = body["generation"] as? Int, gen != currentGeneration {
+                logger.info("Bỏ qua stateChange từ generation cũ (\(gen) != \(self.currentGeneration))")
+                return
+            }
             if let stateCode = body["state"] as? Int {
-                // YT.PlayerState: -1 (unstarted), 0 (ended), 1 (playing), 2 (paused), 3 (buffering), 5 (cued)
                 onPlaybackStateChange?(stateCode)
-                if stateCode == 0 {
+                if stateCode == 0 { // YT.PlayerState.ENDED
                     onTrackEnded?()
                 }
             }
 
         case "timeUpdate":
-            let cur = body["currentTime"] as? TimeInterval ?? 0
-            let dur = body["duration"] as? TimeInterval ?? 0
-            onPositionUpdate?(cur, dur)
+            if let gen = body["generation"] as? Int, gen != currentGeneration {
+                return
+            }
+            if let cur = body["currentTime"] as? Double,
+               let dur = body["duration"] as? Double {
+                onPositionUpdate?(cur, dur)
+            }
 
         case "error":
-            let code = body["code"] as? Int ?? -1
-            logger.error("Lỗi trình phát WebView:")
-            onError?(code)
+            if let code = body["code"] as? Int {
+                onError?(code)
+            }
 
         default:
             break

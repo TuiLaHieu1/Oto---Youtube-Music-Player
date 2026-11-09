@@ -25,12 +25,41 @@ public struct FullscreenPlayerView: View {
                 .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // Thanh gạt đóng sheet ở trên cùng
-                    Capsule()
-                        .fill(Color.secondary.opacity(0.4))
-                        .frame(width: 36, height: 5)
-                        .padding(.top, 12)
-                        .padding(.bottom, 20)
+                    // Thanh công cụ đóng sheet và thanh gạt
+                    HStack {
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                playerVM.isExpanded = false
+                            }
+                        } label: {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(.secondary)
+                                .padding(12)
+                                .contentShape(Rectangle())
+                        }
+
+                        Spacer()
+
+                        Button {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                                playerVM.isExpanded = false
+                            }
+                        } label: {
+                            Capsule()
+                                .fill(Color.secondary.opacity(0.4))
+                                .frame(width: 36, height: 5)
+                                .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+
+                        Spacer()
+
+                        Color.clear
+                            .frame(width: 42, height: 42)
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
 
                     if playerVM.showLyrics {
                         // Chế độ xem lời bài hát đồng bộ
@@ -194,6 +223,15 @@ public struct FullscreenPlayerView: View {
         .sheet(isPresented: $playerVM.showQueue) {
             QueueView(playerVM: playerVM)
         }
+        .gesture(
+            DragGesture().onEnded { value in
+                if value.translation.height > 80 && abs(value.translation.width) < 100 {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        playerVM.isExpanded = false
+                    }
+                }
+            }
+        )
     }
 
     private var repeatIconName: String {

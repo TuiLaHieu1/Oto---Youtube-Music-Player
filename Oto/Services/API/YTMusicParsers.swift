@@ -1,13 +1,16 @@
 import Foundation
 import OtoCore
 
-/// Bộ phân tích dữ liệu JSON từ Innertube API của YouTube Music.
+/// Bộ phân tích dữ liệu JSON từ Innertube API của YouTube Music với kiểm tra schema chẩn đoán lỗi.
 public enum YTMusicParsers {
     // MARK: - Home Feed
 
-    public static func parseHomeSections(from data: Data) -> (quickPicks: [Song], listenAgain: [Song]) {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let contents = json["contents"] as? [String: Any],
+    public static func parseHomeSections(from data: Data) throws -> (quickPicks: [Song], listenAgain: [Song]) {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw YTMusicError.invalidResponse
+        }
+
+        guard let contents = json["contents"] as? [String: Any],
               let browseResults = contents["singleColumnBrowseResultsRenderer"] as? [String: Any],
               let tabs = browseResults["tabs"] as? [[String: Any]],
               let firstTab = tabs.first,
@@ -15,36 +18,69 @@ public enum YTMusicParsers {
               let tabContent = tabRenderer["content"] as? [String: Any],
               let sectionList = tabContent["sectionListRenderer"] as? [String: Any],
               let sectionContents = sectionList["contents"] as? [[String: Any]] else {
-            return ([], [])
+            throw YTMusicError.parsingError
         }
 
-        var allSongs: [Song] = []
+        var quickPicks: [Song] = []
+        var listenAgain: [Song] = []
+
         for section in sectionContents {
-            if let carousel = section["musicCarouselShelfRenderer"] as? [String: Any],
-               let items = carousel["contents"] as? [[String: Any]] {
-                for item in items {
-                    if let renderer = item["musicResponsiveListItemRenderer"] as? [String: Any],
-                       let song = parseResponsiveListItem(renderer) {
-                        allSongs.append(song)
-                    } else if let renderer = item["musicTwoRowItemRenderer"] as? [String: Any],
-                              let song = parseTwoRowItem(renderer) {
-                        allSongs.append(song)
-                    }
-                }
+            guard let carousel = section["musicCarouselShelfRenderer"] as? [String: Any] else { continue }
+            let (shelfTitle, shelfSongs) = parseCarouselShelf(carousel)
+            guard !shelfSongs.isEmpty else { continue }
+
+            if shelfTitle.contains("listen") || shelfTitle.contains("lại") || shelfTitle.contains("nghe") {
+                listenAgain.append(contentsOf: shelfSongs)
+            } else if shelfTitle.contains("quick") || shelfTitle.contains("nhanh") || shelfTitle.contains("chọn") {
+                quickPicks.append(contentsOf: shelfSongs)
+            } else if quickPicks.isEmpty {
+                quickPicks = shelfSongs
+            } else if listenAgain.isEmpty {
+                listenAgain = shelfSongs
             }
         }
 
-        let half = allSongs.count / 2
-        let quick = Array(allSongs.prefix(max(4, half)))
-        let listen = Array(allSongs.dropFirst(max(4, half)))
-        return (quick, listen)
+        if quickPicks.isEmpty && listenAgain.isEmpty && !sectionContents.isEmpty {
+            throw YTMusicError.parsingError
+        }
+
+        return (quickPicks, listenAgain)
+    }
+
+    private static func parseCarouselShelf(_ carousel: [String: Any]) -> (title: String, songs: [Song]) {
+        var shelfTitle = ""
+        if let header = carousel["header"] as? [String: Any],
+           let basicHeader = header["musicCarouselShelfBasicHeaderRenderer"] as? [String: Any],
+           let titleObj = basicHeader["title"] as? [String: Any],
+           let runs = titleObj["runs"] as? [[String: Any]] {
+            shelfTitle = runs.compactMap { $0["text"] as? String }.joined().lowercased()
+        }
+
+        guard let items = carousel["contents"] as? [[String: Any]] else {
+            return (shelfTitle, [])
+        }
+
+        var shelfSongs: [Song] = []
+        for item in items {
+            if let renderer = item["musicResponsiveListItemRenderer"] as? [String: Any],
+               let song = parseResponsiveListItem(renderer) {
+                shelfSongs.append(song)
+            } else if let renderer = item["musicTwoRowItemRenderer"] as? [String: Any],
+                      let song = parseTwoRowItem(renderer) {
+                shelfSongs.append(song)
+            }
+        }
+        return (shelfTitle, shelfSongs)
     }
 
     // MARK: - Playlists & Liked Songs
 
-    public static func parsePlaylistOrShelfSongs(from data: Data) -> [Song] {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let contents = json["contents"] as? [String: Any],
+    public static func parsePlaylistOrShelfSongs(from data: Data) throws -> [Song] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw YTMusicError.invalidResponse
+        }
+
+        guard let contents = json["contents"] as? [String: Any],
               let browseResults = contents["singleColumnBrowseResultsRenderer"] as? [String: Any],
               let tabs = browseResults["tabs"] as? [[String: Any]],
               let firstTab = tabs.first,
@@ -52,7 +88,7 @@ public enum YTMusicParsers {
               let tabContent = tabRenderer["content"] as? [String: Any],
               let sectionList = tabContent["sectionListRenderer"] as? [String: Any],
               let sectionContents = sectionList["contents"] as? [[String: Any]] else {
-            return []
+            throw YTMusicError.parsingError
         }
 
         var results: [Song] = []
@@ -75,10 +111,13 @@ public enum YTMusicParsers {
 
     // MARK: - Search
 
-    public static func parseSongs(from data: Data) -> [Song] {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let contents = json["contents"] as? [String: Any] else {
-            return []
+    public static func parseSongs(from data: Data) throws -> [Song] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw YTMusicError.invalidResponse
+        }
+
+        guard let contents = json["contents"] as? [String: Any] else {
+            throw YTMusicError.parsingError
         }
 
         var results: [Song] = []

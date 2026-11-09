@@ -52,7 +52,9 @@ public final class YTMusicClient: Sendable {
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 throw YTMusicError.invalidResponse
             }
-            return YTMusicParsers.parseSongs(from: data)
+            return try YTMusicParsers.parseSongs(from: data)
+        } catch let ytError as YTMusicError {
+            throw ytError
         } catch {
             logger.error("Lỗi gọi Innertube search API: \(error.localizedDescription)")
             throw YTMusicError.networkError(error.localizedDescription)
@@ -77,7 +79,9 @@ public final class YTMusicClient: Sendable {
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 throw YTMusicError.invalidResponse
             }
-            return YTMusicParsers.parseHomeSections(from: data)
+            return try YTMusicParsers.parseHomeSections(from: data)
+        } catch let ytError as YTMusicError {
+            throw ytError
         } catch {
             logger.error("Lỗi gọi Innertube browse API: \(error.localizedDescription)")
             throw YTMusicError.networkError(error.localizedDescription)
@@ -106,7 +110,9 @@ public final class YTMusicClient: Sendable {
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200 else {
                 throw YTMusicError.invalidResponse
             }
-            return YTMusicParsers.parsePlaylistOrShelfSongs(from: data)
+            return try YTMusicParsers.parsePlaylistOrShelfSongs(from: data)
+        } catch let ytError as YTMusicError {
+            throw ytError
         } catch {
             logger.error("Lỗi gọi Innertube liked songs API: \(error.localizedDescription)")
             throw YTMusicError.networkError(error.localizedDescription)

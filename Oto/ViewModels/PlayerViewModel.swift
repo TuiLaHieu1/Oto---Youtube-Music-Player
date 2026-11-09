@@ -16,6 +16,8 @@ public final class PlayerViewModel {
     public let queueManager: QueueManager
     public let clock: InterpolatedClock
 
+    private var playbackGeneration: Int = 0
+    private var hasAdvancedCurrentTrack: Bool = false
     private var positionTimerTask: Task<Void, Never>?
 
     public init(
@@ -48,10 +50,15 @@ public final class PlayerViewModel {
 
     /// Bắt đầu phát một bài hát cụ thể và cập nhật hàng đợi.
     public func play(song: Song) {
+        playbackGeneration += 1
+        hasAdvancedCurrentTrack = false
+        let gen = playbackGeneration
+
+        AudioSessionManager.shared.activateSession()
         clock.play(from: 0, rate: 1.0)
         playbackState = .playing(song: song, position: 0)
         currentPosition = 0
-        SingletonPlayerWebView.shared.loadVideo(id: song.id, startSeconds: 0)
+        SingletonPlayerWebView.shared.loadVideo(id: song.id, startSeconds: 0, generation: gen)
         NowPlayingManager.shared.updateNowPlaying(song: song, isPlaying: true, currentTime: 0)
         startPositionTracking()
     }
@@ -65,9 +72,17 @@ public final class PlayerViewModel {
         }
     }
 
+    /// Phát bài hát tại một vị trí cụ thể trong hàng đợi và cập nhật currentIndex.
+    public func playQueueItem(at index: Int) {
+        if let targetSong = queueManager.skipToIndex(index) {
+            play(song: targetSong)
+        }
+    }
+
     /// Tiếp tục phát.
     public func resume() {
         guard let song = currentSong else { return }
+        AudioSessionManager.shared.activateSession()
         clock.play(from: currentPosition, rate: 1.0)
         playbackState = .playing(song: song, position: currentPosition)
         SingletonPlayerWebView.shared.play()
@@ -155,8 +170,15 @@ public final class PlayerViewModel {
         }
 
         SingletonPlayerWebView.shared.onTrackEnded = { [weak self] in
-            self?.next()
+            self?.advanceOnce()
         }
+    }
+
+    /// Chuyển bài kế tiếp duy nhất một lần khi bài hiện tại kết thúc, ngăn chặn nhảy bài kép.
+    private func advanceOnce() {
+        guard !hasAdvancedCurrentTrack else { return }
+        hasAdvancedCurrentTrack = true
+        next()
     }
 
     private func setupNowPlayingCommands() {
@@ -197,12 +219,7 @@ public final class PlayerViewModel {
                 guard let self = self, self.isPlaying else { break }
                 let newPos = self.clock.currentPosition()
                 self.currentPosition = newPos
-
-                // Kiểm tra khi hết thời lượng bài hát
-                if let song = self.currentSong, song.duration > 0, newPos >= song.duration {
-                    self.next()
-                    break
-                }
+                // Timer chỉ cập nhật tiến trình hiển thị; việc chuyển bài do onTrackEnded đảm nhiệm.
             }
         }
     }

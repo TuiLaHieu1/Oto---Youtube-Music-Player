@@ -100,4 +100,24 @@ struct PlayerTests {
         #expect(queue.next()?.id == "special")
         #expect(queue.next()?.id == "s2")
     }
+
+    @Test("QueueManager skipToIndex jumps to designated index and updates currentIndex")
+    func testSkipToIndex() {
+        let queue = QueueManager()
+        let songs = [
+            Song(id: "s1", title: "Song 1", artist: "A", duration: 100),
+            Song(id: "s2", title: "Song 2", artist: "A", duration: 100),
+            Song(id: "s3", title: "Song 3", artist: "A", duration: 100)
+        ]
+        queue.setQueue(songs: songs, startIndex: 0)
+        #expect(queue.currentIndex == 0)
+
+        let target = queue.skipToIndex(2)
+        #expect(target?.id == "s3")
+        #expect(queue.currentIndex == 2)
+        #expect(queue.currentSong?.id == "s3")
+
+        #expect(queue.next() == nil)
+        #expect(queue.previous()?.id == "s2")
+    }
 }

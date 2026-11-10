@@ -19,17 +19,18 @@ private let bridgeJavaScript = """
       }
 
       const style = document.createElement('style');
-      style.textContent = `
-        html, body {
-          overflow: hidden !important;
-          background-color: #000 !important;
-        }
-        ytmusic-popup-container, ytmusic-dialog, ytmusic-mealbar-promo-renderer,
-        ytmusic-guide-renderer, ytmusic-nav-bar, #nav-bar-background {
-          display: none !important;
-        }
-      `;
+      style.textContent = 'html, body { overflow: hidden !important; background-color: #000 !important; } ' +
+        'ytmusic-popup-container, ytmusic-dialog, ytmusic-mealbar-promo-renderer, ' +
+        'ytmusic-guide-renderer, ytmusic-nav-bar, #nav-bar-background { display: none !important; }';
       document.head.appendChild(style);
+
+      try {
+        const retF = function() { return false; };
+        const retV = function() { return 'visible'; };
+        Object.defineProperty(document, 'hidden', { get: retF, configurable: true });
+        Object.defineProperty(document, 'visibilityState', { get: retV, configurable: true });
+        window.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);
+      } catch(e) {}
 
       let boundVideo = null;
       window.__otoUserPaused = false;
@@ -84,17 +85,15 @@ private let bridgeJavaScript = """
           pause: function() { postRemoteCommand('pause'); },
           nexttrack: function() { postRemoteCommand('next'); },
           previoustrack: function() { postRemoteCommand('previous'); },
-          seekto: function(details) {
-            if (details && Number.isFinite(details.seekTime)) {
-              postRemoteCommand('seek', { position: details.seekTime });
-            }
+          seekto: function(d) {
+            if (d && Number.isFinite(d.seekTime)) postRemoteCommand('seek', { position: d.seekTime });
           }
         };
-        Object.keys(handlers).forEach(function(action) {
-          try { navigator.mediaSession.setActionHandler(action, handlers[action]); } catch(e) {}
+        Object.keys(handlers).forEach(function(a) {
+          try { navigator.mediaSession.setActionHandler(a, handlers[a]); } catch(e) {}
         });
-        ['seekforward', 'seekbackward'].forEach(function(action) {
-          try { navigator.mediaSession.setActionHandler(action, null); } catch(e) {}
+        ['seekforward', 'seekbackward'].forEach(function(a) {
+          try { navigator.mediaSession.setActionHandler(a, null); } catch(e) {}
         });
       }
 
@@ -131,33 +130,63 @@ private let bridgeJavaScript = """
       }
 
       function attemptPlay(v) {
-        if (!v || window.__otoUserPaused) return;
-        v.muted = false;
-        v.volume = 1.0;
+        if (window.__otoUserPaused) return;
 
+        // 1. Pierce Shadow DOM of ytmusic-player-bar to click native play button
+        try {
+          const bar = document.querySelector('ytmusic-player-bar');
+          if (bar && bar.shadowRoot) {
+            const playBtn = bar.shadowRoot.querySelector('#play-pause-button');
+            if (playBtn) {
+              const label = (playBtn.getAttribute('aria-label') || '').toLowerCase();
+              if (label.includes('play') || label.includes('phát')) {
+                playBtn.click();
+              }
+            }
+          }
+        } catch(e) {}
+
+        // 2. Movie Player API
         const mp = document.getElementById('movie_player');
         if (mp) {
-          if (typeof mp.unMute === 'function') mp.unMute();
-          if (typeof mp.setVolume === 'function') mp.setVolume(100);
-          if (typeof mp.playVideo === 'function') mp.playVideo();
+          try {
+            if (typeof mp.unMute === 'function') mp.unMute();
+            if (typeof mp.setVolume === 'function') mp.setVolume(100);
+            if (typeof mp.playVideo === 'function') mp.playVideo();
+          } catch(e) {}
         }
 
+        // 3. ytmusic-player playerApi
         const player = document.querySelector('ytmusic-player');
         if (player && player.playerApi) {
-          if (typeof player.playerApi.unMute === 'function') player.playerApi.unMute();
-          if (typeof player.playerApi.setVolume === 'function') player.playerApi.setVolume(100);
-          if (typeof player.playerApi.playVideo === 'function') player.playerApi.playVideo();
+          try {
+            if (typeof player.playerApi.unMute === 'function') player.playerApi.unMute();
+            if (typeof player.playerApi.setVolume === 'function') player.playerApi.setVolume(100);
+            if (typeof player.playerApi.playVideo === 'function') player.playerApi.playVideo();
+          } catch(e) {}
         }
 
-        const p = v.play();
-        if (p && typeof p.catch === 'function') {
-          p.catch(function() {
-            const playBtn = document.querySelector('#play-pause-button') ||
-                            document.querySelector('.play-pause-button') ||
-                            document.querySelector('[slot="player-bar"] .play-pause-button') ||
-                            document.querySelector('.ytmusicPlayerControlsPlayPauseButton button');
-            if (playBtn) playBtn.click();
-          });
+        // 4. HTML5 video element play with mute-fallback for unmuted autoplay restrictions
+        const targetVideo = v || document.querySelector('video');
+        if (targetVideo) {
+          try {
+            targetVideo.muted = false;
+            targetVideo.volume = 1.0;
+            const p = targetVideo.play();
+            if (p && typeof p.catch === 'function') {
+              p.catch(function() {
+                try {
+                  targetVideo.muted = true;
+                  const p2 = targetVideo.play();
+                  if (p2 && typeof p2.then === 'function') {
+                    p2.then(function() {
+                      targetVideo.muted = false;
+                    }).catch(function() {});
+                  }
+                } catch(e2) {}
+              });
+            }
+          } catch(e) {}
         }
       }
 
@@ -189,17 +218,11 @@ private let bridgeJavaScript = """
               checkAndNotifyEnded(v);
             } else {
               post('stateChange', Object.assign({ state: 2 }, messageIdentity()));
-              if (!window.__otoUserPaused && !v.ended) {
-                setTimeout(function() { attemptPlay(v); }, 300);
-              }
+              if (!window.__otoUserPaused && !v.ended) setTimeout(function() { attemptPlay(v); }, 300);
             }
           }
         });
-        v.addEventListener('ended', function() {
-          if (!isAdActive()) {
-            checkAndNotifyEnded(v);
-          }
-        });
+        v.addEventListener('ended', function() { if (!isAdActive()) checkAndNotifyEnded(v); });
         v.addEventListener('timeupdate', function() {
           if (!isAdActive()) {
             checkAndNotifyEnded(v);
@@ -255,7 +278,11 @@ private let bridgeJavaScript = """
           const mp = document.getElementById('movie_player');
           if (mp && typeof mp.loadVideoById === 'function') {
             try {
-              mp.loadVideoById({ videoId: id, startSeconds: startSeconds || 0 });
+              try {
+                mp.loadVideoById(id, startSeconds || 0);
+              } catch(e1) {
+                mp.loadVideoById({ videoId: id, startSeconds: startSeconds || 0 });
+              }
               mp.playVideo();
               confirmTrack(id, generation || 0, 0);
               return;
@@ -284,17 +311,32 @@ private let bridgeJavaScript = """
           window.__otoCurrentVideoId = id;
           window.__otoUserPaused = !shouldPlay;
 
-          const v = document.querySelector('video');
-          if (v) {
-            v.__otoTrackEndedFired = false;
-            if (typeof startSeconds === 'number' && startSeconds > 0) {
-              v.currentTime = startSeconds;
+          function tryAdopt(retries) {
+            const v = document.querySelector('video');
+            const mp = document.getElementById('movie_player');
+            if (v || (mp && typeof mp.playVideo === 'function')) {
+              if (v) {
+                v.__otoTrackEndedFired = false;
+                if (typeof startSeconds === 'number' && startSeconds > 0) {
+                  v.currentTime = startSeconds;
+                }
+              }
+              if (mp && typeof mp.seekTo === 'function' && typeof startSeconds === 'number' && startSeconds > 0) {
+                try { mp.seekTo(startSeconds, true); } catch(e) {}
+              }
+              if (shouldPlay) {
+                attemptPlay(v);
+              }
+              confirmTrack(id, generation || 0, 0);
+              return;
             }
-            if (shouldPlay) {
-              attemptPlay(v);
+            if (retries > 0) {
+              setTimeout(function() { tryAdopt(retries - 1); }, 150);
+            } else {
+              confirmTrack(id, generation || 0, 0);
             }
           }
-          confirmTrack(id, generation || 0, 0);
+          tryAdopt(30);
         },
 
         adoptCurrentVideo: function(id, startSeconds, generation, shouldPlay) {

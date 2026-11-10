@@ -25,6 +25,7 @@ public final class SessionStore {
     public static let shared = SessionStore()
     private let logger = Logger(subsystem: "com.oto.music", category: "SessionStore")
     private var resetHandlers: [@MainActor () -> Void] = []
+    private var signInHandlers: [@MainActor () -> Void] = []
 
     public private(set) var sessionGeneration: Int = 0
     public private(set) var isAuthenticated: Bool = false
@@ -36,6 +37,11 @@ public final class SessionStore {
     /// Đăng ký handler dọn dẹp dữ liệu memory cache khi người dùng đăng xuất.
     public func registerResetHandler(_ handler: @escaping @MainActor () -> Void) {
         resetHandlers.append(handler)
+    }
+
+    /// Đăng ký handler cập nhật dữ liệu khi người dùng đăng nhập thành công.
+    public func registerSignInHandler(_ handler: @escaping @MainActor () -> Void) {
+        signInHandlers.append(handler)
     }
 
     /// Kiểm tra lại phiên làm việc từ Keychain.
@@ -59,6 +65,10 @@ public final class SessionStore {
 
         sessionGeneration += 1
         logger.info("SessionStore: Đã đăng nhập phiên mới thành công (gen: \(self.sessionGeneration)).")
+
+        for handler in signInHandlers {
+            handler()
+        }
     }
 
     /// Đăng xuất: thực hiện hủy request, reset player, xóa memory & disk caches và cập nhật UI.

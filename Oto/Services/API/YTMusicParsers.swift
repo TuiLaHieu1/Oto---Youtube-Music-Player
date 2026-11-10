@@ -10,8 +10,9 @@ public enum YTMusicParsers {
             throw YTMusicError.invalidResponse
         }
 
-        let carousels = collectRenderers(named: "musicCarouselShelfRenderer", in: json)
-        guard !carousels.isEmpty else {
+        var shelves = collectRenderers(named: "musicCarouselShelfRenderer", in: json)
+        shelves.append(contentsOf: collectRenderers(named: "musicShelfRenderer", in: json))
+        guard !shelves.isEmpty else {
             throw YTMusicError.parsingError
         }
 
@@ -19,14 +20,30 @@ public enum YTMusicParsers {
         var listenAgain: [Song] = []
         var otherShelves: [[Song]] = []
 
-        for carousel in carousels {
-            let (shelfTitle, shelfSongs) = parseCarouselShelf(carousel)
+        for shelf in shelves {
+            let (shelfTitle, shelfSongs) = parseCarouselShelf(shelf)
             guard !shelfSongs.isEmpty else { continue }
 
             let lowerTitle = shelfTitle.lowercased()
-            if lowerTitle.contains("listen again") || lowerTitle.contains("nghe lại") {
+            let isListenAgain = lowerTitle.contains("listen again")
+                || lowerTitle.contains("nghe lại")
+                || lowerTitle.contains("gần đây")
+                || lowerTitle.contains("recently")
+                || lowerTitle.contains("đã phát")
+
+            let isQuickPicks = lowerTitle.contains("quick picks")
+                || lowerTitle.contains("lựa chọn nhanh")
+                || lowerTitle.contains("dành cho bạn")
+                || lowerTitle.contains("for you")
+                || lowerTitle.contains("gợi ý")
+                || lowerTitle.contains("khởi động radio")
+                || lowerTitle.contains("start radio")
+                || lowerTitle.contains("mixed for you")
+                || lowerTitle.contains("bản phối")
+
+            if isListenAgain {
                 listenAgain.append(contentsOf: shelfSongs)
-            } else if lowerTitle.contains("quick picks") || lowerTitle.contains("lựa chọn nhanh") {
+            } else if isQuickPicks {
                 quickPicks.append(contentsOf: shelfSongs)
             } else {
                 otherShelves.append(shelfSongs)
@@ -41,6 +58,10 @@ public enum YTMusicParsers {
                 listenAgain = otherShelves.removeFirst()
             }
         }
+
+        // Loại bỏ bài trùng lặp nếu có giữa quickPicks và listenAgain
+        let quickPicksIds = Set(quickPicks.map(\.id))
+        listenAgain.removeAll { quickPicksIds.contains($0.id) }
 
         if quickPicks.isEmpty && listenAgain.isEmpty {
             throw YTMusicError.parsingError
@@ -71,13 +92,22 @@ public enum YTMusicParsers {
     }
 
     private static func parseCarouselShelf(_ carousel: [String: Any]) -> (title: String, songs: [Song]) {
-        var shelfTitle = ""
-        if let header = carousel["header"] as? [String: Any],
-           let basicHeader = header["musicCarouselShelfBasicHeaderRenderer"] as? [String: Any],
-           let titleObj = basicHeader["title"] as? [String: Any],
-           let runs = titleObj["runs"] as? [[String: Any]] {
-            shelfTitle = runs.compactMap { $0["text"] as? String }.joined().lowercased()
+        var headerTexts: [String] = []
+        if let header = carousel["header"] as? [String: Any] {
+            let basicHeader = (header["musicCarouselShelfBasicHeaderRenderer"] as? [String: Any])
+                ?? (header["musicShelfHeaderRenderer"] as? [String: Any])
+            if let basic = basicHeader {
+                if let titleObj = basic["title"] as? [String: Any],
+                   let runs = titleObj["runs"] as? [[String: Any]] {
+                    headerTexts.append(contentsOf: runs.compactMap { $0["text"] as? String })
+                }
+                if let straplineObj = basic["strapline"] as? [String: Any],
+                   let runs = straplineObj["runs"] as? [[String: Any]] {
+                    headerTexts.append(contentsOf: runs.compactMap { $0["text"] as? String })
+                }
+            }
         }
+        let shelfTitle = headerTexts.joined(separator: " ").lowercased()
 
         guard let items = carousel["contents"] as? [[String: Any]] else {
             return (shelfTitle, [])
@@ -220,7 +250,11 @@ public enum YTMusicParsers {
             artworkURL: extractThumbnailURL(from: renderer["thumbnail"] as? [String: Any])
         )
     }
+}
 
+// MARK: - Helper Parsers
+
+extension YTMusicParsers {
     public static func parseTwoRowItem(_ renderer: [String: Any]) -> Song? {
         let nav = renderer["navigationEndpoint"] as? [String: Any]
         let watch = nav?["watchEndpoint"] as? [String: Any]

@@ -25,6 +25,12 @@ public final class HomeViewModel {
         SessionStore.shared.registerResetHandler { [weak self] in
             self?.clearSessionData()
         }
+        SessionStore.shared.registerSignInHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.clearSessionData()
+                await self?.loadFeed()
+            }
+        }
         loadTask = Task { [weak self] in
             await self?.loadCachedData()
         }

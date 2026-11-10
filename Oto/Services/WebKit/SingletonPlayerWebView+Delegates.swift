@@ -31,17 +31,27 @@ extension SingletonPlayerWebView: WKNavigationDelegate {
             return
         }
 
-        // Bắt buộc host thuộc danh sách cho phép của YouTube Music Player
-        let isAllowedHost = host == "music.youtube.com" || host == "accounts.google.com"
+        // Cho phép các iframe và subframe tải tài nguyên DRM, auth và media luồng
+        if navigationAction.targetFrame?.isMainFrame == false {
+            decisionHandler(.allow)
+            return
+        }
+
+        // Bắt buộc host thuộc danh sách cho phép của YouTube Music Player và Google Services
+        let isAllowedHost = host == "music.youtube.com"
+            || host == "accounts.google.com"
+            || host.hasSuffix(".youtube.com")
+            || host.hasSuffix(".google.com")
+            || host.hasSuffix(".googlevideo.com")
         guard isAllowedHost else {
             logger.warning("Chặn navigation ngoài allowlist: \(url.absoluteString)")
             decisionHandler(.cancel)
             return
         }
 
-        // Với link navigation từ người dùng, chỉ cho phép trên cùng host music.youtube.com
+        // Với link navigation từ người dùng, chỉ cho phép trên các domain YouTube
         if navigationAction.navigationType == .linkActivated {
-            if host == "music.youtube.com" {
+            if host.hasSuffix("youtube.com") {
                 decisionHandler(.allow)
             } else {
                 logger.warning("Chặn click link ngoài allowlist: \(url.absoluteString)")

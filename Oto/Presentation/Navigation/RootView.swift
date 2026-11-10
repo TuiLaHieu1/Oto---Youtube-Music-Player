@@ -64,7 +64,7 @@ public struct RootView: View {
             } detail: {
                 ZStack(alignment: .bottom) {
                     detailView(for: selectedTab ?? .home)
-                    if playerVM.currentSong != nil {
+                    if shouldShowMiniPlayer {
                         MiniPlayerView(playerVM: playerVM)
                             .padding(.bottom, OtoTheme.spacing16)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -118,11 +118,15 @@ public struct RootView: View {
         .animation(OtoTheme.smoothSpring, value: playerVM.currentSong?.id)
     }
 
+    private var shouldShowMiniPlayer: Bool {
+        playerVM.currentSong != nil && playerVM.playbackState != .idle
+    }
+
     @ViewBuilder
     private var miniPlayerAccessory: some View {
-        if playerVM.currentSong != nil {
+        if shouldShowMiniPlayer {
             MiniPlayerView(playerVM: playerVM)
-                .padding(.bottom, 54)
+                .padding(.bottom, 76)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }

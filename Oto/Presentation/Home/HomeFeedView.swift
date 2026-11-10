@@ -40,6 +40,7 @@ public struct HomeFeedView: View {
                 }
             }
             .navigationTitle("Trang chủ")
+            .toolbar(.hidden, for: .navigationBar)
             .refreshable {
                 await homeVM.loadFeed()
             }
@@ -55,7 +56,20 @@ public struct HomeFeedView: View {
 
     private var feedScrollView: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: OtoTheme.spacing32) {
+            VStack(alignment: .leading, spacing: OtoTheme.spacing24) {
+                // Header Trang chủ theo Figma spec H01
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Trang chủ")
+                        .font(OtoTheme.largeTitleFont)
+                        .foregroundStyle(OtoTheme.primaryText)
+
+                    Text("A little space to listen.")
+                        .font(OtoTheme.subtitleFont)
+                        .foregroundStyle(OtoTheme.secondaryText)
+                }
+                .padding(.horizontal, OtoTheme.spacing16)
+                .padding(.top, OtoTheme.spacing8)
+
                 // Section 1: Quick Picks (Lựa chọn nhanh dạng thẻ ngang)
                 if !homeVM.quickPicks.isEmpty {
                     VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
@@ -67,7 +81,7 @@ public struct HomeFeedView: View {
                                     let isCurrent = (playerVM.currentSong?.id == song.id) && playerVM.isPlaying
                                     OtoAlbumCard(song: song, isPlaying: isCurrent) {
                                         triggerHaptic()
-                                        let index = homeVM.quickPicks.firstIndex(of: song) ?? 0
+                                        let index = homeVM.quickPicks.firstIndex(where: { $0.id == song.id }) ?? 0
                                         playerVM.playQueue(songs: homeVM.quickPicks, startIndex: index)
                                     }
                                 }
@@ -88,7 +102,7 @@ public struct HomeFeedView: View {
                                 let isCurrent = (playerVM.currentSong?.id == song.id) && playerVM.isPlaying
                                 OtoSongRow(song: song, isPlaying: isCurrent) {
                                     triggerHaptic()
-                                    let index = homeVM.listenAgain.firstIndex(of: song) ?? 0
+                                    let index = homeVM.listenAgain.firstIndex(where: { $0.id == song.id }) ?? 0
                                     playerVM.playQueue(songs: homeVM.listenAgain, startIndex: index)
                                 }
                             }
@@ -107,7 +121,7 @@ public struct HomeFeedView: View {
                                 let isCurrent = (playerVM.currentSong?.id == song.id) && playerVM.isPlaying
                                 OtoSongRow(song: song, isPlaying: isCurrent) {
                                     triggerHaptic()
-                                    let index = homeVM.recentlyPlayed.firstIndex(of: song) ?? 0
+                                    let index = homeVM.recentlyPlayed.firstIndex(where: { $0.id == song.id }) ?? 0
                                     playerVM.playQueue(songs: homeVM.recentlyPlayed, startIndex: index)
                                 }
                             }
@@ -116,7 +130,7 @@ public struct HomeFeedView: View {
                     }
                 }
             }
-            .padding(.top, OtoTheme.spacing16)
+            .padding(.top, OtoTheme.spacing4)
             .padding(.bottom, 160)
         }
     }

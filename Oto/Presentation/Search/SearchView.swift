@@ -69,7 +69,7 @@ public struct SearchView: View {
                         #if os(iOS)
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         #endif
-                        let index = searchVM.searchResults.firstIndex(of: song) ?? 0
+                        let index = searchVM.searchResults.firstIndex(where: { $0.id == song.id }) ?? 0
                         playerVM.playQueue(songs: searchVM.searchResults, startIndex: index)
                     }
                 }

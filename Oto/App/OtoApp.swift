@@ -7,6 +7,9 @@ struct OtoApp: App {
     @State private var playerVM: PlayerViewModel
 
     init() {
+        URLCache.shared.memoryCapacity = 64 * 1024 * 1024
+        URLCache.shared.diskCapacity = 256 * 1024 * 1024
+
         let vm = PlayerViewModel()
         _playerVM = State(initialValue: vm)
 

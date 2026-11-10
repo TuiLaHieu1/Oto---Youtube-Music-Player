@@ -249,8 +249,27 @@ private struct AmbientBackgroundView: View {
             // Nền dự phòng bảo đảm khả năng đọc tuyệt đối theo theme
             OtoTheme.background.ignoresSafeArea()
 
+            if let artworkURL {
+                AsyncImage(url: artworkURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image
+                            .resizable()
+                            .scaledToFill()
+                            .frame(width: size.width, height: size.height)
+                            .clipped()
+                            .blur(radius: 60)
+                            .opacity(0.40)
+                    default:
+                        Color.clear
+                    }
+                }
+                .id(artworkURL)
+                .ignoresSafeArea()
+            }
+
             OtoTheme.atmosphere
-                .opacity(artworkURL == nil ? 0 : 0.55)
+                .opacity(artworkURL == nil ? 0 : 0.35)
                 .frame(width: size.width, height: size.height)
                 .ignoresSafeArea()
         }

@@ -78,16 +78,15 @@ public struct RootView: View {
 
     @ViewBuilder
     private var phoneLayout: some View {
-        if #available(iOS 26.0, *) {
+        ZStack(alignment: .bottom) {
             phoneTabView
-                .tabViewBottomAccessory {
-                    miniPlayerAccessory
-                }
-        } else {
-            phoneTabView
-                .safeAreaInset(edge: .bottom, spacing: OtoTheme.spacing8) {
-                    miniPlayerAccessory
-                }
+
+            if shouldShowMiniPlayer {
+                MiniPlayerView(playerVM: playerVM)
+                    .padding(.horizontal, OtoTheme.spacing12)
+                    .padding(.bottom, 92)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
     }
 
@@ -119,15 +118,12 @@ public struct RootView: View {
     }
 
     private var shouldShowMiniPlayer: Bool {
-        playerVM.currentSong != nil && playerVM.playbackState != .idle
-    }
-
-    @ViewBuilder
-    private var miniPlayerAccessory: some View {
-        if shouldShowMiniPlayer {
-            MiniPlayerView(playerVM: playerVM)
-                .padding(.bottom, 76)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
+        guard let song = playerVM.currentSong, !song.id.isEmpty else { return false }
+        switch playerVM.playbackState {
+        case .idle:
+            return false
+        default:
+            return true
         }
     }
 

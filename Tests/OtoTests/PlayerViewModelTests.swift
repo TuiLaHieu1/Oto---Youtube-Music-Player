@@ -255,6 +255,66 @@ struct YTMusicHomeParserTests {
         #expect(result.listenAgain.isEmpty)
     }
 
+    @Test("Home parser phân tích musicSpeedDialShelfRenderer chuẩn YouTube Music")
+    func testSpeedDialShelf() throws {
+        let speedDialItem: [String: Any] = [
+            "musicSpeedDialItemRenderer": [
+                "navigationEndpoint": ["watchEndpoint": ["videoId": "speed_1"]],
+                "title": ["runs": [["text": "Speed Song"]]],
+                "subtitle": ["runs": [["text": "Speed Artist"]]],
+                "thumbnail": ["thumbnails": [["url": "https://yt3.ggpht.com/thumb=w120-h120"]]]
+            ]
+        ]
+        let fixture: [String: Any] = [
+            "contents": [
+                "singleColumnBrowseResultsRenderer": [
+                    "tabs": [[
+                        "tabRenderer": [
+                            "content": [
+                                "sectionListRenderer": [
+                                    "contents": [[
+                                        "musicSpeedDialShelfRenderer": [
+                                            "header": [
+                                                "musicCarouselShelfBasicHeaderRenderer": [
+                                                    "title": ["runs": [["text": "Speed dial"]]]
+                                                ]
+                                            ],
+                                            "contents": [speedDialItem]
+                                        ]
+                                    ]]
+                                ]
+                            ]
+                        ]
+                    ]]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: fixture)
+        let result = try YTMusicParsers.parseHomeSections(from: data)
+        #expect(result.quickPicks.first?.id == "speed_1")
+        #expect(result.quickPicks.first?.artworkURL?.absoluteString.contains("=w800-h800-l90-rj") == true)
+    }
+
+    @Test("upgradeThumbnailURL nâng cấp độ phân giải ảnh thumbnail chuẩn nét")
+    func testUpgradeThumbnailURL() {
+        let lowRes = "https://lh3.googleusercontent.com/abc=w120-h120-l90-rj"
+        let upgraded = YTMusicParsers.upgradeThumbnailURLString(lowRes)
+        #expect(upgraded == "https://lh3.googleusercontent.com/abc=w800-h800-l90-rj")
+
+        let sFormat = "https://lh3.googleusercontent.com/xyz=s60"
+        let upgradedS = YTMusicParsers.upgradeThumbnailURLString(sFormat)
+        #expect(upgradedS == "https://lh3.googleusercontent.com/xyz=s800-c")
+
+        let ytImg = "https://i.ytimg.com/vi/Hn9Uo8Mswa4/hqdefault.jpg"
+            + "?sqp=-oaymwEWCJADEOEBIAQqCggAEOADGC0guwJIWg&rs=AMzJL3kBwh"
+        let upgradedYt = YTMusicParsers.upgradeThumbnailURLString(ytImg)
+        #expect(upgradedYt == "https://i.ytimg.com/vi/Hn9Uo8Mswa4/hqdefault.jpg")
+
+        let ytDefault = "https://i.ytimg.com/vi/xyz123/default.jpg"
+        let upgradedDefault = YTMusicParsers.upgradeThumbnailURLString(ytDefault)
+        #expect(upgradedDefault == "https://i.ytimg.com/vi/xyz123/hqdefault.jpg")
+    }
+
     private static func carousel(title: String, id: String) -> [String: Any] {
         [
             "header": [

@@ -12,6 +12,7 @@ public enum YTMusicParsers {
 
         var shelves = collectRenderers(named: "musicCarouselShelfRenderer", in: json)
         shelves.append(contentsOf: collectRenderers(named: "musicShelfRenderer", in: json))
+        shelves.append(contentsOf: collectRenderers(named: "musicSpeedDialShelfRenderer", in: json))
         guard !shelves.isEmpty else {
             throw YTMusicError.parsingError
         }
@@ -25,21 +26,12 @@ public enum YTMusicParsers {
             guard !shelfSongs.isEmpty else { continue }
 
             let lowerTitle = shelfTitle.lowercased()
-            let isListenAgain = lowerTitle.contains("listen again")
-                || lowerTitle.contains("nghe lại")
-                || lowerTitle.contains("gần đây")
-                || lowerTitle.contains("recently")
-                || lowerTitle.contains("đã phát")
-
-            let isQuickPicks = lowerTitle.contains("quick picks")
-                || lowerTitle.contains("lựa chọn nhanh")
-                || lowerTitle.contains("dành cho bạn")
-                || lowerTitle.contains("for you")
-                || lowerTitle.contains("gợi ý")
-                || lowerTitle.contains("khởi động radio")
-                || lowerTitle.contains("start radio")
-                || lowerTitle.contains("mixed for you")
-                || lowerTitle.contains("bản phối")
+            let isListenAgain = ["listen again", "nghe lại", "gần đây", "recently", "đã phát"]
+                .contains { lowerTitle.contains($0) }
+            let isQuickPicks = [
+                "quick picks", "lựa chọn nhanh", "speed dial", "speeddial", "quay số nhanh",
+                "dành cho bạn", "for you", "gợi ý", "khởi động radio", "start radio", "mixed for you", "bản phối"
+            ].contains { lowerTitle.contains($0) }
 
             if isListenAgain {
                 listenAgain.append(contentsOf: shelfSongs)
@@ -109,7 +101,9 @@ public enum YTMusicParsers {
         }
         let shelfTitle = headerTexts.joined(separator: " ").lowercased()
 
-        guard let items = carousel["contents"] as? [[String: Any]] else {
+        let rawItems = (carousel["contents"] as? [[String: Any]])
+            ?? (carousel["items"] as? [[String: Any]])
+        guard let items = rawItems else {
             return (shelfTitle, [])
         }
 
@@ -118,7 +112,8 @@ public enum YTMusicParsers {
             if let renderer = item["musicResponsiveListItemRenderer"] as? [String: Any],
                let song = parseResponsiveListItem(renderer) {
                 shelfSongs.append(song)
-            } else if let renderer = item["musicTwoRowItemRenderer"] as? [String: Any],
+            } else if let renderer = (item["musicTwoRowItemRenderer"] as? [String: Any])
+                ?? (item["musicSpeedDialItemRenderer"] as? [String: Any]),
                       let song = parseTwoRowItem(renderer) {
                 shelfSongs.append(song)
             }
@@ -322,24 +317,24 @@ extension YTMusicParsers {
         let subRuns = (renderer["subtitle"] as? [String: Any])?["runs"] as? [[String: Any]]
         let artist = subRuns?.first?["text"] as? String ?? "Nhiều nghệ sĩ"
 
+        let thumbContainer = (renderer["thumbnailRenderer"] as? [String: Any])
+            ?? (renderer["thumbnail"] as? [String: Any])
+
         return Song(
             id: videoId,
             title: title,
             artist: artist,
             album: nil,
             duration: 0,
-            artworkURL: extractThumbnailURL(from: renderer["thumbnailRenderer"] as? [String: Any])
+            artworkURL: extractThumbnailURL(from: thumbContainer)
         )
     }
 
     private static func extractSectionLists(from contents: [String: Any]) -> [[String: Any]] {
-        if let direct = contents["sectionListRenderer"] as? [String: Any] {
-            return [direct]
-        }
+        if let direct = contents["sectionListRenderer"] as? [String: Any] { return [direct] }
         if let tabbed = contents["tabbedSearchResultsRenderer"] as? [String: Any],
            let tabs = tabbed["tabs"] as? [[String: Any]],
-           let firstTab = tabs.first,
-           let tabRenderer = firstTab["tabRenderer"] as? [String: Any],
+           let tabRenderer = tabs.first?["tabRenderer"] as? [String: Any],
            let tabContent = tabRenderer["content"] as? [String: Any],
            let sectionList = tabContent["sectionListRenderer"] as? [String: Any] {
             return [sectionList]
@@ -347,25 +342,44 @@ extension YTMusicParsers {
         return []
     }
 
+    public static func upgradeThumbnailURLString(_ urlStr: String) -> String {
+        var result = urlStr
+        if result.contains("i.ytimg.com/vi/") {
+            if let sqpIndex = result.range(of: "?sqp=")?.lowerBound {
+                result = String(result[..<sqpIndex])
+            }
+            result = result.replacingOccurrences(of: "/default.jpg", with: "/hqdefault.jpg")
+                .replacingOccurrences(of: "/mqdefault.jpg", with: "/hqdefault.jpg")
+            return result
+        }
+        let range = NSRange(location: 0, length: result.utf16.count)
+        if result.contains("=w"), let regex = try? NSRegularExpression(pattern: "=w\\d+-h\\d+.*") {
+            result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: "=w800-h800-l90-rj")
+        } else if result.contains("=s"), let regex = try? NSRegularExpression(pattern: "=s\\d+.*") {
+            result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: "=s800-c")
+        }
+        return result
+    }
+
     private static func extractThumbnailURL(from container: [String: Any]?) -> URL? {
         guard let container else { return nil }
         let musicThumb = container["musicThumbnailRenderer"] as? [String: Any]
-        let thumbObj = (musicThumb?["thumbnail"] as? [String: Any]) ?? (container["thumbnail"] as? [String: Any])
-        let thumbs = thumbObj?["thumbnails"] as? [[String: Any]]
+        let thumbObj = (musicThumb?["thumbnail"] as? [String: Any])
+            ?? (container["thumbnail"] as? [String: Any])
+            ?? container
+        let thumbs = (thumbObj["thumbnails"] as? [[String: Any]])
+            ?? (container["thumbnails"] as? [[String: Any]])
         guard let lastThumb = thumbs?.last,
               let urlStr = lastThumb["url"] as? String else {
             return nil
         }
-        return URL(string: urlStr)
+        return URL(string: upgradeThumbnailURLString(urlStr))
     }
 
     private static func parseDurationString(_ text: String) -> TimeInterval {
         let parts = text.components(separatedBy: ":").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
-        if parts.count == 2 {
-            return (parts[0] * 60) + parts[1]
-        } else if parts.count == 3 {
-            return (parts[0] * 3600) + (parts[1] * 60) + parts[2]
-        }
+        if parts.count == 2 { return (parts[0] * 60) + parts[1] }
+        if parts.count == 3 { return (parts[0] * 3600) + (parts[1] * 60) + parts[2] }
         return 0
     }
 }

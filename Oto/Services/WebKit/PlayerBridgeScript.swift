@@ -36,6 +36,44 @@ private let bridgeJavaScript = """
       window.__otoCurrentGeneration = 0;
       window.__otoCurrentVideoId = '';
 
+      function actualVideoId() {
+        try {
+          const mp = document.getElementById('movie_player');
+          if (mp && typeof mp.getVideoData === 'function') {
+            const data = mp.getVideoData();
+            if (data && data.video_id) return String(data.video_id);
+          }
+          const player = document.querySelector('ytmusic-player');
+          if (player && player.playerApi && typeof player.playerApi.getVideoData === 'function') {
+            const data = player.playerApi.getVideoData();
+            if (data && data.video_id) return String(data.video_id);
+          }
+          return new URL(window.location.href).searchParams.get('v') || '';
+        } catch(e) {
+          return '';
+        }
+      }
+
+      function messageIdentity() {
+        return {
+          generation: window.__otoCurrentGeneration || 0,
+          videoId: actualVideoId()
+        };
+      }
+
+      function confirmTrack(expectedId, generation, attempt) {
+        const activeId = actualVideoId();
+        if (activeId === expectedId) {
+          post('trackActivated', { videoId: activeId, generation: generation });
+          return;
+        }
+        if (attempt < 40) {
+          setTimeout(function() { confirmTrack(expectedId, generation, attempt + 1); }, 125);
+          return;
+        }
+        post('error', { code: 901, videoId: expectedId, generation: generation });
+      }
+
       try {
         localStorage.setItem('yt-player-volume', JSON.stringify({
           data: JSON.stringify({ volume: 100, muted: false })
@@ -93,26 +131,14 @@ private let bridgeJavaScript = """
         attemptPlay(v);
 
         v.addEventListener('play', function() {
-          post('stateChange', {
-            state: 1,
-            generation: window.__otoCurrentGeneration || 0,
-            videoId: window.__otoCurrentVideoId || ''
-          });
+          post('stateChange', Object.assign({ state: 1 }, messageIdentity()));
         });
         v.addEventListener('playing', function() {
-          post('stateChange', {
-            state: 1,
-            generation: window.__otoCurrentGeneration || 0,
-            videoId: window.__otoCurrentVideoId || ''
-          });
+          post('stateChange', Object.assign({ state: 1 }, messageIdentity()));
         });
         v.addEventListener('pause', function() {
           if (!isAdActive()) {
-            post('stateChange', {
-              state: 2,
-              generation: window.__otoCurrentGeneration || 0,
-              videoId: window.__otoCurrentVideoId || ''
-            });
+            post('stateChange', Object.assign({ state: 2 }, messageIdentity()));
             if (!window.__otoUserPaused && !v.ended) {
               setTimeout(function() { attemptPlay(v); }, 300);
             }
@@ -120,15 +146,8 @@ private let bridgeJavaScript = """
         });
         v.addEventListener('ended', function() {
           if (!isAdActive()) {
-            post('stateChange', {
-              state: 0,
-              generation: window.__otoCurrentGeneration || 0,
-              videoId: window.__otoCurrentVideoId || ''
-            });
-            post('trackEnded', {
-              generation: window.__otoCurrentGeneration || 0,
-              videoId: window.__otoCurrentVideoId || ''
-            });
+            post('stateChange', Object.assign({ state: 0 }, messageIdentity()));
+            post('trackEnded', messageIdentity());
           }
         });
         v.addEventListener('timeupdate', function() {
@@ -137,7 +156,7 @@ private let bridgeJavaScript = """
               currentTime: Number(v.currentTime) || 0,
               duration: Number(v.duration) || 0,
               generation: window.__otoCurrentGeneration || 0,
-              videoId: window.__otoCurrentVideoId || ''
+              videoId: actualVideoId()
             });
           }
         });
@@ -145,7 +164,7 @@ private let bridgeJavaScript = """
           post('error', {
             code: v.error ? v.error.code : -1,
             generation: window.__otoCurrentGeneration || 0,
-            videoId: window.__otoCurrentVideoId || ''
+            videoId: actualVideoId()
           });
         });
       }
@@ -183,6 +202,7 @@ private let bridgeJavaScript = """
             try {
               mp.loadVideoById({ videoId: id, startSeconds: startSeconds || 0 });
               mp.playVideo();
+              confirmTrack(id, generation || 0, 0);
               return;
             } catch(e) {}
           }
@@ -191,6 +211,12 @@ private let bridgeJavaScript = """
           if (app && typeof app.resolveCommand === 'function') {
             try {
               app.resolveCommand({ watchEndpoint: { videoId: id } });
+              confirmTrack(id, generation || 0, 0);
+              setTimeout(function() {
+                if (actualVideoId() !== id) {
+                  window.location.assign('https://music.youtube.com/watch?v=' + encodeURIComponent(id));
+                }
+              }, 750);
               return;
             } catch(e) {}
           }
@@ -212,6 +238,7 @@ private let bridgeJavaScript = """
               attemptPlay(v);
             }
           }
+          confirmTrack(id, generation || 0, 0);
         },
 
         adoptCurrentVideo: function(id, startSeconds, generation, shouldPlay) {
@@ -237,6 +264,7 @@ private let bridgeJavaScript = """
               mp.playVideo();
             }
           }
+          confirmTrack(id, generation || 0, 0);
         },
 
         play: function() {

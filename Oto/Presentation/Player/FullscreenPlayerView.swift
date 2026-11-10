@@ -38,15 +38,6 @@ public struct FullscreenPlayerView: View {
         .sheet(isPresented: $playerVM.showQueue) {
             QueueView(playerVM: playerVM)
         }
-        .gesture(
-            DragGesture().onEnded { value in
-                if value.translation.height > 80 && abs(value.translation.width) < 100 {
-                    withAnimation(OtoTheme.smoothSpring) {
-                        playerVM.isExpanded = false
-                    }
-                }
-            }
-        )
     }
 
     private func compactPlayerLayout(geo: GeometryProxy) -> some View {
@@ -190,7 +181,7 @@ private extension FullscreenPlayerView {
         OtoPlaybackControls(
             isPlaying: playerVM.isPlaying,
             isShuffleEnabled: playerVM.isShuffleEnabled,
-            isRepeatEnabled: playerVM.repeatMode != .off,
+            repeatMode: playerVM.repeatMode,
             playButtonSize: 64,
             onShuffle: { playerVM.toggleShuffle() },
             onPrevious: { playerVM.previous() },

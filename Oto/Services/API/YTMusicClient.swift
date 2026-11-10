@@ -34,6 +34,8 @@ public enum YTMusicError: Error, LocalizedError {
 
 /// Client giao tiếp trực tiếp với Innertube JSON API của YouTube Music (không dùng WebView để cào dữ liệu).
 public final class YTMusicClient: Sendable {
+    private static let webRemixClientName = "67"
+    private static let webRemixClientVersion = "1.20241014.01.00"
     public static let shared = YTMusicClient()
     private let logger = Logger(subsystem: "com.oto.music", category: "YTMusicClient")
     private let session: URLSession
@@ -122,7 +124,7 @@ public final class YTMusicClient: Sendable {
         [
             "client": [
                 "clientName": "WEB_REMIX",
-                "clientVersion": "1.20241014.01.00",
+                "clientVersion": Self.webRemixClientVersion,
                 "hl": "vi",
                 "gl": "VN"
             ]
@@ -135,7 +137,10 @@ public final class YTMusicClient: Sendable {
         request.timeoutInterval = 10.0
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("https://music.youtube.com", forHTTPHeaderField: "Origin")
+        request.setValue("https://music.youtube.com", forHTTPHeaderField: "X-Origin")
         request.setValue("https://music.youtube.com/", forHTTPHeaderField: "Referer")
+        request.setValue(Self.webRemixClientName, forHTTPHeaderField: "X-Youtube-Client-Name")
+        request.setValue(Self.webRemixClientVersion, forHTTPHeaderField: "X-Youtube-Client-Version")
         request.setValue(
             "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
             forHTTPHeaderField: "User-Agent"
@@ -150,6 +155,8 @@ public final class YTMusicClient: Sendable {
 
         let cookieHeader = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
         request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
+        request.setValue("0", forHTTPHeaderField: "X-Goog-AuthUser")
+        request.setValue("true", forHTTPHeaderField: "X-Youtube-Bootstrap-Logged-In")
 
         if let sapisidCookie = cookies.first(where: { $0.name == "SAPISID" || $0.name == "__Secure-3PAPISID" }) {
             let timestamp = Int(Date().timeIntervalSince1970)

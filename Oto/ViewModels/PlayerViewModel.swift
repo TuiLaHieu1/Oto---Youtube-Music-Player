@@ -248,16 +248,23 @@ extension PlayerViewModel {
     }
 
     private func setupPlayerBridge() {
-        backend.onPlaybackStateChange = { [weak self] (stateCode, gen) in
-            self?.handleBridgeStateChange(stateCode: stateCode, generation: gen)
+        backend.onTrackActivated = { [weak self] trackId, generation in
+            guard let self,
+                  generation == self.stateMachine.currentGeneration,
+                  trackId == self.stateMachine.currentSong?.id else { return }
+            self.logger.info("Engine đã xác nhận bài active: \(trackId), gen: \(generation)")
         }
 
-        backend.onPositionUpdate = { [weak self] (cur, dur, gen) in
-            self?.handleBridgePositionUpdate(current: cur, duration: dur, generation: gen)
+        backend.onPlaybackStateChange = { [weak self] (stateCode, gen, trackId) in
+            self?.handleBridgeStateChange(stateCode: stateCode, generation: gen, trackId: trackId)
         }
 
-        backend.onTrackEnded = { [weak self] gen in
-            self?.handleBridgeTrackEnded(generation: gen)
+        backend.onPositionUpdate = { [weak self] (cur, dur, gen, trackId) in
+            self?.handleBridgePositionUpdate(current: cur, duration: dur, generation: gen, trackId: trackId)
+        }
+
+        backend.onTrackEnded = { [weak self] gen, trackId in
+            self?.handleBridgeTrackEnded(generation: gen, trackId: trackId)
         }
 
         backend.onError = { [weak self] (code, gen, trackId) in
@@ -272,8 +279,8 @@ extension PlayerViewModel {
         }
     }
 
-    private func handleBridgeStateChange(stateCode: Int, generation: Int) {
-        guard generation == stateMachine.currentGeneration else { return }
+    private func handleBridgeStateChange(stateCode: Int, generation: Int, trackId: String) {
+        guard generation == stateMachine.currentGeneration, trackId == stateMachine.currentSong?.id else { return }
 
         let engineState: EnginePlaybackState
         switch stateCode {
@@ -298,8 +305,13 @@ extension PlayerViewModel {
         }
     }
 
-    private func handleBridgePositionUpdate(current: TimeInterval, duration: TimeInterval, generation: Int) {
-        guard generation == stateMachine.currentGeneration else { return }
+    private func handleBridgePositionUpdate(
+        current: TimeInterval,
+        duration: TimeInterval,
+        generation: Int,
+        trackId: String
+    ) {
+        guard generation == stateMachine.currentGeneration, trackId == stateMachine.currentSong?.id else { return }
 
         if duration > 0 {
             runtimeDuration = duration
@@ -319,8 +331,8 @@ extension PlayerViewModel {
         )
     }
 
-    private func handleBridgeTrackEnded(generation: Int) {
-        guard generation == stateMachine.currentGeneration else { return }
+    private func handleBridgeTrackEnded(generation: Int, trackId: String) {
+        guard generation == stateMachine.currentGeneration, trackId == stateMachine.currentSong?.id else { return }
         let effects = stateMachine.engineTrackEnded(generation: generation)
         applyEffects(effects)
     }

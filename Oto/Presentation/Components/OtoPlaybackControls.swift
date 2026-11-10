@@ -1,10 +1,11 @@
 import SwiftUI
+import OtoCore
 
 /// Cụm phím điều khiển phát nhạc tái sử dụng với haptic feedback và kích thước chạm tối thiểu 44pt.
 public struct OtoPlaybackControls: View {
     public let isPlaying: Bool
     public let isShuffleEnabled: Bool
-    public let isRepeatEnabled: Bool
+    public let repeatMode: RepeatMode
     public let playButtonSize: CGFloat
     public let onShuffle: () -> Void
     public let onPrevious: () -> Void
@@ -15,7 +16,7 @@ public struct OtoPlaybackControls: View {
     public init(
         isPlaying: Bool,
         isShuffleEnabled: Bool = false,
-        isRepeatEnabled: Bool = false,
+        repeatMode: RepeatMode = .off,
         playButtonSize: CGFloat = 64,
         onShuffle: @escaping () -> Void,
         onPrevious: @escaping () -> Void,
@@ -25,7 +26,7 @@ public struct OtoPlaybackControls: View {
     ) {
         self.isPlaying = isPlaying
         self.isShuffleEnabled = isShuffleEnabled
-        self.isRepeatEnabled = isRepeatEnabled
+        self.repeatMode = repeatMode
         self.playButtonSize = playButtonSize
         self.onShuffle = onShuffle
         self.onPrevious = onPrevious
@@ -93,13 +94,24 @@ public struct OtoPlaybackControls: View {
                 triggerLightHaptic()
                 onRepeat()
             } label: {
-                Image(systemName: "repeat")
+                Image(systemName: repeatMode == .one ? "repeat.1" : "repeat")
                     .font(.system(size: 19))
-                    .foregroundStyle(isRepeatEnabled ? OtoTheme.accent : OtoTheme.secondaryText)
+                    .foregroundStyle(repeatMode != .off ? OtoTheme.accent : OtoTheme.secondaryText)
                     .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isRepeatEnabled ? "Tắt lặp lại" : "Bật lặp lại")
+            .accessibilityLabel(repeatAccessibilityLabel)
+        }
+    }
+
+    private var repeatAccessibilityLabel: String {
+        switch repeatMode {
+        case .off:
+            return "Bật lặp lại tất cả"
+        case .all:
+            return "Bật lặp lại một bài"
+        case .one:
+            return "Tắt lặp lại"
         }
     }
 

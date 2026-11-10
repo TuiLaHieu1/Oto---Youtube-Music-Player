@@ -41,7 +41,9 @@ public final class NowPlayingManager: @unchecked Sendable {
             MPMediaItemPropertyArtist: song.artist,
             MPMediaItemPropertyPlaybackDuration: totalDuration,
             MPNowPlayingInfoPropertyElapsedPlaybackTime: currentTime,
-            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0
+            MPNowPlayingInfoPropertyPlaybackRate: isPlaying ? 1.0 : 0.0,
+            MPMediaItemPropertyMediaType: MPMediaType.music.rawValue,
+            MPNowPlayingInfoPropertyIsLiveStream: false
         ]
 
         if let album = song.album {
@@ -55,6 +57,12 @@ public final class NowPlayingManager: @unchecked Sendable {
     private func setupRemoteCommands() {
         #if os(iOS)
         let commandCenter = MPRemoteCommandCenter.shared()
+
+        // Oto phát nhạc theo track. Tắt các lệnh tua kiểu podcast để hệ thống ưu tiên Previous/Next.
+        commandCenter.skipForwardCommand.isEnabled = false
+        commandCenter.skipBackwardCommand.isEnabled = false
+        commandCenter.seekForwardCommand.isEnabled = false
+        commandCenter.seekBackwardCommand.isEnabled = false
 
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in

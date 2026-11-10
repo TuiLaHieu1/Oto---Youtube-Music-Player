@@ -41,6 +41,7 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
     public private(set) var webView: WKWebView?
     var isBridgeReady: Bool = false
     private var pendingLoad: PendingPlayback?
+    private var requestedVideoId: String?
     public private(set) var currentGeneration: Int = 0
     public private(set) var currentLoadedVideoId: String?
     public private(set) var activeDescriptor: ActivePlaybackDescriptor?
@@ -48,9 +49,15 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
     var crashRetryCount = 0
     let maxCrashRetries = 3
 
-    public var onPlaybackStateChange: ((_ state: Int, _ generation: Int) -> Void)?
-    public var onPositionUpdate: ((_ current: TimeInterval, _ duration: TimeInterval, _ generation: Int) -> Void)?
-    public var onTrackEnded: ((_ generation: Int) -> Void)?
+    public var onTrackActivated: ((_ trackId: String, _ generation: Int) -> Void)?
+    public var onPlaybackStateChange: ((_ state: Int, _ generation: Int, _ trackId: String) -> Void)?
+    public var onPositionUpdate: ((
+        _ current: TimeInterval,
+        _ duration: TimeInterval,
+        _ generation: Int,
+        _ trackId: String
+    ) -> Void)?
+    public var onTrackEnded: ((_ generation: Int, _ trackId: String) -> Void)?
     public var onError: ((_ code: Int, _ generation: Int, _ trackId: String) -> Void)?
     public var onRecoveryRequired: (() -> Void)?
 
@@ -105,6 +112,7 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
             crashRetryCount = 0
         }
         currentGeneration = generation
+        requestedVideoId = id
         activeDescriptor = ActivePlaybackDescriptor(
             id: id,
             generation: generation,
@@ -135,7 +143,6 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
 
         // Nếu chưa ở trang watch hoặc bridge chưa ready, lưu pendingLoad và nạp URL
         guard isBridgeReady, isAlreadyOnWatch else {
-            currentLoadedVideoId = id
             pendingLoad = PendingPlayback(
                 id: id,
                 startSeconds: startSeconds,
@@ -148,7 +155,6 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
             return
         }
 
-        currentLoadedVideoId = id
         let jsCode = "if (window.otoPlayer) window.otoPlayer.loadVideo(id, startSeconds, generation);"
         let arguments: [String: Any] = [
             "id": id,
@@ -225,6 +231,7 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
         pendingLoad = nil
         activeDescriptor = nil
         currentLoadedVideoId = nil
+        requestedVideoId = nil
         isBridgeReady = false
         if let blankURL = URL(string: "about:blank") {
             webView?.load(URLRequest(url: blankURL))
@@ -236,7 +243,6 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
         if let pending = pendingLoad {
             pendingLoad = nil
             currentGeneration = pending.generation
-            currentLoadedVideoId = pending.id
 
             if webView?.url?.absoluteString.contains(pending.id) == true {
                 logger.info(
@@ -274,6 +280,8 @@ extension SingletonPlayerWebView {
             checkReadyAndFlush()
         case "stateChange":
             handleStateChange(body)
+        case "trackActivated":
+            handleTrackActivated(body)
         case "timeUpdate":
             handleTimeUpdate(body)
         case "trackEnded":
@@ -285,23 +293,36 @@ extension SingletonPlayerWebView {
         }
     }
 
-    private func handleStateChange(_ body: [String: Any]) {
-        guard let gen = body["generation"] as? Int, gen == currentGeneration else {
-            return
+    private func validatedIdentity(from body: [String: Any]) -> (generation: Int, trackId: String)? {
+        guard let generation = body["generation"] as? Int,
+              generation == currentGeneration,
+              let trackId = body["videoId"] as? String,
+              !trackId.isEmpty,
+              trackId == requestedVideoId else {
+            return nil
         }
+        return (generation, trackId)
+    }
+
+    private func handleTrackActivated(_ body: [String: Any]) {
+        guard let identity = validatedIdentity(from: body) else { return }
+        currentLoadedVideoId = identity.trackId
+        onTrackActivated?(identity.trackId, identity.generation)
+    }
+
+    private func handleStateChange(_ body: [String: Any]) {
+        guard let identity = validatedIdentity(from: body) else { return }
         if let stateCode = body["state"] as? Int {
             // Khi engine đã phát ổn định (stateCode == 1: playing), reset retry count của recovery episode
             if stateCode == 1 {
                 crashRetryCount = 0
             }
-            onPlaybackStateChange?(stateCode, gen)
+            onPlaybackStateChange?(stateCode, identity.generation, identity.trackId)
         }
     }
 
     private func handleTimeUpdate(_ body: [String: Any]) {
-        guard let gen = body["generation"] as? Int, gen == currentGeneration else {
-            return
-        }
+        guard let identity = validatedIdentity(from: body) else { return }
         guard let cur = body["currentTime"] as? Double, !cur.isNaN, !cur.isInfinite else {
             return
         }
@@ -311,20 +332,18 @@ extension SingletonPlayerWebView {
             let wasPlaying = activeDescriptor?.shouldPlay ?? true
             activeDescriptor = ActivePlaybackDescriptor(
                 id: videoId,
-                generation: gen,
+                generation: identity.generation,
                 position: cur,
                 shouldPlay: wasPlaying
             )
         }
 
-        onPositionUpdate?(cur, dur, gen)
+        onPositionUpdate?(cur, dur, identity.generation, identity.trackId)
     }
 
     private func handleTrackEnded(_ body: [String: Any]) {
-        guard let gen = body["generation"] as? Int, gen == currentGeneration else {
-            return
-        }
-        onTrackEnded?(gen)
+        guard let identity = validatedIdentity(from: body) else { return }
+        onTrackEnded?(identity.generation, identity.trackId)
     }
 
     private func handleError(_ body: [String: Any]) {

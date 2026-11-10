@@ -10,23 +10,15 @@ public enum YTMusicParsers {
             throw YTMusicError.invalidResponse
         }
 
-        guard let contents = json["contents"] as? [String: Any],
-              let browseResults = contents["singleColumnBrowseResultsRenderer"] as? [String: Any],
-              let tabs = browseResults["tabs"] as? [[String: Any]],
-              let firstTab = tabs.first,
-              let tabRenderer = firstTab["tabRenderer"] as? [String: Any],
-              let tabContent = tabRenderer["content"] as? [String: Any],
-              let sectionList = tabContent["sectionListRenderer"] as? [String: Any],
-              let sectionContents = sectionList["contents"] as? [[String: Any]] else {
+        let carousels = collectRenderers(named: "musicCarouselShelfRenderer", in: json)
+        guard !carousels.isEmpty else {
             throw YTMusicError.parsingError
         }
 
         var quickPicks: [Song] = []
         var listenAgain: [Song] = []
-        var generalShelves: [Song] = []
 
-        for section in sectionContents {
-            guard let carousel = section["musicCarouselShelfRenderer"] as? [String: Any] else { continue }
+        for carousel in carousels {
             let (shelfTitle, shelfSongs) = parseCarouselShelf(carousel)
             guard !shelfSongs.isEmpty else { continue }
 
@@ -34,26 +26,35 @@ public enum YTMusicParsers {
                 listenAgain.append(contentsOf: shelfSongs)
             } else if shelfTitle.contains("quick picks") || shelfTitle.contains("lựa chọn nhanh") {
                 quickPicks.append(contentsOf: shelfSongs)
-            } else {
-                generalShelves.append(contentsOf: shelfSongs)
             }
         }
 
-        // Nếu người dùng chưa đăng nhập hoặc tiêu đề shelf khác biệt, tận dụng các shelf thật để hiển thị
-        if quickPicks.isEmpty && !generalShelves.isEmpty {
-            let splitIndex = min(generalShelves.count / 2, 8)
-            quickPicks = Array(generalShelves.prefix(splitIndex))
-            generalShelves.removeFirst(splitIndex)
-        }
-        if listenAgain.isEmpty && !generalShelves.isEmpty {
-            listenAgain = generalShelves
-        }
-
-        if quickPicks.isEmpty && listenAgain.isEmpty && !sectionContents.isEmpty {
+        if quickPicks.isEmpty && listenAgain.isEmpty {
             throw YTMusicError.parsingError
         }
 
         return (quickPicks, listenAgain)
+    }
+
+    /// Innertube thường thêm wrapper vào Home feed. Chỉ tìm renderer theo key cụ thể,
+    /// không biến mọi shelf lạ thành nội dung cá nhân hóa.
+    private static func collectRenderers(named name: String, in value: Any) -> [[String: Any]] {
+        if let dictionary = value as? [String: Any] {
+            var results: [[String: Any]] = []
+            if let renderer = dictionary[name] as? [String: Any] {
+                results.append(renderer)
+            }
+            for child in dictionary.values {
+                results.append(contentsOf: collectRenderers(named: name, in: child))
+            }
+            return results
+        }
+
+        if let array = value as? [Any] {
+            return array.flatMap { collectRenderers(named: name, in: $0) }
+        }
+
+        return []
     }
 
     private static func parseCarouselShelf(_ carousel: [String: Any]) -> (title: String, songs: [Song]) {

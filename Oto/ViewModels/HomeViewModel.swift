@@ -36,13 +36,8 @@ public final class HomeViewModel {
         if let cached = await cache.loadCachedFeed() {
             guard !Task.isCancelled else { return }
             self.quickPicks = cached.quickPicks
-            if cached.listenAgain.count > 4 {
-                self.listenAgain = Array(cached.listenAgain.prefix(4))
-                self.recentlyPlayed = Array(cached.listenAgain.dropFirst(4))
-            } else {
-                self.listenAgain = cached.listenAgain
-                self.recentlyPlayed = []
-            }
+            self.listenAgain = cached.listenAgain
+            self.recentlyPlayed = []
         }
     }
 
@@ -65,13 +60,8 @@ public final class HomeViewModel {
             let feed = try await client.fetchHomeFeed()
             if !feed.quickPicks.isEmpty || !feed.listenAgain.isEmpty {
                 self.quickPicks = feed.quickPicks
-                if feed.listenAgain.count > 4 {
-                    self.listenAgain = Array(feed.listenAgain.prefix(4))
-                    self.recentlyPlayed = Array(feed.listenAgain.dropFirst(4))
-                } else {
-                    self.listenAgain = feed.listenAgain
-                    self.recentlyPlayed = []
-                }
+                self.listenAgain = feed.listenAgain
+                self.recentlyPlayed = []
                 await cache.saveFeed(quickPicks: feed.quickPicks, listenAgain: feed.listenAgain)
             }
         } catch is CancellationError {

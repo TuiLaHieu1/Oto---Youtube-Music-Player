@@ -49,16 +49,17 @@ public struct OtoMiniPlayer: View {
             .padding(.horizontal, OtoTheme.spacing16)
             .padding(.vertical, 8)
         }
-        .frame(height: 58)
+        .frame(minHeight: 62)
         .background(
             RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
                 .fill(OtoTheme.surface)
-                .overlay(
-                    RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                        .stroke(OtoTheme.separator, lineWidth: 0.5)
-                )
-                .shadow(color: OtoTheme.cardShadowColor.opacity(0.12), radius: 10, x: 0, y: 4)
         )
+        .clipShape(RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
+                .stroke(OtoTheme.separator, lineWidth: 0.5)
+        )
+        .shadow(color: OtoTheme.cardShadowColor.opacity(0.12), radius: 10, x: 0, y: 4)
         .padding(.horizontal, OtoTheme.spacing12)
         .accessibilityElement(children: .contain)
         .accessibilityHint("Chạm vào thông tin bài hát để mở trình phát toàn màn hình")

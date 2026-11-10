@@ -19,9 +19,15 @@ final class MockPlaybackBackend: PlaybackBackend {
     var seekCalls: [TimeInterval] = []
     var resetCount = 0
 
-    var onPlaybackStateChange: ((_ state: Int, _ generation: Int) -> Void)?
-    var onPositionUpdate: ((_ current: TimeInterval, _ duration: TimeInterval, _ generation: Int) -> Void)?
-    var onTrackEnded: ((_ generation: Int) -> Void)?
+    var onTrackActivated: ((_ trackId: String, _ generation: Int) -> Void)?
+    var onPlaybackStateChange: ((_ state: Int, _ generation: Int, _ trackId: String) -> Void)?
+    var onPositionUpdate: ((
+        _ current: TimeInterval,
+        _ duration: TimeInterval,
+        _ generation: Int,
+        _ trackId: String
+    ) -> Void)?
+    var onTrackEnded: ((_ generation: Int, _ trackId: String) -> Void)?
     var onError: ((_ code: Int, _ generation: Int, _ trackId: String) -> Void)?
     var onRecoveryRequired: (() -> Void)?
 
@@ -66,7 +72,7 @@ struct PlayerViewModelTests {
         #expect(vm.isBuffering == true)
 
         // Backend báo engine đang phát
-        mock.onPlaybackStateChange?(1, 1)
+        mock.onPlaybackStateChange?(1, 1, testSong.id)
         #expect(vm.isPlaying == true)
     }
 
@@ -77,8 +83,8 @@ struct PlayerViewModelTests {
         let vm = PlayerViewModel(backend: mock)
 
         vm.play(song: testSong)
-        mock.onPlaybackStateChange?(1, 1)
-        mock.onPositionUpdate?(45.0, 180.0, 1)
+        mock.onPlaybackStateChange?(1, 1, testSong.id)
+        mock.onPositionUpdate?(45.0, 180.0, 1, testSong.id)
 
         #expect(vm.currentPosition == 45.0)
         #expect(vm.isPlaying == true)
@@ -95,12 +101,12 @@ struct PlayerViewModelTests {
         #expect(recoveryCall.shouldPlay == true)
 
         // Callback từ generation 1 bị từ chối, state giữ nguyên .buffering
-        mock.onPlaybackStateChange?(2, 1)
+        mock.onPlaybackStateChange?(2, 1, testSong.id)
         #expect(vm.playbackState.isBuffering == true)
         #expect(vm.isPlaying == false)
 
         // Callback từ generation 2 được tiếp nhận
-        mock.onPlaybackStateChange?(1, 2)
+        mock.onPlaybackStateChange?(1, 2, testSong.id)
         #expect(vm.isPlaying == true)
     }
 
@@ -111,12 +117,12 @@ struct PlayerViewModelTests {
         let vm = PlayerViewModel(backend: mock)
 
         vm.play(song: testSong)
-        mock.onPlaybackStateChange?(1, 1)
-        mock.onPositionUpdate?(60.0, 180.0, 1)
+        mock.onPlaybackStateChange?(1, 1, testSong.id)
+        mock.onPositionUpdate?(60.0, 180.0, 1, testSong.id)
 
         // Người dùng chủ động tạm dừng
         vm.pause()
-        mock.onPlaybackStateChange?(2, 1)
+        mock.onPlaybackStateChange?(2, 1, testSong.id)
         #expect(vm.isPlaying == false)
 
         // WebContent process crash khi đang paused
@@ -147,5 +153,80 @@ struct PlayerViewModelTests {
         mock.onError?(150, 1, "test_track_1")
         // Bài hiện tại vẫn là secondSong (không bị skip bậy bạ)
         #expect(vm.currentSong?.id == "test_track_2")
+    }
+
+    @Test("callback cùng generation nhưng sai track identity bị bỏ qua")
+    @MainActor
+    func testWrongTrackIdentityIgnored() {
+        let mock = MockPlaybackBackend()
+        let vm = PlayerViewModel(backend: mock)
+
+        vm.play(song: testSong)
+        #expect(vm.isBuffering == true)
+
+        mock.onPlaybackStateChange?(1, 1, "old_track")
+        mock.onPositionUpdate?(90, 180, 1, "old_track")
+        #expect(vm.isBuffering == true)
+        #expect(vm.currentPosition == 0)
+
+        mock.onPlaybackStateChange?(1, 1, testSong.id)
+        mock.onPositionUpdate?(15, 180, 1, testSong.id)
+        #expect(vm.isPlaying == true)
+        #expect(vm.currentPosition == 15)
+    }
+
+    @Test("seek cập nhật UI và gửi đúng vị trí cho backend ngay lập tức")
+    @MainActor
+    func testSeekUpdatesImmediately() {
+        let mock = MockPlaybackBackend()
+        let vm = PlayerViewModel(backend: mock)
+
+        vm.play(song: testSong)
+        vm.seek(to: 72.5)
+
+        #expect(vm.currentPosition == 72.5)
+        #expect(mock.seekCalls == [72.5])
+    }
+}
+
+@Suite("YTMusic Home Parser Tests")
+struct YTMusicHomeParserTests {
+    @Test("Home parser tìm carousel trong wrapper mới nhưng không lấy shelf không rõ nghĩa")
+    func testNestedHomeCarousel() throws {
+        let quickPick = Self.carousel(title: "Lựa chọn nhanh", id: "quick_1")
+        let unrelated = Self.carousel(title: "Bảng xếp hạng", id: "chart_1")
+        let fixture: [String: Any] = [
+            "contents": [
+                "newWrapperRenderer": [
+                    "nested": [
+                        ["musicCarouselShelfRenderer": quickPick],
+                        ["musicCarouselShelfRenderer": unrelated]
+                    ]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: fixture)
+
+        let result = try YTMusicParsers.parseHomeSections(from: data)
+
+        #expect(result.quickPicks.map(\.id) == ["quick_1"])
+        #expect(result.listenAgain.isEmpty)
+    }
+
+    private static func carousel(title: String, id: String) -> [String: Any] {
+        [
+            "header": [
+                "musicCarouselShelfBasicHeaderRenderer": [
+                    "title": ["runs": [["text": title]]]
+                ]
+            ],
+            "contents": [[
+                "musicTwoRowItemRenderer": [
+                    "navigationEndpoint": ["watchEndpoint": ["videoId": id]],
+                    "title": ["runs": [["text": "Bài hát"]]],
+                    "subtitle": ["runs": [["text": "Nghệ sĩ"]]]
+                ]
+            ]]
+        ]
     }
 }

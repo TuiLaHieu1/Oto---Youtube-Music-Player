@@ -49,17 +49,6 @@ public struct RootView: View {
         }
     }
 
-    private var miniPlayerBottomPadding: CGFloat {
-        #if os(iOS)
-        let scenes = UIApplication.shared.connectedScenes
-        let windowScene = scenes.first as? UIWindowScene
-        let bottom = windowScene?.windows.first?.safeAreaInsets.bottom ?? 34
-        return 49 + (bottom > 0 ? bottom : 12) + 8
-        #else
-        return 60
-        #endif
-    }
-
     @ViewBuilder
     private var mainContentView: some View {
         if horizontalSizeClass == .regular {
@@ -75,41 +64,46 @@ public struct RootView: View {
             } detail: {
                 ZStack(alignment: .bottom) {
                     detailView(for: selectedTab ?? .home)
-                    MiniPlayerView(playerVM: playerVM)
-                        .padding(.bottom, 16)
+                    if playerVM.currentSong != nil {
+                        MiniPlayerView(playerVM: playerVM)
+                            .padding(.bottom, OtoTheme.spacing16)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
                 }
             }
         } else {
             // Layout iPhone (TabView)
-            ZStack(alignment: .bottom) {
-                TabView(selection: Binding(
-                    get: { selectedTab ?? .home },
-                    set: { selectedTab = $0 }
-                )) {
-                    HomeFeedView(playerVM: playerVM)
-                        .tabItem {
-                            Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
-                        }
-                        .tag(TabItem.home)
+            TabView(selection: Binding(
+                get: { selectedTab ?? .home },
+                set: { selectedTab = $0 }
+            )) {
+                HomeFeedView(playerVM: playerVM)
+                    .tabItem {
+                        Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
+                    }
+                    .tag(TabItem.home)
 
-                    SearchView(playerVM: playerVM)
-                        .tabItem {
-                            Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
-                        }
-                        .tag(TabItem.search)
+                SearchView(playerVM: playerVM)
+                    .tabItem {
+                        Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
+                    }
+                    .tag(TabItem.search)
 
-                    LibraryView(playerVM: playerVM)
-                        .tabItem {
-                            Label(TabItem.library.rawValue, systemImage: TabItem.library.icon)
-                        }
-                        .tag(TabItem.library)
-                }
-                .tint(OtoTheme.accent)
-
-                // MiniPlayer nổi thanh lịch phía trên TabBar chuẩn Apple Music
-                MiniPlayerView(playerVM: playerVM)
-                    .padding(.bottom, miniPlayerBottomPadding)
+                LibraryView(playerVM: playerVM)
+                    .tabItem {
+                        Label(TabItem.library.rawValue, systemImage: TabItem.library.icon)
+                    }
+                    .tag(TabItem.library)
             }
+            .tint(OtoTheme.accent)
+            .safeAreaInset(edge: .bottom, spacing: OtoTheme.spacing8) {
+                if playerVM.currentSong != nil {
+                    MiniPlayerView(playerVM: playerVM)
+                        .padding(.bottom, OtoTheme.spacing4)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
+            }
+            .animation(OtoTheme.smoothSpring, value: playerVM.currentSong?.id)
         }
     }
 

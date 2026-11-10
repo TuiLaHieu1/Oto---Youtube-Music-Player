@@ -17,15 +17,28 @@ public enum YTMusicParsers {
 
         var quickPicks: [Song] = []
         var listenAgain: [Song] = []
+        var otherShelves: [[Song]] = []
 
         for carousel in carousels {
             let (shelfTitle, shelfSongs) = parseCarouselShelf(carousel)
             guard !shelfSongs.isEmpty else { continue }
 
-            if shelfTitle.contains("listen again") || shelfTitle.contains("nghe lại") {
+            let lowerTitle = shelfTitle.lowercased()
+            if lowerTitle.contains("listen again") || lowerTitle.contains("nghe lại") {
                 listenAgain.append(contentsOf: shelfSongs)
-            } else if shelfTitle.contains("quick picks") || shelfTitle.contains("lựa chọn nhanh") {
+            } else if lowerTitle.contains("quick picks") || lowerTitle.contains("lựa chọn nhanh") {
                 quickPicks.append(contentsOf: shelfSongs)
+            } else {
+                otherShelves.append(shelfSongs)
+            }
+        }
+
+        // Nếu cả hai đều rỗng (tiêu đề bản địa không khớp từ khoá cố định),
+        // fallback phân bổ các shelf đã phân tích được để tránh ném lỗi fatal làm hỏng màn hình chính
+        if quickPicks.isEmpty && listenAgain.isEmpty && !otherShelves.isEmpty {
+            quickPicks = otherShelves.removeFirst()
+            if !otherShelves.isEmpty {
+                listenAgain = otherShelves.removeFirst()
             }
         }
 

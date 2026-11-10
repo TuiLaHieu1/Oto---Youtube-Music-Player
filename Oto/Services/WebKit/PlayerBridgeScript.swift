@@ -67,6 +67,18 @@ private let bridgeJavaScript = """
 
       function installMediaSessionHandlers() {
         if (!navigator.mediaSession || typeof navigator.mediaSession.setActionHandler !== 'function') return;
+
+        if (!window.__otoActionHandlerPatched) {
+          window.__otoActionHandlerPatched = true;
+          const _origSetActionHandler = navigator.mediaSession.setActionHandler.bind(navigator.mediaSession);
+          navigator.mediaSession.setActionHandler = function(action, handler) {
+            if (action === 'seekforward' || action === 'seekbackward') {
+              return;
+            }
+            return _origSetActionHandler(action, handler);
+          };
+        }
+
         const handlers = {
           play: function() { postRemoteCommand('play'); },
           pause: function() { postRemoteCommand('pause'); },
@@ -149,6 +161,16 @@ private let bridgeJavaScript = """
         }
       }
 
+      function checkAndNotifyEnded(v) {
+        if (v && v.duration > 5 && v.currentTime >= v.duration - 0.6) {
+          if (!v.__otoTrackEndedFired) {
+            v.__otoTrackEndedFired = true;
+            post('stateChange', Object.assign({ state: 0 }, messageIdentity()));
+            post('trackEnded', messageIdentity());
+          }
+        }
+      }
+
       function hookVideo(v) {
         if (!v || v === boundVideo) return;
         boundVideo = v;
@@ -163,20 +185,24 @@ private let bridgeJavaScript = """
         });
         v.addEventListener('pause', function() {
           if (!isAdActive()) {
-            post('stateChange', Object.assign({ state: 2 }, messageIdentity()));
-            if (!window.__otoUserPaused && !v.ended) {
-              setTimeout(function() { attemptPlay(v); }, 300);
+            if (v.duration > 5 && v.currentTime >= v.duration - 0.8) {
+              checkAndNotifyEnded(v);
+            } else {
+              post('stateChange', Object.assign({ state: 2 }, messageIdentity()));
+              if (!window.__otoUserPaused && !v.ended) {
+                setTimeout(function() { attemptPlay(v); }, 300);
+              }
             }
           }
         });
         v.addEventListener('ended', function() {
           if (!isAdActive()) {
-            post('stateChange', Object.assign({ state: 0 }, messageIdentity()));
-            post('trackEnded', messageIdentity());
+            checkAndNotifyEnded(v);
           }
         });
         v.addEventListener('timeupdate', function() {
           if (!isAdActive()) {
+            checkAndNotifyEnded(v);
             post('timeUpdate', {
               currentTime: Number(v.currentTime) || 0,
               duration: Number(v.duration) || 0,
@@ -224,6 +250,7 @@ private let bridgeJavaScript = """
           window.__otoUserPaused = false;
           window.__otoCurrentGeneration = generation || 0;
           window.__otoCurrentVideoId = id;
+          if (boundVideo) boundVideo.__otoTrackEndedFired = false;
 
           const mp = document.getElementById('movie_player');
           if (mp && typeof mp.loadVideoById === 'function') {
@@ -259,6 +286,7 @@ private let bridgeJavaScript = """
 
           const v = document.querySelector('video');
           if (v) {
+            v.__otoTrackEndedFired = false;
             if (typeof startSeconds === 'number' && startSeconds > 0) {
               v.currentTime = startSeconds;
             }

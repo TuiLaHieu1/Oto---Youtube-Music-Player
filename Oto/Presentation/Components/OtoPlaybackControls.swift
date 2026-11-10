@@ -55,8 +55,8 @@ public struct OtoPlaybackControls: View {
                 triggerMediumHaptic()
                 onPrevious()
             } label: {
-                Image(systemName: "backward.fill")
-                    .font(.system(size: 26))
+                Image(systemName: "backward.end.fill")
+                    .font(.system(size: 24))
                     .foregroundStyle(OtoTheme.primaryText)
                     .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
             }
@@ -68,10 +68,16 @@ public struct OtoPlaybackControls: View {
                 triggerMediumHaptic()
                 onTogglePlayPause()
             } label: {
-                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
-                    .font(.system(size: playButtonSize))
-                    .foregroundStyle(OtoTheme.accent)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
+                ZStack {
+                    Circle()
+                        .fill(OtoTheme.accent)
+                        .frame(width: playButtonSize, height: playButtonSize)
+                    Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                        .font(.system(size: playButtonSize * 0.40, weight: .bold))
+                        .foregroundStyle(OtoTheme.onAccent)
+                        .offset(x: isPlaying ? 0 : 2)
+                }
+                .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isPlaying ? "Tạm dừng" : "Phát")
@@ -81,8 +87,8 @@ public struct OtoPlaybackControls: View {
                 triggerMediumHaptic()
                 onNext()
             } label: {
-                Image(systemName: "forward.fill")
-                    .font(.system(size: 26))
+                Image(systemName: "forward.end.fill")
+                    .font(.system(size: 24))
                     .foregroundStyle(OtoTheme.primaryText)
                     .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
             }

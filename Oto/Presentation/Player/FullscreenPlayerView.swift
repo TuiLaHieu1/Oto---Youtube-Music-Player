@@ -42,7 +42,10 @@ public struct FullscreenPlayerView: View {
 
     private func compactPlayerLayout(geo: GeometryProxy) -> some View {
         VStack(spacing: 0) {
-            FullscreenHeaderBar(isExpanded: $playerVM.isExpanded)
+            FullscreenHeaderBar(
+                isExpanded: $playerVM.isExpanded,
+                playingFromTitle: playerVM.currentSong?.album ?? "Quick Picks"
+            )
 
             if playerVM.showLyrics {
                 SyncedLyricsView(lyricsVM: lyricsVM) { seekTime in
@@ -66,7 +69,10 @@ public struct FullscreenPlayerView: View {
     /// iPad và cửa sổ rộng giữ player bên trái, lời bên phải theo cùng geometry Light/Dark.
     private func widePlayerLayout(geo: GeometryProxy) -> some View {
         VStack(spacing: 0) {
-            FullscreenHeaderBar(isExpanded: $playerVM.isExpanded)
+            FullscreenHeaderBar(
+                isExpanded: $playerVM.isExpanded,
+                playingFromTitle: playerVM.currentSong?.album ?? "Quick Picks"
+            )
 
             HStack(alignment: .top, spacing: OtoTheme.spacing32) {
                 VStack(spacing: OtoTheme.spacing24) {
@@ -193,7 +199,7 @@ private extension FullscreenPlayerView {
     }
 
     private var bottomBar: some View {
-        HStack(spacing: 48) {
+        HStack(spacing: OtoTheme.spacing16) {
             Button {
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -202,11 +208,25 @@ private extension FullscreenPlayerView {
                     playerVM.showLyrics.toggle()
                 }
             } label: {
-                Image(systemName: playerVM.showLyrics ? "quote.bubble.fill" : "quote.bubble")
-                    .font(.system(size: 20))
-                    .foregroundStyle(playerVM.showLyrics ? OtoTheme.accent : OtoTheme.secondaryText)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
+                HStack(spacing: 8) {
+                    Image(systemName: playerVM.showLyrics ? "quote.bubble.fill" : "quote.bubble")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Lyrics")
+                        .font(.system(.subheadline, design: .default, weight: .semibold))
+                }
+                .foregroundStyle(playerVM.showLyrics ? OtoTheme.accent : OtoTheme.secondaryText)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule()
+                        .fill(playerVM.showLyrics ? OtoTheme.accentSurface : OtoTheme.surface.opacity(0.85))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(playerVM.showLyrics ? OtoTheme.accent.opacity(0.4) : OtoTheme.separator, lineWidth: 0.8)
+                )
             }
+            .buttonStyle(.plain)
 
             Button {
                 #if os(iOS)
@@ -214,11 +234,25 @@ private extension FullscreenPlayerView {
                 #endif
                 playerVM.showQueue = true
             } label: {
-                Image(systemName: "list.bullet")
-                    .font(.system(size: 20))
-                    .foregroundStyle(OtoTheme.secondaryText)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
+                HStack(spacing: 8) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("Queue")
+                        .font(.system(.subheadline, design: .default, weight: .semibold))
+                }
+                .foregroundStyle(OtoTheme.secondaryText)
+                .padding(.horizontal, 22)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule()
+                        .fill(OtoTheme.surface.opacity(0.85))
+                )
+                .overlay(
+                    Capsule()
+                        .stroke(OtoTheme.separator, lineWidth: 0.8)
+                )
             }
+            .buttonStyle(.plain)
         }
         .padding(.bottom, OtoTheme.spacing16)
     }
@@ -255,6 +289,7 @@ private struct AmbientBackgroundView: View {
 
 private struct FullscreenHeaderBar: View {
     @Binding var isExpanded: Bool
+    var playingFromTitle: String = "Quick Picks"
 
     var body: some View {
         HStack {
@@ -275,23 +310,30 @@ private struct FullscreenHeaderBar: View {
 
             Spacer()
 
+            VStack(spacing: 2) {
+                Text("PLAYING FROM")
+                    .font(.system(size: 10, weight: .bold))
+                    .tracking(1.0)
+                    .foregroundStyle(OtoTheme.secondaryText)
+                Text(playingFromTitle)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(OtoTheme.primaryText)
+                    .lineLimit(1)
+            }
+
+            Spacer()
+
             Button {
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 #endif
-                withAnimation(OtoTheme.smoothSpring) {
-                    isExpanded = false
-                }
             } label: {
-                Capsule()
-                    .fill(OtoTheme.secondaryText.opacity(0.35))
-                    .frame(width: 36, height: 5)
-                    .padding(.vertical, 12)
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(OtoTheme.secondaryText)
+                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
-
-            Spacer()
-            Color.clear.frame(width: OtoTheme.minTouchTarget, height: OtoTheme.minTouchTarget)
         }
         .padding(.horizontal, OtoTheme.spacing16)
         .padding(.top, OtoTheme.spacing8)

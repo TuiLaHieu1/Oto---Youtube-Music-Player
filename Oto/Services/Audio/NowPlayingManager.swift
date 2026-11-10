@@ -1,5 +1,8 @@
 import Foundation
 import MediaPlayer
+#if canImport(UIKit)
+import UIKit
+#endif
 import OtoCore
 
 /// Quản lý thông tin hiển thị tại Màn hình khóa (Lock Screen), Dynamic Island và Trung tâm điều khiển.
@@ -8,9 +11,16 @@ public final class NowPlayingManager: @unchecked Sendable {
 
     public var onPlayCommand: (@Sendable () -> Void)?
     public var onPauseCommand: (@Sendable () -> Void)?
+    public var onTogglePlayPauseCommand: (@Sendable () -> Void)?
     public var onNextCommand: (@Sendable () -> Void)?
     public var onPreviousCommand: (@Sendable () -> Void)?
     public var onSeekCommand: (@Sendable (TimeInterval) -> Void)?
+
+    #if canImport(UIKit)
+    private var cachedArtworkSongId: String?
+    private var cachedArtworkImage: UIImage?
+    private var artworkTask: Task<Void, Never>?
+    #endif
 
     private init() {
         setupRemoteCommands()
@@ -50,9 +60,55 @@ public final class NowPlayingManager: @unchecked Sendable {
             info[MPMediaItemPropertyAlbumTitle] = album
         }
 
+        #if canImport(UIKit)
+        if let artworkURL = song.artworkURL {
+            if cachedArtworkSongId == song.id, let image = cachedArtworkImage {
+                info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            } else {
+                loadArtworkAsync(
+                    for: song,
+                    url: artworkURL,
+                    currentTime: currentTime,
+                    duration: totalDuration,
+                    isPlaying: isPlaying
+                )
+            }
+        }
+        #endif
+
+        let commandCenter = MPRemoteCommandCenter.shared()
+        commandCenter.skipForwardCommand.isEnabled = false
+        commandCenter.skipBackwardCommand.isEnabled = false
+        commandCenter.skipForwardCommand.preferredIntervals = []
+        commandCenter.skipBackwardCommand.preferredIntervals = []
+        commandCenter.seekForwardCommand.isEnabled = false
+        commandCenter.seekBackwardCommand.isEnabled = false
+        commandCenter.nextTrackCommand.isEnabled = true
+        commandCenter.previousTrackCommand.isEnabled = true
+
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         #endif
     }
+
+    #if canImport(UIKit)
+    private func loadArtworkAsync(
+        for song: Song,
+        url: URL,
+        currentTime: TimeInterval,
+        duration: TimeInterval,
+        isPlaying: Bool
+    ) {
+        artworkTask?.cancel()
+        artworkTask = Task { [weak self] in
+            guard let (data, _) = try? await URLSession.shared.data(from: url),
+                  let image = UIImage(data: data) else { return }
+            guard !Task.isCancelled else { return }
+            self?.cachedArtworkSongId = song.id
+            self?.cachedArtworkImage = image
+            self?.updateNowPlaying(song: song, isPlaying: isPlaying, currentTime: currentTime, duration: duration)
+        }
+    }
+    #endif
 
     private func setupRemoteCommands() {
         #if os(iOS)
@@ -61,6 +117,8 @@ public final class NowPlayingManager: @unchecked Sendable {
         // Oto phát nhạc theo track. Tắt các lệnh tua kiểu podcast để hệ thống ưu tiên Previous/Next.
         commandCenter.skipForwardCommand.isEnabled = false
         commandCenter.skipBackwardCommand.isEnabled = false
+        commandCenter.skipForwardCommand.preferredIntervals = []
+        commandCenter.skipBackwardCommand.preferredIntervals = []
         commandCenter.seekForwardCommand.isEnabled = false
         commandCenter.seekBackwardCommand.isEnabled = false
 
@@ -73,6 +131,16 @@ public final class NowPlayingManager: @unchecked Sendable {
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
             self?.onPauseCommand?()
+            return .success
+        }
+
+        commandCenter.togglePlayPauseCommand.isEnabled = true
+        commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
+            if let onToggle = self?.onTogglePlayPauseCommand {
+                onToggle()
+            } else {
+                self?.onPlayCommand?()
+            }
             return .success
         }
 

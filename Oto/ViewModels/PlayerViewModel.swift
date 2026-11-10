@@ -353,31 +353,13 @@ extension PlayerViewModel {
     }
 
     private func setupNowPlayingCommands() {
-        NowPlayingManager.shared.onPlayCommand = { [weak self] in
-            Task { @MainActor in
-                self?.resume()
-            }
-        }
-        NowPlayingManager.shared.onPauseCommand = { [weak self] in
-            Task { @MainActor in
-                self?.pause()
-            }
-        }
-        NowPlayingManager.shared.onNextCommand = { [weak self] in
-            Task { @MainActor in
-                self?.next()
-            }
-        }
-        NowPlayingManager.shared.onPreviousCommand = { [weak self] in
-            Task { @MainActor in
-                self?.previous()
-            }
-        }
-        NowPlayingManager.shared.onSeekCommand = { [weak self] targetPosition in
-            Task { @MainActor in
-                self?.seek(to: targetPosition)
-            }
-        }
+        let mgr = NowPlayingManager.shared
+        mgr.onPlayCommand = { [weak self] in Task { @MainActor in self?.resume() } }
+        mgr.onPauseCommand = { [weak self] in Task { @MainActor in self?.pause() } }
+        mgr.onTogglePlayPauseCommand = { [weak self] in Task { @MainActor in self?.togglePlayPause() } }
+        mgr.onNextCommand = { [weak self] in Task { @MainActor in self?.next() } }
+        mgr.onPreviousCommand = { [weak self] in Task { @MainActor in self?.previous() } }
+        mgr.onSeekCommand = { [weak self] pos in Task { @MainActor in self?.seek(to: pos) } }
     }
 
     private func startPositionTracking() {

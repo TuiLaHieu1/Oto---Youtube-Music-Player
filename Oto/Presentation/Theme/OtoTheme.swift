@@ -63,6 +63,11 @@ public enum OtoTheme {
     /// - Spectrum: #B9ADFF (tím oải hương lavender huyền ảo)
     public static let accent = dynamicColor(light: "A74328", dark: "B9ADFF")
 
+    /// On-Accent (Nội dung trên nền accent, ví dụ icon nút Play):
+    /// - Atelier: #FFFFFF
+    /// - Spectrum: #171225
+    public static let onAccent = dynamicColor(light: "FFFFFF", dark: "171225")
+
     /// Accent Surface (Nền mờ nhạt cho badge, tag, nút chọn):
     /// - Atelier: #F6EDE9 (terracotta 10%)
     /// - Spectrum: #242238 (lavender 15%)

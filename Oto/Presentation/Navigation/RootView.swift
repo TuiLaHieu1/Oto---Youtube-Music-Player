@@ -122,6 +122,7 @@ public struct RootView: View {
     private var miniPlayerAccessory: some View {
         if playerVM.currentSong != nil {
             MiniPlayerView(playerVM: playerVM)
+                .padding(.bottom, 54)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }

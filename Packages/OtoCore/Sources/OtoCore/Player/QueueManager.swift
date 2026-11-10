@@ -197,4 +197,25 @@ public final class QueueManager {
             _currentIndex = 0
         }
     }
+
+    /// Thêm danh sách bài hát vào cuối hàng đợi (không thay đổi currentIndex hiện tại).
+    public func appendQueue(songs: [Song]) {
+        guard !songs.isEmpty else { return }
+        lock.lock()
+        defer { lock.unlock() }
+        let newItems = songs.map { QueueItem(song: $0) }
+        _items.append(contentsOf: newItems)
+        _originalItems.append(contentsOf: newItems)
+        if _currentIndex == nil, !_items.isEmpty {
+            _currentIndex = 0
+        }
+    }
+
+    /// Số lượng bài hát còn lại trong hàng đợi sau bài hiện tại.
+    public var remainingCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let cur = _currentIndex else { return _items.count }
+        return max(0, _items.count - (cur + 1))
+    }
 }

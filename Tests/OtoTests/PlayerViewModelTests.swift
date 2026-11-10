@@ -176,6 +176,24 @@ struct PlayerViewModelTests {
         #expect(vm.currentPosition == 15)
     }
 
+    @Test("togglePlayPause during buffering pauses immediately without requiring second tap")
+    @MainActor
+    func testTogglePlayPauseDuringBuffering() {
+        let mock = MockPlaybackBackend()
+        let vm = PlayerViewModel(backend: mock)
+
+        vm.play(song: testSong)
+        #expect(vm.isBuffering == true)
+        #expect(vm.isPlaying == false)
+        #expect(vm.shouldShowPauseButton == true)
+
+        // User taps pause button while buffering
+        vm.togglePlayPause()
+
+        #expect(mock.pauseCount == 1)
+        #expect(vm.shouldShowPauseButton == false)
+    }
+
     @Test("seek cập nhật UI và gửi đúng vị trí cho backend ngay lập tức")
     @MainActor
     func testSeekUpdatesImmediately() {
@@ -252,5 +270,51 @@ struct YTMusicHomeParserTests {
                 ]
             ]]
         ]
+    }
+}
+
+@Suite("YTMusic Up Next Parser Tests")
+struct YTMusicUpNextParserTests {
+    @Test("UpNext parser parses playlistPanelVideoRenderer correctly")
+    func testParseUpNext() throws {
+        let renderer: [String: Any] = [
+            "playlistPanelVideoRenderer": [
+                "videoId": "radio_track_1",
+                "title": ["runs": [["text": "Radio Song 1"]]],
+                "longBylineText": ["runs": [["text": "Artist 1"], ["text": " • "], ["text": "Album 1"]]],
+                "lengthText": ["runs": [["text": "3:45"]]]
+            ]
+        ]
+        let fixture: [String: Any] = [
+            "contents": [
+                "singleColumnMusicWatchNextResultsRenderer": [
+                    "tabbedRenderer": [
+                        "watchNextTabbedResultsRenderer": [
+                            "tabs": [[
+                                "tabRenderer": [
+                                    "content": [
+                                        "musicQueueRenderer": [
+                                            "content": [
+                                                "playlistPanelRenderer": [
+                                                    "contents": [renderer]
+                                                ]
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]]
+                        ]
+                    ]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: fixture)
+        let songs = try YTMusicParsers.parseUpNextQueue(from: data)
+        #expect(songs.count == 1)
+        #expect(songs.first?.id == "radio_track_1")
+        #expect(songs.first?.title == "Radio Song 1")
+        #expect(songs.first?.artist == "Artist 1")
+        #expect(songs.first?.album == "Album 1")
+        #expect(songs.first?.duration == 225)
     }
 }

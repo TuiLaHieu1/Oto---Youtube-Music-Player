@@ -156,11 +156,12 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
             return
         }
 
-        let jsCode = "if (window.otoPlayer) window.otoPlayer.loadVideo(id, startSeconds, generation);"
+        let jsCode = "if (window.otoPlayer) window.otoPlayer.loadVideo(id, startSeconds, generation, shouldPlay);"
         let arguments: [String: Any] = [
             "id": id,
             "startSeconds": startSeconds,
-            "generation": generation
+            "generation": generation,
+            "shouldPlay": shouldPlay
         ]
 
         webView?.callAsyncJavaScript(jsCode, arguments: arguments, in: nil, in: .page) { [weak self] result in

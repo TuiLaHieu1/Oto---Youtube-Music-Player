@@ -12,7 +12,7 @@ public struct MiniPlayerView: View {
     public var body: some View {
         OtoMiniPlayer(
             song: playerVM.currentSong,
-            isPlaying: playerVM.isPlaying,
+            isPlaying: playerVM.shouldShowPauseButton,
             currentPosition: playerVM.currentPosition,
             duration: playerVM.effectiveDuration,
             onTogglePlayPause: {

@@ -252,9 +252,62 @@ public enum YTMusicParsers {
     }
 }
 
-// MARK: - Helper Parsers
+// MARK: - Helper Parsers & Queue
 
 extension YTMusicParsers {
+    /// Phân tích danh sách hàng đợi phát tiếp theo (Up Next / Radio) từ YouTube Music.
+    public static func parseUpNextQueue(from data: Data) throws -> [Song] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw YTMusicError.invalidResponse
+        }
+
+        let renderers = collectRenderers(named: "playlistPanelVideoRenderer", in: json)
+        guard !renderers.isEmpty else {
+            return []
+        }
+
+        var results: [Song] = []
+        for renderer in renderers {
+            guard let videoId = renderer["videoId"] as? String, !videoId.isEmpty else {
+                continue
+            }
+
+            let titleObj = renderer["title"] as? [String: Any]
+            let titleRuns = titleObj?["runs"] as? [[String: Any]]
+            let title = titleRuns?.first?["text"] as? String ?? ""
+            guard !title.isEmpty else { continue }
+
+            var artist = "Nhiều nghệ sĩ"
+            var album: String?
+            let byline = (renderer["longBylineText"] as? [String: Any])
+                ?? (renderer["shortBylineText"] as? [String: Any])
+            if let runs = byline?["runs"] as? [[String: Any]], !runs.isEmpty {
+                artist = runs[0]["text"] as? String ?? "Nhiều nghệ sĩ"
+                if runs.count >= 3 {
+                    album = runs[2]["text"] as? String
+                }
+            }
+
+            var duration: TimeInterval = 0
+            if let lengthObj = renderer["lengthText"] as? [String: Any],
+               let lengthRuns = lengthObj["runs"] as? [[String: Any]],
+               let timeStr = lengthRuns.first?["text"] as? String {
+                duration = parseDurationString(timeStr)
+            }
+
+            let song = Song(
+                id: videoId,
+                title: title,
+                artist: artist,
+                album: album,
+                duration: duration,
+                artworkURL: extractThumbnailURL(from: renderer["thumbnail"] as? [String: Any])
+            )
+            results.append(song)
+        }
+        return results
+    }
+
     public static func parseTwoRowItem(_ renderer: [String: Any]) -> Song? {
         let nav = renderer["navigationEndpoint"] as? [String: Any]
         let watch = nav?["watchEndpoint"] as? [String: Any]

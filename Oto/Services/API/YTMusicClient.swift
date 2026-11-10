@@ -112,6 +112,28 @@ public final class YTMusicClient: Sendable {
         return try YTMusicParsers.parsePlaylistOrShelfSongs(from: data)
     }
 
+    /// Nạp danh sách bài hát Radio / Up Next tự động từ YouTube Music theo bài hát chỉ định.
+    public func fetchUpNextQueue(videoId: String) async throws -> [Song] {
+        let trimmed = videoId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        guard let url = URL(string: "https://music.youtube.com/youtubei/v1/next?prettyPrint=false") else {
+            throw YTMusicError.invalidURL
+        }
+
+        var request = makeBaseRequest(url: url)
+        let bodyPayload: [String: Any] = [
+            "context": clientContext,
+            "videoId": trimmed,
+            "playlistId": "RDAMVM\(trimmed)",
+            "isAudioOnly": true
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
+
+        let data = try await perform(request, operation: "up-next")
+        return try YTMusicParsers.parseUpNextQueue(from: data)
+    }
+
     /// Chặn callback của phiên cũ và hủy request đang chạy trước khi xóa thông tin đăng nhập.
     public func invalidateSession() async {
         await sessionFence.invalidate()

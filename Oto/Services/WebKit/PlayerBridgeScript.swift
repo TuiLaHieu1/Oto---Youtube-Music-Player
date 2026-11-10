@@ -50,16 +50,11 @@ private let bridgeJavaScript = """
             if (data && data.video_id) return String(data.video_id);
           }
           return new URL(window.location.href).searchParams.get('v') || '';
-        } catch(e) {
-          return '';
-        }
+        } catch(e) { return ''; }
       }
 
       function messageIdentity() {
-        return {
-          generation: window.__otoCurrentGeneration || 0,
-          videoId: actualVideoId()
-        };
+        return { generation: window.__otoCurrentGeneration || 0, videoId: actualVideoId() };
       }
 
       function postRemoteCommand(command, extra) {
@@ -73,9 +68,7 @@ private let bridgeJavaScript = """
           window.__otoActionHandlerPatched = true;
           const _origSetActionHandler = navigator.mediaSession.setActionHandler.bind(navigator.mediaSession);
           navigator.mediaSession.setActionHandler = function(action, handler) {
-            if (action === 'seekforward' || action === 'seekbackward') {
-              return;
-            }
+            if (action === 'seekforward' || action === 'seekbackward') return;
             return _origSetActionHandler(action, handler);
           };
         }
@@ -132,21 +125,17 @@ private let bridgeJavaScript = """
       function attemptPlay(v) {
         if (window.__otoUserPaused) return;
 
-        // 1. Pierce Shadow DOM of ytmusic-player-bar to click native play button
         try {
           const bar = document.querySelector('ytmusic-player-bar');
           if (bar && bar.shadowRoot) {
             const playBtn = bar.shadowRoot.querySelector('#play-pause-button');
             if (playBtn) {
               const label = (playBtn.getAttribute('aria-label') || '').toLowerCase();
-              if (label.includes('play') || label.includes('phát')) {
-                playBtn.click();
-              }
+              if (label.includes('play') || label.includes('phát')) playBtn.click();
             }
           }
         } catch(e) {}
 
-        // 2. Movie Player API
         const mp = document.getElementById('movie_player');
         if (mp) {
           try {
@@ -156,7 +145,6 @@ private let bridgeJavaScript = """
           } catch(e) {}
         }
 
-        // 3. ytmusic-player playerApi
         const player = document.querySelector('ytmusic-player');
         if (player && player.playerApi) {
           try {
@@ -166,7 +154,6 @@ private let bridgeJavaScript = """
           } catch(e) {}
         }
 
-        // 4. HTML5 video element play with mute-fallback for unmuted autoplay restrictions
         const targetVideo = v || document.querySelector('video');
         if (targetVideo) {
           try {
@@ -179,9 +166,7 @@ private let bridgeJavaScript = """
                   targetVideo.muted = true;
                   const p2 = targetVideo.play();
                   if (p2 && typeof p2.then === 'function') {
-                    p2.then(function() {
-                      targetVideo.muted = false;
-                    }).catch(function() {});
+                    p2.then(function() { targetVideo.muted = false; }).catch(function() {});
                   }
                 } catch(e2) {}
               });
@@ -204,7 +189,9 @@ private let bridgeJavaScript = """
         if (!v || v === boundVideo) return;
         boundVideo = v;
 
-        attemptPlay(v);
+        if (!window.__otoUserPaused) {
+          attemptPlay(v);
+        }
 
         v.addEventListener('play', function() {
           post('stateChange', Object.assign({ state: 1 }, messageIdentity()));
@@ -269,8 +256,8 @@ private let bridgeJavaScript = """
       setInterval(installMediaSessionHandlers, 1000);
 
       window.otoPlayer = {
-        loadVideo: function(id, startSeconds, generation) {
-          window.__otoUserPaused = false;
+        loadVideo: function(id, startSeconds, generation, shouldPlay) {
+          window.__otoUserPaused = (shouldPlay === false);
           window.__otoCurrentGeneration = generation || 0;
           window.__otoCurrentVideoId = id;
           if (boundVideo) boundVideo.__otoTrackEndedFired = false;
@@ -283,7 +270,9 @@ private let bridgeJavaScript = """
               } catch(e1) {
                 mp.loadVideoById({ videoId: id, startSeconds: startSeconds || 0 });
               }
-              mp.playVideo();
+              if (shouldPlay !== false && !window.__otoUserPaused) {
+                mp.playVideo();
+              }
               confirmTrack(id, generation || 0, 0);
               return;
             } catch(e) {}
@@ -309,7 +298,7 @@ private let bridgeJavaScript = """
         adoptLoadedVideo: function(id, startSeconds, generation, shouldPlay) {
           window.__otoCurrentGeneration = generation || 0;
           window.__otoCurrentVideoId = id;
-          window.__otoUserPaused = !shouldPlay;
+          window.__otoUserPaused = (shouldPlay === false);
 
           function tryAdopt(retries) {
             const v = document.querySelector('video');
@@ -317,14 +306,12 @@ private let bridgeJavaScript = """
             if (v || (mp && typeof mp.playVideo === 'function')) {
               if (v) {
                 v.__otoTrackEndedFired = false;
-                if (typeof startSeconds === 'number' && startSeconds > 0) {
-                  v.currentTime = startSeconds;
-                }
+                if (typeof startSeconds === 'number' && startSeconds > 0) v.currentTime = startSeconds;
               }
               if (mp && typeof mp.seekTo === 'function' && typeof startSeconds === 'number' && startSeconds > 0) {
                 try { mp.seekTo(startSeconds, true); } catch(e) {}
               }
-              if (shouldPlay) {
+              if (shouldPlay && !window.__otoUserPaused) {
                 attemptPlay(v);
               }
               confirmTrack(id, generation || 0, 0);
@@ -342,23 +329,19 @@ private let bridgeJavaScript = """
         adoptCurrentVideo: function(id, startSeconds, generation, shouldPlay) {
           window.__otoCurrentGeneration = generation || 0;
           window.__otoCurrentVideoId = id;
-          window.__otoUserPaused = !shouldPlay;
+          window.__otoUserPaused = (shouldPlay === false);
 
           const v = document.querySelector('video');
           if (v) {
-            if (typeof startSeconds === 'number' && startSeconds >= 0) {
-              v.currentTime = startSeconds;
-            }
-            if (shouldPlay) {
-              attemptPlay(v);
-            }
+            if (typeof startSeconds === 'number' && startSeconds >= 0) v.currentTime = startSeconds;
+            if (shouldPlay && !window.__otoUserPaused) attemptPlay(v);
           }
           const mp = document.getElementById('movie_player');
           if (mp) {
             if (typeof startSeconds === 'number' && startSeconds >= 0 && typeof mp.seekTo === 'function') {
               mp.seekTo(startSeconds, true);
             }
-            if (shouldPlay && typeof mp.playVideo === 'function') {
+            if (shouldPlay && !window.__otoUserPaused && typeof mp.playVideo === 'function') {
               mp.playVideo();
             }
           }
@@ -373,10 +356,24 @@ private let bridgeJavaScript = """
 
         pause: function() {
           window.__otoUserPaused = true;
+          try {
+            const bar = document.querySelector('ytmusic-player-bar');
+            if (bar && bar.shadowRoot) {
+              const playBtn = bar.shadowRoot.querySelector('#play-pause-button');
+              if (playBtn) {
+                const label = (playBtn.getAttribute('aria-label') || '').toLowerCase();
+                if (label.includes('pause') || label.includes('dừng')) playBtn.click();
+              }
+            }
+          } catch(e) {}
           const v = document.querySelector('video');
           if (v && !v.paused) v.pause();
           const mp = document.getElementById('movie_player');
           if (mp && typeof mp.pauseVideo === 'function') mp.pauseVideo();
+          const player = document.querySelector('ytmusic-player');
+          if (player && player.playerApi && typeof player.playerApi.pauseVideo === 'function') {
+            player.playerApi.pauseVideo();
+          }
         },
 
         seekTo: function(seconds) {

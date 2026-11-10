@@ -185,7 +185,7 @@ private extension FullscreenPlayerView {
 
     private var transportControls: some View {
         OtoPlaybackControls(
-            isPlaying: playerVM.isPlaying,
+            isPlaying: playerVM.shouldShowPauseButton,
             isShuffleEnabled: playerVM.isShuffleEnabled,
             repeatMode: playerVM.repeatMode,
             playButtonSize: 64,

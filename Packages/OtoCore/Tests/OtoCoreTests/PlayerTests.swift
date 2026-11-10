@@ -101,6 +101,32 @@ struct PlayerTests {
         #expect(queue.next()?.id == "s2")
     }
 
+    @Test("QueueManager appendQueue appends songs without altering current track position")
+    func testAppendQueue() {
+        let queue = QueueManager()
+        let song1 = Song(id: "s1", title: "Song 1", artist: "A", duration: 100)
+        let song2 = Song(id: "s2", title: "Song 2", artist: "A", duration: 100)
+        let radioSongs = [
+            Song(id: "r1", title: "Radio 1", artist: "R", duration: 120),
+            Song(id: "r2", title: "Radio 2", artist: "R", duration: 140)
+        ]
+
+        queue.setQueue(songs: [song1, song2], startIndex: 0)
+        #expect(queue.remainingCount == 1)
+        queue.appendQueue(songs: radioSongs)
+
+        #expect(queue.items.count == 4)
+        #expect(queue.remainingCount == 3)
+        #expect(queue.currentSong?.id == "s1")
+        #expect(queue.currentIndex == 0)
+        #expect(queue.next()?.id == "s2")
+        #expect(queue.remainingCount == 2)
+        #expect(queue.next()?.id == "r1")
+        #expect(queue.remainingCount == 1)
+        #expect(queue.next()?.id == "r2")
+        #expect(queue.remainingCount == 0)
+    }
+
     @Test("QueueManager skipToIndex jumps to designated index and updates currentIndex")
     func testSkipToIndex() {
         let queue = QueueManager()

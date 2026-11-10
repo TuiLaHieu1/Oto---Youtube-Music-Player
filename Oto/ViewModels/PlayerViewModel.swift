@@ -159,11 +159,8 @@ public final class PlayerViewModel {
     }
 }
 
-// MARK: - Side Effects Dispatcher & Observers
-
 extension PlayerViewModel {
     private func applyEffects(_ effects: PlaybackEffects) {
-        // 1. Kích hoạt AudioSession bất đồng bộ ngoài main thread khi có yêu cầu
         if effects.shouldActivateSession {
             Task {
                 do {
@@ -174,7 +171,6 @@ extension PlayerViewModel {
             }
         }
 
-        // 2. Nạp bài hát mới vào WebKit engine
         if let payload = effects.shouldStartEngine {
             runtimeDuration = nil
             clock.pause(at: payload.startSeconds)
@@ -186,32 +182,27 @@ extension PlayerViewModel {
             )
         }
 
-        // 3. Tiếp tục WebKit engine
         if effects.shouldResumeEngine {
             clock.play(from: stateMachine.currentPosition, rate: 1.0)
             backend.play()
             startPositionTracking()
         }
 
-        // 4. Tạm dừng WebKit engine
         if effects.shouldPauseEngine {
             clock.pause()
             backend.pause()
             stopPositionTracking()
         }
 
-        // 5. Tua WebKit engine
         if let seekTime = effects.shouldSeekEngine {
             clock.seek(to: seekTime)
             backend.seek(to: seekTime)
         }
 
-        // 6. Chuyển bài kế tiếp
         if effects.shouldAdvanceToNextTrack {
             next()
         }
 
-        // 7. Đồng bộ trạng thái ra giao diện người dùng và NowPlaying
         syncPublicState()
     }
 
@@ -269,6 +260,17 @@ extension PlayerViewModel {
 
         backend.onError = { [weak self] (code, gen, trackId) in
             self?.handleBridgeError(code: code, generation: gen, trackId: trackId)
+        }
+
+        backend.onRemoteCommand = { [weak self] command in
+            guard let self else { return }
+            switch command {
+            case .play: self.resume()
+            case .pause: self.pause()
+            case .next: self.next()
+            case .previous: self.previous()
+            case .seek(let position): self.seek(to: position)
+            }
         }
 
         backend.onRecoveryRequired = { [weak self] in
@@ -377,8 +379,6 @@ extension PlayerViewModel {
             }
         }
     }
-
-    // MARK: - Internal Position Tracking
 
     private func startPositionTracking() {
         positionTimerTask?.cancel()

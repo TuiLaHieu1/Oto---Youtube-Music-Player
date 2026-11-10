@@ -35,7 +35,8 @@ public enum YTMusicError: Error, LocalizedError {
 /// Client giao tiếp trực tiếp với Innertube JSON API của YouTube Music (không dùng WebView để cào dữ liệu).
 public final class YTMusicClient: Sendable {
     private static let webRemixClientName = "67"
-    private static let webRemixClientVersion = "1.20241014.01.00"
+    // Đo từ bootstrap công khai music.youtube.com ngày 10/11/2026.
+    private static let webRemixClientVersion = "1.20261104.00.00"
     public static let shared = YTMusicClient()
     private let logger = Logger(subsystem: "com.oto.music", category: "YTMusicClient")
     private let session: URLSession

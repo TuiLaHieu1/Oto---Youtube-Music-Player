@@ -61,6 +61,31 @@ private let bridgeJavaScript = """
         };
       }
 
+      function postRemoteCommand(command, extra) {
+        post('remoteCommand', Object.assign({ command: command }, messageIdentity(), extra || {}));
+      }
+
+      function installMediaSessionHandlers() {
+        if (!navigator.mediaSession || typeof navigator.mediaSession.setActionHandler !== 'function') return;
+        const handlers = {
+          play: function() { postRemoteCommand('play'); },
+          pause: function() { postRemoteCommand('pause'); },
+          nexttrack: function() { postRemoteCommand('next'); },
+          previoustrack: function() { postRemoteCommand('previous'); },
+          seekto: function(details) {
+            if (details && Number.isFinite(details.seekTime)) {
+              postRemoteCommand('seek', { position: details.seekTime });
+            }
+          }
+        };
+        Object.keys(handlers).forEach(function(action) {
+          try { navigator.mediaSession.setActionHandler(action, handlers[action]); } catch(e) {}
+        });
+        ['seekforward', 'seekbackward'].forEach(function(action) {
+          try { navigator.mediaSession.setActionHandler(action, null); } catch(e) {}
+        });
+      }
+
       function confirmTrack(expectedId, generation, attempt) {
         const activeId = actualVideoId();
         if (activeId === expectedId) {
@@ -190,6 +215,9 @@ private let bridgeJavaScript = """
           post('ready');
         }
       }, 200);
+
+      installMediaSessionHandlers();
+      setInterval(installMediaSessionHandlers, 1000);
 
       window.otoPlayer = {
         loadVideo: function(id, startSeconds, generation) {

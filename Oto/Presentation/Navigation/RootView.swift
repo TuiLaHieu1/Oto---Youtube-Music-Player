@@ -72,38 +72,57 @@ public struct RootView: View {
                 }
             }
         } else {
-            // Layout iPhone (TabView)
-            TabView(selection: Binding(
-                get: { selectedTab ?? .home },
-                set: { selectedTab = $0 }
-            )) {
-                HomeFeedView(playerVM: playerVM)
-                    .tabItem {
-                        Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
-                    }
-                    .tag(TabItem.home)
+            phoneLayout
+        }
+    }
 
-                SearchView(playerVM: playerVM)
-                    .tabItem {
-                        Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
-                    }
-                    .tag(TabItem.search)
-
-                LibraryView(playerVM: playerVM)
-                    .tabItem {
-                        Label(TabItem.library.rawValue, systemImage: TabItem.library.icon)
-                    }
-                    .tag(TabItem.library)
-            }
-            .tint(OtoTheme.accent)
-            .safeAreaInset(edge: .bottom, spacing: OtoTheme.spacing8) {
-                if playerVM.currentSong != nil {
-                    MiniPlayerView(playerVM: playerVM)
-                        .padding(.bottom, OtoTheme.spacing4)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
+    @ViewBuilder
+    private var phoneLayout: some View {
+        if #available(iOS 26.0, *) {
+            phoneTabView
+                .tabViewBottomAccessory {
+                    miniPlayerAccessory
                 }
-            }
-            .animation(OtoTheme.smoothSpring, value: playerVM.currentSong?.id)
+        } else {
+            phoneTabView
+                .safeAreaInset(edge: .bottom, spacing: OtoTheme.spacing8) {
+                    miniPlayerAccessory
+                }
+        }
+    }
+
+    private var phoneTabView: some View {
+        TabView(selection: Binding(
+            get: { selectedTab ?? .home },
+            set: { selectedTab = $0 }
+        )) {
+            HomeFeedView(playerVM: playerVM)
+                .tabItem {
+                    Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
+                }
+                .tag(TabItem.home)
+
+            SearchView(playerVM: playerVM)
+                .tabItem {
+                    Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
+                }
+                .tag(TabItem.search)
+
+            LibraryView(playerVM: playerVM)
+                .tabItem {
+                    Label(TabItem.library.rawValue, systemImage: TabItem.library.icon)
+                }
+                .tag(TabItem.library)
+        }
+        .tint(OtoTheme.accent)
+        .animation(OtoTheme.smoothSpring, value: playerVM.currentSong?.id)
+    }
+
+    @ViewBuilder
+    private var miniPlayerAccessory: some View {
+        if playerVM.currentSong != nil {
+            MiniPlayerView(playerVM: playerVM)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 

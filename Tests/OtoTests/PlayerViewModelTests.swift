@@ -29,6 +29,7 @@ final class MockPlaybackBackend: PlaybackBackend {
     ) -> Void)?
     var onTrackEnded: ((_ generation: Int, _ trackId: String) -> Void)?
     var onError: ((_ code: Int, _ generation: Int, _ trackId: String) -> Void)?
+    var onRemoteCommand: ((PlaybackRemoteCommand) -> Void)?
     var onRecoveryRequired: (() -> Void)?
 
     func loadVideo(id: String, startSeconds: TimeInterval, generation: Int, shouldPlay: Bool) {
@@ -186,6 +187,29 @@ struct PlayerViewModelTests {
 
         #expect(vm.currentPosition == 72.5)
         #expect(mock.seekCalls == [72.5])
+    }
+
+    @Test("Media Session command từ AirPods điều khiển đúng PlayerViewModel")
+    @MainActor
+    func testMediaSessionRemoteCommands() {
+        let mock = MockPlaybackBackend()
+        let vm = PlayerViewModel(backend: mock)
+        let secondSong = Song(id: "test_track_2", title: "Second", artist: "Artist", duration: 200)
+        vm.playQueue(songs: [testSong, secondSong])
+
+        mock.onRemoteCommand?(.pause)
+        #expect(mock.pauseCount == 1)
+
+        mock.onRemoteCommand?(.play)
+        #expect(mock.playCount == 1)
+
+        mock.onRemoteCommand?(.next)
+        #expect(vm.currentSong?.id == secondSong.id)
+        #expect(mock.loadCalls.last?.id == secondSong.id)
+
+        mock.onRemoteCommand?(.seek(42))
+        #expect(mock.seekCalls.last == 42)
+        #expect(vm.currentPosition == 42)
     }
 }
 

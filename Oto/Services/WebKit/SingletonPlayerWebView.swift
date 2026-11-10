@@ -59,6 +59,7 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
     ) -> Void)?
     public var onTrackEnded: ((_ generation: Int, _ trackId: String) -> Void)?
     public var onError: ((_ code: Int, _ generation: Int, _ trackId: String) -> Void)?
+    public var onRemoteCommand: ((PlaybackRemoteCommand) -> Void)?
     public var onRecoveryRequired: (() -> Void)?
 
     private override init() {
@@ -286,6 +287,8 @@ extension SingletonPlayerWebView {
             handleTimeUpdate(body)
         case "trackEnded":
             handleTrackEnded(body)
+        case "remoteCommand":
+            handleRemoteCommand(body)
         case "error":
             handleError(body)
         default:
@@ -344,6 +347,24 @@ extension SingletonPlayerWebView {
     private func handleTrackEnded(_ body: [String: Any]) {
         guard let identity = validatedIdentity(from: body) else { return }
         onTrackEnded?(identity.generation, identity.trackId)
+    }
+
+    private func handleRemoteCommand(_ body: [String: Any]) {
+        guard validatedIdentity(from: body) != nil,
+              let command = body["command"] as? String else { return }
+
+        switch command {
+        case "play": onRemoteCommand?(.play)
+        case "pause": onRemoteCommand?(.pause)
+        case "next": onRemoteCommand?(.next)
+        case "previous": onRemoteCommand?(.previous)
+        case "seek":
+            guard let position = body["position"] as? Double,
+                  position.isFinite,
+                  position >= 0 else { return }
+            onRemoteCommand?(.seek(position))
+        default: break
+        }
     }
 
     private func handleError(_ body: [String: Any]) {

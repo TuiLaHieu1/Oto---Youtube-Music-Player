@@ -7,6 +7,7 @@ public struct LibraryView: View {
     @State private var libraryVM = LibraryViewModel()
     @State private var sessionStore = SessionStore.shared
     @State private var showClearAlert: Bool = false
+    @State private var showSettings: Bool = false
 
     public init(playerVM: PlayerViewModel) {
         self.playerVM = playerVM
@@ -14,117 +15,37 @@ public struct LibraryView: View {
 
     public var body: some View {
         NavigationStack {
-            List {
-                Section("Nội dung") {
-                    if sessionStore.isAuthenticated {
-                        NavigationLink {
-                            LikedSongsView(playerVM: playerVM, libraryVM: libraryVM)
-                        } label: {
-                            HStack {
-                                Label("Bài hát đã thích", systemImage: "heart.fill")
-                                    .foregroundStyle(OtoTheme.accent)
-                                Spacer()
-                                if !libraryVM.likedSongs.isEmpty {
-                                    Text("\(libraryVM.likedSongs.count)")
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(OtoTheme.secondaryText)
-                                }
-                            }
-                        }
-                    } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: OtoTheme.spacing24) {
+                    HStack {
+                        Text("Thư viện của bạn")
+                            .font(OtoTheme.largeTitleFont)
+                            .foregroundStyle(OtoTheme.primaryText)
+                        Spacer()
                         Button {
-                            playerVM.showAuth = true
+                            showSettings = true
                         } label: {
-                            HStack {
-                                Label("Bài hát đã thích", systemImage: "heart.fill")
-                                    .foregroundStyle(OtoTheme.accent)
-                                Spacer()
-                                Text("Cần đăng nhập")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(OtoTheme.secondaryText)
-                            }
+                            Image(systemName: "gearshape")
+                                .foregroundStyle(OtoTheme.controlInactive)
+                                .frame(width: OtoTheme.minTouchTarget, height: OtoTheme.minTouchTarget)
                         }
+                        .buttonStyle(.plain)
                     }
 
-                    unavailableLibraryRow("Danh sách phát", systemImage: "music.note.list")
-                    unavailableLibraryRow("Album", systemImage: "square.stack")
-                    unavailableLibraryRow("Nghệ sĩ", systemImage: "music.mic")
+                    categoryChips
+
+                    likedSongsLink
+
+                    librarySection(title: "Danh sách phát", icon: "music.note.list")
+                    librarySection(title: "Album", icon: "square.stack")
+                    librarySection(title: "Nghệ sĩ", icon: "music.mic")
                 }
-
-                Section("Bộ nhớ đệm & Cài đặt") {
-                    HStack {
-                        Label("Dung lượng bộ nhớ đệm", systemImage: "internaldrive")
-                        Spacer()
-                        Text(libraryVM.cacheSizeString)
-                            .font(.system(size: 14, design: .monospaced))
-                            .foregroundStyle(OtoTheme.secondaryText)
-                    }
-
-                    Button(role: .destructive) {
-                        showClearAlert = true
-                    } label: {
-                        Label("Xóa bộ nhớ đệm", systemImage: "trash")
-                            .foregroundStyle(OtoTheme.error)
-                    }
-                    .confirmationDialog(
-                        "Bạn có chắc muốn xóa toàn bộ bộ nhớ đệm và ảnh bìa không?",
-                        isPresented: $showClearAlert,
-                        titleVisibility: .visible
-                    ) {
-                        Button("Xóa bộ nhớ đệm", role: .destructive) {
-                            libraryVM.clearAllCache()
-                        }
-                        Button("Hủy", role: .cancel) {}
-                    }
-                }
-
-                Section("Tài khoản") {
-                    if sessionStore.isAuthenticated {
-                        HStack {
-                            Label("Đã kết nối YouTube Music", systemImage: "checkmark.seal.fill")
-                                .foregroundStyle(OtoTheme.success)
-                            Spacer()
-                        }
-                        Button(role: .destructive) {
-                            Task {
-                                await sessionStore.signOut(playerVM: playerVM)
-                                libraryVM.likedSongs = []
-                            }
-                        } label: {
-                            Text("Đăng xuất tài khoản")
-                                .foregroundStyle(OtoTheme.error)
-                        }
-                    } else {
-                        Button {
-                            playerVM.showAuth = true
-                        } label: {
-                            Label("Đăng nhập tài khoản Google", systemImage: "person.crop.circle.badge.plus")
-                                .foregroundStyle(OtoTheme.accent)
-                        }
-                    }
-                }
-
-                Section("Thông tin") {
-                    HStack {
-                        Text("Chế độ giao diện")
-                        Spacer()
-                        Text("Atelier Light × Spectrum Dark")
-                            .font(.system(size: 13))
-                            .foregroundStyle(OtoTheme.secondaryText)
-                    }
-
-                    HStack {
-                        Text("Phiên bản")
-                        Spacer()
-                        Text("1.0.0 (Swift 6 Native)")
-                            .font(.system(size: 13))
-                            .foregroundStyle(OtoTheme.secondaryText)
-                    }
-                }
+                .padding(.horizontal, OtoTheme.spacing16)
+                .padding(.top, OtoTheme.spacing8)
+                .padding(.bottom, 120)
             }
-            .scrollContentBackground(.hidden)
             .background(OtoTheme.background.ignoresSafeArea())
-            .navigationTitle("Thư viện")
+            .toolbar(.hidden, for: .navigationBar)
             .onAppear {
                 sessionStore.refreshSessionState()
                 libraryVM.updateCacheSize()
@@ -134,19 +55,143 @@ public struct LibraryView: View {
                     await libraryVM.loadLikedSongs()
                 }
             }
+            .sheet(isPresented: $showSettings) {
+                settingsView
+            }
+            .confirmationDialog(
+                "Bạn có chắc muốn xóa toàn bộ bộ nhớ đệm và ảnh bìa không?",
+                isPresented: $showClearAlert,
+                titleVisibility: .visible
+            ) {
+                Button("Xóa bộ nhớ đệm", role: .destructive) {
+                    libraryVM.clearAllCache()
+                }
+                Button("Hủy", role: .cancel) {}
+            }
         }
     }
 
-    private func unavailableLibraryRow(_ title: String, systemImage: String) -> some View {
-        HStack {
-            Label(title, systemImage: systemImage)
-            Spacer()
-            Text("Chưa có dữ liệu")
-                .font(.caption)
-                .foregroundStyle(OtoTheme.tertiaryText)
+    private var categoryChips: some View {
+        HStack(spacing: OtoTheme.spacing8) {
+            chip("Tất cả", selected: true)
+            chip("Playlist", selected: false)
+            chip("Album", selected: false)
+            chip("Nghệ sĩ", selected: false)
         }
-        .foregroundStyle(OtoTheme.controlInactive)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(title), chưa có dữ liệu")
+    }
+
+    private func chip(_ title: String, selected: Bool) -> some View {
+        Text(title)
+            .font(OtoTheme.captionFont)
+            .foregroundStyle(selected ? OtoTheme.accent : OtoTheme.secondaryText)
+            .padding(.horizontal, OtoTheme.spacing12)
+            .frame(minHeight: 34)
+            .background(selected ? OtoTheme.accentSurface : OtoTheme.surface)
+            .clipShape(Capsule())
+    }
+
+    @ViewBuilder
+    private var likedSongsLink: some View {
+        if sessionStore.isAuthenticated {
+            NavigationLink {
+                LikedSongsView(playerVM: playerVM, libraryVM: libraryVM)
+            } label: {
+                libraryCard
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button {
+                playerVM.showAuth = true
+            } label: {
+                libraryCard
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var libraryCard: some View {
+        HStack {
+            Image(systemName: "heart")
+                .foregroundStyle(OtoTheme.accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Bài hát đã thích")
+                    .font(OtoTheme.sectionTitleFont)
+                    .foregroundStyle(OtoTheme.primaryText)
+                Text(sessionStore.isAuthenticated
+                     ? "\(libraryVM.likedSongs.count) bài hát"
+                     : "Đăng nhập để xem thư viện")
+                    .font(OtoTheme.captionFont)
+                    .foregroundStyle(OtoTheme.secondaryText)
+            }
+            Spacer()
+        }
+        .padding(OtoTheme.spacing16)
+        .background(OtoTheme.accentSurface)
+        .clipShape(RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous))
+    }
+
+    private func librarySection(title: String, icon: String) -> some View {
+        VStack(alignment: .leading, spacing: OtoTheme.spacing8) {
+            Text(title)
+                .font(OtoTheme.sectionTitleFont)
+                .foregroundStyle(OtoTheme.primaryText)
+            HStack(spacing: OtoTheme.spacing12) {
+                RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous)
+                    .fill(OtoTheme.backgroundSecondary)
+                    .frame(width: 52, height: 52)
+                    .overlay(Image(systemName: icon).foregroundStyle(OtoTheme.tertiaryText))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Chưa có \(title.lowercased())")
+                        .font(OtoTheme.rowTitleFont)
+                    Text("Nội dung khả dụng sẽ xuất hiện tại đây.")
+                        .font(OtoTheme.captionFont)
+                        .foregroundStyle(OtoTheme.secondaryText)
+                }
+            }
+        }
+    }
+
+    private var settingsView: some View {
+        NavigationStack {
+            List {
+                Section("Tài khoản") {
+                    if sessionStore.isAuthenticated {
+                        Text("Đã kết nối YouTube Music")
+                        Button("Đăng xuất", role: .destructive) {
+                            Task {
+                                await sessionStore.signOut(playerVM: playerVM)
+                                libraryVM.likedSongs = []
+                                showSettings = false
+                            }
+                        }
+                    } else {
+                        Button("Đăng nhập") {
+                            showSettings = false
+                            playerVM.showAuth = true
+                        }
+                    }
+                }
+                Section("Bộ nhớ đệm") {
+                    LabeledContent("Dung lượng", value: libraryVM.cacheSizeString)
+                    Button("Xóa bộ nhớ đệm", role: .destructive) {
+                        showClearAlert = true
+                    }
+                }
+                Section("Giao diện") {
+                    LabeledContent("Chế độ", value: "Theo hệ thống")
+                }
+                Section("Thông tin") {
+                    LabeledContent("Phiên bản", value: "1.0.0")
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .background(OtoTheme.background)
+            .navigationTitle("Cài đặt")
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Xong") { showSettings = false }
+                }
+            }
+        }
     }
 }

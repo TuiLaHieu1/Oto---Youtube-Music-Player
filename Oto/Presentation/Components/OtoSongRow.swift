@@ -28,7 +28,7 @@ public struct OtoSongRow: View {
                             .foregroundStyle(OtoTheme.secondaryText)
                     }
                 }
-                .frame(width: 48, height: 48)
+                .frame(width: 44, height: 44)
                 .clipShape(RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous))
 
                 // Thông tin bài hát
@@ -53,17 +53,24 @@ public struct OtoSongRow: View {
                         .foregroundStyle(OtoTheme.accent)
                         .accessibilityLabel("Đang phát")
                 }
+
+                if song.duration > 0, !isPlaying {
+                    Text(formatDuration(song.duration))
+                        .font(OtoTheme.timeFont)
+                        .foregroundStyle(OtoTheme.tertiaryText)
+                }
+
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(OtoTheme.controlInactive)
+                    .frame(width: 24, height: OtoTheme.minTouchTarget)
             }
-            .padding(.horizontal, OtoTheme.spacing12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, OtoTheme.spacing4)
+            .padding(.vertical, OtoTheme.spacing4)
             .frame(minHeight: OtoTheme.minTouchTarget)
             .background(
-                RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                    .fill(isPlaying ? OtoTheme.accentSurface : OtoTheme.surface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                            .stroke(isPlaying ? OtoTheme.accent.opacity(0.3) : OtoTheme.separator, lineWidth: 0.5)
-                    )
+                RoundedRectangle(cornerRadius: OtoTheme.buttonRadius, style: .continuous)
+                    .fill(isPlaying ? OtoTheme.accentSurface : Color.clear)
             )
             .contentShape(Rectangle())
         }
@@ -71,5 +78,9 @@ public struct OtoSongRow: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(song.title), nghệ sĩ \(song.artist)")
         .accessibilityHint("Nhấn đúp để phát bài hát này")
+    }
+
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        String(format: "%d:%02d", Int(duration) / 60, Int(duration) % 60)
     }
 }

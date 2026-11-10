@@ -39,7 +39,7 @@ public struct OtoErrorState: View {
             Button(action: onRetry) {
                 Label("Thử lại", systemImage: "arrow.clockwise")
                     .font(OtoTheme.buttonFont)
-                    .foregroundStyle(OtoTheme.surface)
+                    .foregroundStyle(OtoTheme.onAccent)
                     .padding(.horizontal, OtoTheme.spacing24)
                     .padding(.vertical, OtoTheme.spacing12)
                     .frame(minHeight: OtoTheme.minTouchTarget)

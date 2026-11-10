@@ -48,7 +48,7 @@ public struct OtoEmptyState: View {
                 Button(action: action) {
                     Text(actionTitle)
                         .font(OtoTheme.buttonFont)
-                        .foregroundStyle(OtoTheme.surface)
+                        .foregroundStyle(OtoTheme.onAccent)
                         .padding(.horizontal, OtoTheme.spacing24)
                         .padding(.vertical, OtoTheme.spacing12)
                         .frame(minHeight: OtoTheme.minTouchTarget)

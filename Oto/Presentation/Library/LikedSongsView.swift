@@ -75,7 +75,7 @@ public struct LikedSongsView: View {
                                 .fontWeight(.semibold)
                         }
                         .font(.system(size: 15))
-                        .foregroundStyle(OtoTheme.surface)
+                        .foregroundStyle(OtoTheme.onAccent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(
@@ -121,64 +121,12 @@ public struct LikedSongsView: View {
                 .padding(.horizontal, OtoTheme.spacing16)
 
                 // List of liked songs
-                LazyVStack(spacing: OtoTheme.spacing8) {
+                LazyVStack(spacing: OtoTheme.spacing4) {
                     ForEach(libraryVM.likedSongs) { song in
                         let isCur = isCurrent(song)
-                        Button {
+                        OtoSongRow(song: song, isPlaying: isCur) {
                             playSong(song)
-                        } label: {
-                            HStack(spacing: OtoTheme.spacing12) {
-                                AsyncImage(url: song.artworkURL) { image in
-                                    image.resizable().scaledToFill()
-                                } placeholder: {
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: OtoTheme.artworkRadius, style: .continuous)
-                                            .fill(OtoTheme.secondaryText.opacity(0.12))
-                                        Image(systemName: "music.note")
-                                            .font(.system(size: 16))
-                                            .foregroundStyle(OtoTheme.secondaryText)
-                                    }
-                                }
-                                .frame(width: 52, height: 52)
-                                .clipShape(RoundedRectangle(cornerRadius: OtoTheme.artworkRadius, style: .continuous))
-
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(song.title)
-                                        .font(.system(size: 15, weight: .semibold))
-                                        .foregroundStyle(isCur ? OtoTheme.accent : OtoTheme.primaryText)
-                                        .lineLimit(1)
-
-                                    Text(song.artist)
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(OtoTheme.secondaryText)
-                                        .lineLimit(1)
-                                }
-
-                                Spacer()
-
-                                if song.duration > 0 {
-                                    Text(formatDuration(song.duration))
-                                        .font(.system(size: 12, weight: .medium, design: .monospaced))
-                                        .foregroundStyle(OtoTheme.secondaryText)
-                                }
-                            }
-                            .padding(.horizontal, OtoTheme.spacing12)
-                            .padding(.vertical, 10)
-                            .frame(minHeight: OtoTheme.minTouchTarget)
-                            .background(
-                                RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                                    .fill(isCur ? OtoTheme.accentSurface : OtoTheme.surface)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                                            .stroke(
-                                                isCur ? OtoTheme.accent.opacity(0.3) : OtoTheme.separator,
-                                                lineWidth: 0.5
-                                            )
-                                    )
-                            )
-                            .contentShape(Rectangle())
                         }
-                        .buttonStyle(.plain)
                     }
                 }
                 .padding(.horizontal, OtoTheme.spacing16)
@@ -213,11 +161,5 @@ public struct LikedSongsView: View {
             songs.shuffle()
         }
         playerVM.playQueue(songs: songs, startIndex: 0)
-    }
-
-    private func formatDuration(_ duration: TimeInterval) -> String {
-        let minutes = Int(duration) / 60
-        let seconds = Int(duration) % 60
-        return String(format: "%d:%02d", minutes, seconds)
     }
 }

@@ -33,6 +33,9 @@ public enum OtoTheme {
     /// - Spectrum (Dark): #101117 (nền tối sâu, immersive)
     public static let background = dynamicColor(light: "F7F4EF", dark: "101117")
 
+    /// Nền nhóm và control phụ.
+    public static let backgroundSecondary = dynamicColor(light: "EEE8E0", dark: "171922")
+
     /// Surface:
     /// - Atelier: #FFFFFF (bề mặt thẻ sạch sẽ)
     /// - Spectrum: #1D202A (bề mặt nổi lớp than chì)
@@ -41,7 +44,7 @@ public enum OtoTheme {
     /// Surface Elevated (Popup, Inset, Chip cao hơn một bậc):
     /// - Atelier: #FDFCFA
     /// - Spectrum: #262A37
-    public static let surfaceElevated = dynamicColor(light: "FDFCFA", dark: "262A37")
+    public static let surfaceElevated = dynamicColor(light: "FFFFFF", dark: "292C39")
 
     /// Primary Text:
     /// - Atelier: #201E1B (chữ đen than ấm, độ tương phản cao)
@@ -51,12 +54,12 @@ public enum OtoTheme {
     /// Secondary Text:
     /// - Atelier: #7A756D (chữ phụ xám ấm)
     /// - Spectrum: #8F94A6 (chữ phụ xám sương lạnh)
-    public static let secondaryText = dynamicColor(light: "7A756D", dark: "8F94A6")
+    public static let secondaryText = dynamicColor(light: "6D655D", dark: "AFB2C2")
 
     /// Tertiary Text / Placeholder:
     /// - Atelier: #A6A095
     /// - Spectrum: #5D6275
-    public static let tertiaryText = dynamicColor(light: "A6A095", dark: "5D6275")
+    public static let tertiaryText = dynamicColor(light: "7A7168", dark: "979CAE")
 
     /// Accent / Highlight Color:
     /// - Atelier: #A74328 (đỏ gạch nung terracotta ấm áp)
@@ -71,17 +74,20 @@ public enum OtoTheme {
     /// Accent Surface (Nền mờ nhạt cho badge, tag, nút chọn):
     /// - Atelier: #F6EDE9 (terracotta 10%)
     /// - Spectrum: #242238 (lavender 15%)
-    public static let accentSurface = dynamicColor(light: "F6EDE9", dark: "242238")
+    public static let accentSurface = dynamicColor(light: "F3DED4", dark: "36304D")
+
+    /// Wash tĩnh cho player; không dùng blur liên tục.
+    public static let atmosphere = dynamicColor(light: "EBD4C2", dark: "382C3A")
 
     /// Separator / Border:
     /// - Atelier: #E8E3DA (đường viền nhẹ nhàng)
     /// - Spectrum: #262A37 (đường phân tách sâu)
-    public static let separator = dynamicColor(light: "E8E3DA", dark: "262A37")
+    public static let separator = dynamicColor(light: "D8D0C6", dark: "3B3F50")
 
     /// Error Color (Tuyệt đối không dùng chung với accent):
     /// - Atelier: #C83E3E
     /// - Spectrum: #FF6B6B
-    public static let error = dynamicColor(light: "C83E3E", dark: "FF6B6B")
+    public static let error = dynamicColor(light: "AE3029", dark: "FF9B94")
 
     /// Warning dùng cho trạng thái kết nối chập chờn hoặc dữ liệu chưa đồng bộ.
     public static let warning = dynamicColor(light: "9A6700", dark: "F2C94C")
@@ -90,8 +96,9 @@ public enum OtoTheme {
     public static let success = dynamicColor(light: "2F7D4A", dark: "62C987")
 
     /// Control chưa chọn và trạng thái disabled.
-    public static let controlInactive = dynamicColor(light: "8B867E", dark: "9297AA")
-    public static let disabled = dynamicColor(light: "C8C2B8", dark: "4B5061")
+    public static let controlInactive = dynamicColor(light: "756B62", dark: "A1A6BA")
+    public static let disabled = dynamicColor(light: "827970", dark: "878C9E")
+    public static let disabledSurface = dynamicColor(light: "E6E0D8", dark: "282B35")
 
     /// Lớp phủ cho sheet/menu, không phụ thuộc màu artwork.
     public static let scrim = dynamicColor(light: "201E1B", dark: "05060A")

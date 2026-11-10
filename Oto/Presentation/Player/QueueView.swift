@@ -19,15 +19,13 @@ public struct QueueView: View {
                         // Section: Đang phát
                         if let currentSong = playerVM.currentSong {
                             VStack(alignment: .leading, spacing: OtoTheme.spacing8) {
-                                Text("ĐANG PHÁT")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(OtoTheme.secondaryText)
+                                Text("Đang phát")
+                                    .font(OtoTheme.sectionTitleFont)
+                                    .foregroundStyle(OtoTheme.primaryText)
                                     .padding(.horizontal, OtoTheme.spacing16)
 
                                 HStack(spacing: OtoTheme.spacing12) {
-                                    Image(systemName: "speaker.wave.3.fill")
-                                        .font(.system(size: 16, weight: .bold))
-                                        .foregroundStyle(OtoTheme.accent)
+                                    artwork(for: currentSong)
 
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(currentSong.title)
@@ -54,13 +52,27 @@ public struct QueueView: View {
                                 )
                                 .padding(.horizontal, OtoTheme.spacing16)
                             }
+
+                            HStack(spacing: OtoTheme.spacing8) {
+                                queueModeButton(
+                                    title: playerVM.isShuffleEnabled ? "Đang trộn" : "Trộn tắt",
+                                    active: playerVM.isShuffleEnabled,
+                                    action: playerVM.toggleShuffle
+                                )
+                                queueModeButton(
+                                    title: repeatTitle,
+                                    active: playerVM.repeatMode != .off,
+                                    action: playerVM.toggleRepeat
+                                )
+                            }
+                            .padding(.horizontal, OtoTheme.spacing16)
                         }
 
                         // Section: Tiếp theo trong hàng đợi
                         VStack(alignment: .leading, spacing: OtoTheme.spacing8) {
-                            Text("TIẾP THEO TRONG HÀNG ĐỢI")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(OtoTheme.secondaryText)
+                            Text("Tiếp theo")
+                                .font(OtoTheme.sectionTitleFont)
+                                .foregroundStyle(OtoTheme.primaryText)
                                 .padding(.horizontal, OtoTheme.spacing16)
 
                             let items = playerVM.queueManager.items
@@ -87,10 +99,7 @@ public struct QueueView: View {
                                             playerVM.playQueueItem(at: index)
                                         } label: {
                                             HStack(spacing: OtoTheme.spacing12) {
-                                                Text("\(index - currentIndex)")
-                                                    .font(.system(size: 14, weight: .bold, design: .monospaced))
-                                                    .foregroundStyle(OtoTheme.secondaryText)
-                                                    .frame(width: 24, alignment: .leading)
+                                                artwork(for: item.song)
 
                                                 VStack(alignment: .leading, spacing: 2) {
                                                     Text(item.song.title)
@@ -109,17 +118,6 @@ public struct QueueView: View {
                                             .padding(.horizontal, OtoTheme.spacing16)
                                             .padding(.vertical, 10)
                                             .frame(minHeight: OtoTheme.minTouchTarget)
-                                            .background(
-                                                RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                                                    .fill(OtoTheme.surface)
-                                                    .overlay(
-                                                    RoundedRectangle(
-                                                        cornerRadius: OtoTheme.cardRadius,
-                                                        style: .continuous
-                                                    )
-                                                    .stroke(OtoTheme.separator, lineWidth: 0.5)
-                                                    )
-                                            )
                                             .contentShape(Rectangle())
                                         }
                                         .buttonStyle(.plain)
@@ -127,6 +125,15 @@ public struct QueueView: View {
                                 }
                                 .padding(.horizontal, OtoTheme.spacing16)
                             }
+                        }
+
+                        if playerVM.effectiveDuration > 0 {
+                            OtoScrubber(
+                                currentTime: playerVM.currentPosition,
+                                duration: playerVM.effectiveDuration,
+                                onSeek: playerVM.seek
+                            )
+                            .padding(.horizontal, OtoTheme.spacing16)
                         }
                     }
                     .padding(.top, OtoTheme.spacing16)
@@ -145,5 +152,38 @@ public struct QueueView: View {
                 }
             }
         }
+    }
+
+    private var repeatTitle: String {
+        switch playerVM.repeatMode {
+        case .off: return "Lặp tắt"
+        case .all: return "Lặp tất cả"
+        case .one: return "Lặp một bài"
+        }
+    }
+
+    private func queueModeButton(title: String, active: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(OtoTheme.captionFont)
+                .fontWeight(.semibold)
+                .foregroundStyle(active ? OtoTheme.accent : OtoTheme.primaryText)
+                .frame(maxWidth: .infinity, minHeight: OtoTheme.minTouchTarget)
+                .background(active ? OtoTheme.accentSurface : OtoTheme.backgroundSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: OtoTheme.buttonRadius, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func artwork(for song: Song) -> some View {
+        AsyncImage(url: song.artworkURL) { image in
+            image.resizable().scaledToFill()
+        } placeholder: {
+            RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous)
+                .fill(OtoTheme.backgroundSecondary)
+                .overlay(Image(systemName: "music.note").foregroundStyle(OtoTheme.tertiaryText))
+        }
+        .frame(width: 44, height: 44)
+        .clipShape(RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous))
     }
 }

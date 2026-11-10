@@ -12,8 +12,35 @@ public struct SearchView: View {
 
     public var body: some View {
         NavigationStack {
-            ZStack {
-                OtoTheme.background.ignoresSafeArea()
+            VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
+                Text("Tìm kiếm")
+                    .font(OtoTheme.largeTitleFont)
+                    .foregroundStyle(OtoTheme.primaryText)
+                    .padding(.horizontal, OtoTheme.spacing16)
+
+                HStack(spacing: OtoTheme.spacing8) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(OtoTheme.controlInactive)
+                    TextField("Bài hát, album, nghệ sĩ", text: $searchVM.query)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    if !searchVM.query.isEmpty {
+                        Button {
+                            searchVM.query = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(OtoTheme.controlInactive)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, OtoTheme.spacing12)
+                .frame(height: OtoTheme.minTouchTarget)
+                .background(OtoTheme.backgroundSecondary)
+                .clipShape(RoundedRectangle(cornerRadius: OtoTheme.buttonRadius, style: .continuous))
+                .padding(.horizontal, OtoTheme.spacing16)
+
+                filterChips
 
                 Group {
                     if searchVM.isLoading && searchVM.searchResults.isEmpty {
@@ -28,54 +55,72 @@ public struct SearchView: View {
                         resultsListView
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .navigationTitle("Tìm kiếm")
-            .searchable(
-                text: $searchVM.query,
-                placement: .navigationBarDrawer(displayMode: .always),
-                prompt: "Bài hát, nghệ sĩ..."
-            )
+            .padding(.top, OtoTheme.spacing8)
+            .background(OtoTheme.background.ignoresSafeArea())
+            .toolbar(.hidden, for: .navigationBar)
         }
     }
 
     // MARK: - Subviews
 
     private var loadingView: some View {
-        VStack(spacing: OtoTheme.spacing12) {
-            ProgressView()
-                .tint(OtoTheme.accent)
-            Text("Đang tìm bài hát...")
-                .font(OtoTheme.subtitleFont)
-                .foregroundStyle(OtoTheme.secondaryText)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        OtoLoadingSkeleton()
     }
 
     private var emptyStateView: some View {
         let isInitial = searchVM.query.isEmpty
         return OtoEmptyState(
             iconName: "magnifyingglass",
-            title: isInitial ? "Khám phá bài hát mới" : "Không tìm thấy kết quả phù hợp",
-            message: isInitial ? "Nhập tên bài hát hoặc nghệ sĩ bạn muốn nghe." : "Hãy thử tìm kiếm với từ khóa khác."
+            title: isInitial ? "Tìm bài hát tiếp theo" : "Không tìm thấy kết quả",
+            message: isInitial
+                ? "Tìm bài hát, album, nghệ sĩ và playlist."
+                : "Thử cách viết khác hoặc từ khóa ngắn hơn."
         )
     }
 
     private var resultsListView: some View {
         ScrollView {
-            LazyVStack(spacing: OtoTheme.spacing8) {
-                ForEach(searchVM.searchResults) { song in
-                    let isCurrent = playerVM.currentSong?.id == song.id && playerVM.isPlaying
-                    OtoSongRow(song: song, isPlaying: isCurrent) {
-                        #if os(iOS)
-                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                        #endif
-                        playerVM.playWithRadio(song: song)
+            VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
+                OtoSectionHeader(title: "Bài hát")
+                LazyVStack(spacing: OtoTheme.spacing4) {
+                    ForEach(searchVM.searchResults) { song in
+                        let isCurrent = playerVM.currentSong?.id == song.id && playerVM.isPlaying
+                        OtoSongRow(song: song, isPlaying: isCurrent) {
+                            #if os(iOS)
+                            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                            #endif
+                            playerVM.playWithRadio(song: song)
+                        }
                     }
                 }
+                .padding(.horizontal, OtoTheme.spacing16)
+            }
+            .padding(.bottom, 120)
+        }
+    }
+
+    private var filterChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: OtoTheme.spacing8) {
+                filterChip("Tất cả", selected: true)
+                filterChip("Bài hát", selected: false)
+                filterChip("Album", selected: false)
+                filterChip("Nghệ sĩ", selected: false)
+                filterChip("Playlist", selected: false)
             }
             .padding(.horizontal, OtoTheme.spacing16)
-            .padding(.top, OtoTheme.spacing12)
-            .padding(.bottom, 160) // Chừa khoảng trống nổi cho MiniPlayer
         }
+    }
+
+    private func filterChip(_ title: String, selected: Bool) -> some View {
+        Text(title)
+            .font(OtoTheme.captionFont)
+            .foregroundStyle(selected ? OtoTheme.accent : OtoTheme.secondaryText)
+            .padding(.horizontal, OtoTheme.spacing12)
+            .frame(minHeight: 34)
+            .background(selected ? OtoTheme.accentSurface : OtoTheme.surface)
+            .clipShape(Capsule())
     }
 }

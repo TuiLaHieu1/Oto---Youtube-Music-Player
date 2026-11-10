@@ -47,9 +47,9 @@ public struct OtoMiniPlayer: View {
                 controlsView
             }
             .padding(.horizontal, OtoTheme.spacing16)
-            .padding(.vertical, 8)
+            .frame(maxHeight: .infinity)
         }
-        .frame(minHeight: 62)
+        .frame(height: 56)
         .background(
             RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
                 .fill(OtoTheme.surface)
@@ -60,7 +60,6 @@ public struct OtoMiniPlayer: View {
                 .stroke(OtoTheme.separator, lineWidth: 0.5)
         )
         .shadow(color: OtoTheme.cardShadowColor.opacity(0.12), radius: 10, x: 0, y: 4)
-        .padding(.horizontal, OtoTheme.spacing12)
         .accessibilityElement(children: .contain)
         .accessibilityHint("Chạm vào thông tin bài hát để mở trình phát toàn màn hình")
     }
@@ -97,6 +96,7 @@ public struct OtoMiniPlayer: View {
                             .foregroundStyle(OtoTheme.secondaryText)
                     }
                 }
+                .id(song.artworkURL)
                 .frame(width: 42, height: 42)
                 .clipShape(RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous))
             } else {

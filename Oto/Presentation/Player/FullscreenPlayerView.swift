@@ -128,6 +128,7 @@ private extension FullscreenPlayerView {
                     .foregroundStyle(OtoTheme.secondaryText)
             }
         }
+        .id(playerVM.currentSong?.artworkURL)
         .frame(width: size, height: size)
         .clipShape(RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous))
         .overlay(
@@ -199,7 +200,7 @@ private extension FullscreenPlayerView {
     }
 
     private var bottomBar: some View {
-        HStack(spacing: OtoTheme.spacing16) {
+        HStack(spacing: OtoTheme.spacing8) {
             Button {
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -208,23 +209,12 @@ private extension FullscreenPlayerView {
                     playerVM.showLyrics.toggle()
                 }
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: playerVM.showLyrics ? "quote.bubble.fill" : "quote.bubble")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("Lyrics")
-                        .font(.system(.subheadline, design: .default, weight: .semibold))
-                }
-                .foregroundStyle(playerVM.showLyrics ? OtoTheme.accent : OtoTheme.secondaryText)
-                .padding(.horizontal, 22)
-                .padding(.vertical, 10)
-                .background(
-                    Capsule()
-                        .fill(playerVM.showLyrics ? OtoTheme.accentSurface : OtoTheme.surface.opacity(0.85))
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(playerVM.showLyrics ? OtoTheme.accent.opacity(0.4) : OtoTheme.separator, lineWidth: 0.8)
-                )
+                Label("Lời bài hát", systemImage: playerVM.showLyrics ? "quote.bubble.fill" : "quote.bubble")
+                    .font(OtoTheme.buttonFont)
+                    .foregroundStyle(playerVM.showLyrics ? OtoTheme.accent : OtoTheme.primaryText)
+                    .frame(maxWidth: .infinity, minHeight: OtoTheme.minTouchTarget)
+                    .background(OtoTheme.backgroundSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: OtoTheme.buttonRadius, style: .continuous))
             }
             .buttonStyle(.plain)
 
@@ -234,26 +224,16 @@ private extension FullscreenPlayerView {
                 #endif
                 playerVM.showQueue = true
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "list.bullet")
-                        .font(.system(size: 14, weight: .semibold))
-                    Text("Queue")
-                        .font(.system(.subheadline, design: .default, weight: .semibold))
-                }
-                .foregroundStyle(OtoTheme.secondaryText)
-                .padding(.horizontal, 22)
-                .padding(.vertical, 10)
-                .background(
-                    Capsule()
-                        .fill(OtoTheme.surface.opacity(0.85))
-                )
-                .overlay(
-                    Capsule()
-                        .stroke(OtoTheme.separator, lineWidth: 0.8)
-                )
+                Label("Hàng đợi", systemImage: "list.bullet")
+                    .font(OtoTheme.buttonFont)
+                    .foregroundStyle(OtoTheme.primaryText)
+                    .frame(maxWidth: .infinity, minHeight: OtoTheme.minTouchTarget)
+                    .background(OtoTheme.backgroundSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: OtoTheme.buttonRadius, style: .continuous))
             }
             .buttonStyle(.plain)
         }
+        .padding(.horizontal, OtoTheme.spacing32)
         .padding(.bottom, OtoTheme.spacing16)
     }
 }
@@ -269,20 +249,10 @@ private struct AmbientBackgroundView: View {
             // Nền dự phòng bảo đảm khả năng đọc tuyệt đối theo theme
             OtoTheme.background.ignoresSafeArea()
 
-            if let artworkURL {
-                AsyncImage(url: artworkURL) { image in
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: size.width, height: size.height)
-                        .clipped()
-                        .blur(radius: 60)
-                        .opacity(0.35)
-                } placeholder: {
-                    Color.clear
-                }
+            OtoTheme.atmosphere
+                .opacity(artworkURL == nil ? 0 : 0.55)
+                .frame(width: size.width, height: size.height)
                 .ignoresSafeArea()
-            }
         }
     }
 }

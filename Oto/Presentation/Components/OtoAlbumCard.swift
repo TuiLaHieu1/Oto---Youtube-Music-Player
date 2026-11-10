@@ -65,16 +65,6 @@ public struct OtoAlbumCard: View {
                 }
                 .frame(width: size, alignment: .leading)
             }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                    .fill(OtoTheme.surface)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                            .stroke(OtoTheme.separator, lineWidth: 0.5)
-                    )
-                    .shadow(color: OtoTheme.cardShadowColor.opacity(0.08), radius: 6, x: 0, y: 2)
-            )
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .combine)

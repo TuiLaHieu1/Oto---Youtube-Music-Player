@@ -37,6 +37,7 @@ public final class HomeViewModel {
         }
         SessionStore.shared.registerSignInHandler { [weak self] in
             Task { @MainActor [weak self] in
+                await self?.cache.clear()
                 self?.clearSessionData()
                 await self?.loadFeed()
             }

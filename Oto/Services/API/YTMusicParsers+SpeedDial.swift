@@ -69,7 +69,9 @@ extension YTMusicParsers {
                 "speed dial", "speeddial", "quay số nhanh", "listen again", "nghe lại",
                 "thường nghe", "nghe nhiều", "gần đây", "recently", "chọn nhanh đài phát",
                 "đài phát nhanh", "chọn nhanh"
-            ].contains { lowerTitle.contains($0) } || shelf["musicSpeedDialShelfRenderer"] != nil
+            ].contains { lowerTitle.contains($0) }
+                || (shelf["_isSpeedDialRenderer"] as? Bool == true)
+                || shelf["musicSpeedDialShelfRenderer"] != nil
 
             if isSpeedDial && speedDialItems.isEmpty {
                 speedDialItems = parsed.items
@@ -119,10 +121,12 @@ extension YTMusicParsers {
            let sectionList = tabContent["sectionListRenderer"] as? [String: Any],
            let sectionContents = sectionList["contents"] as? [[String: Any]] {
             for container in sectionContents {
-                if let shelf = container["musicCarouselShelfRenderer"] as? [String: Any]
-                    ?? container["musicShelfRenderer"] as? [String: Any]
-                    ?? container["musicSpeedDialShelfRenderer"] as? [String: Any]
+                if var shelf = container["musicSpeedDialShelfRenderer"] as? [String: Any]
                     ?? container["musicSpeedDialShelfModel"] as? [String: Any] {
+                    shelf["_isSpeedDialRenderer"] = true
+                    rawShelves.append(shelf)
+                } else if let shelf = container["musicCarouselShelfRenderer"] as? [String: Any]
+                    ?? container["musicShelfRenderer"] as? [String: Any] {
                     rawShelves.append(shelf)
                 }
             }
@@ -149,6 +153,10 @@ extension YTMusicParsers {
                     headerTexts.append(contentsOf: runs.compactMap { $0["text"] as? String })
                 }
             }
+        }
+        if headerTexts.isEmpty, let titleObj = carousel["title"] as? [String: Any],
+           let runs = titleObj["runs"] as? [[String: Any]] {
+            headerTexts.append(contentsOf: runs.compactMap { $0["text"] as? String })
         }
         let shelfTitle = headerTexts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
         let resolvedTitle = shelfTitle.isEmpty ? "Gợi ý cho bạn" : shelfTitle

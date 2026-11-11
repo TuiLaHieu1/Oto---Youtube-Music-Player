@@ -51,7 +51,7 @@ public final class CookieStorage: Sendable {
         lock.lock()
         defer { lock.unlock() }
 
-        let authCookies = cookies.filter { isRelevantAuthCookie($0.name) }
+        let authCookies = cookies.filter { isRelevantAuthCookie($0) }
         guard !authCookies.isEmpty else {
             logger.warning("Không tìm thấy cookie xác thực hợp lệ để lưu.")
             return false
@@ -144,22 +144,25 @@ public final class CookieStorage: Sendable {
                 return false
             }
             let domain = cookie.domain.lowercased()
-            guard domain.contains("youtube.com") || domain.contains("google.com") else {
-                return false
-            }
-            return true
+            return domain.contains("youtube.com") || domain.contains("google.com")
         }
         let names = Set(validCookies.map(\.name))
-        return names.contains("SAPISID") || names.contains("SID") || names.contains("__Secure-3PAPISID")
+        return names.contains("SAPISID") || names.contains("LOGIN_INFO") || names.contains("__Secure-3PAPISID")
     }
 
-    /// Lọc các cookie cốt lõi cần thiết cho xác thực YouTube Music.
-    private func isRelevantAuthCookie(_ name: String) -> Bool {
-        let relevant: Set<String> = [
-            "SAPISID", "SSID", "SID", "HSID", "__Secure-3PAPISID",
-            "__Secure-1PAPISID", "__Secure-3PSID", "__Secure-1PSID",
-            "LOGIN_INFO", "APISID", "PREF"
-        ]
-        return relevant.contains(name)
+    /// Lọc các cookie cốt lõi cần thiết cho xác thực YouTube Music (bao gồm cả các token bảo mật thời gian thực).
+    private func isRelevantAuthCookie(_ cookie: HTTPCookie) -> Bool {
+        let domain = cookie.domain.lowercased()
+        guard domain.contains("youtube.com") || domain.contains("google.com") else {
+            return false
+        }
+        let name = cookie.name
+        // Lưu trữ các cookie xác thực, phiên và định danh Google/YouTube (kể cả TS/CC timestamp tokens)
+        if name.contains("SID") || name.contains("LOGIN_INFO") || name.contains("APISID")
+            || name.contains("SSID") || name.contains("PREF") || name.contains("HSID")
+            || name.contains("VISITOR") || name.contains("YSC") {
+            return true
+        }
+        return false
     }
 }

@@ -35,7 +35,14 @@ public struct AuthView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Đóng") {
-                        dismiss()
+                        Task { @MainActor in
+                            let saved = await WebKitManager.shared.syncCookiesToStorage()
+                            if saved && CookieStorage.shared.hasValidSession {
+                                try? await SessionStore.shared.handleSignInSuccess()
+                                onLoginSuccess?()
+                            }
+                            dismiss()
+                        }
                     }
                     .foregroundStyle(OtoTheme.secondaryText)
                 }
@@ -119,10 +126,24 @@ struct AuthWebViewRepresentable: UIViewRepresentable {
             isLoading = false
             guard !hasHandledSuccess, let url = webView.url else { return }
 
-            // Chỉ kích hoạt thành công khi đã chuyển hướng hoàn tất về music.youtube.com
-            if url.host?.contains("music.youtube.com") == true {
-                hasHandledSuccess = true
-                Task { @MainActor in
+            let host = url.host?.lowercased() ?? ""
+            let isTargetHost = host.contains("music.youtube.com")
+                || (host.contains("youtube.com") && !url.path.contains("ServiceLogin"))
+
+            // Kiểm tra trạng thái cookie thực tế từ WebKit cookie store
+            Task { @MainActor in
+                let store = WKWebsiteDataStore.default().httpCookieStore
+                let cookies = await store.allCookies()
+                let hasValidToken = cookies.contains { cookie in
+                    let name = cookie.name
+                    let domain = cookie.domain.lowercased()
+                    let isGoogleOrYT = domain.contains("youtube.com") || domain.contains("google.com")
+                    return isGoogleOrYT && (name == "SAPISID" || name == "LOGIN_INFO" || name == "__Secure-3PAPISID")
+                }
+
+                if isTargetHost && hasValidToken {
+                    guard !self.hasHandledSuccess else { return }
+                    self.hasHandledSuccess = true
                     do {
                         try await SessionStore.shared.handleSignInSuccess()
                         self.logger.info("Đã đăng nhập thành công và đồng bộ phiên Keychain.")

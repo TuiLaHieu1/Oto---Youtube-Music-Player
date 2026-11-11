@@ -218,19 +218,35 @@ public final class YTMusicClient: Sendable {
         let cookies = CookieStorage.shared.loadCookies()
         guard !cookies.isEmpty else { return }
 
-        let cookieHeader = cookies.map { "\($0.name)=\($0.value)" }.joined(separator: "; ")
+        // Đưa cookie google.com vào trước, sau đó ghi đè bằng cookie youtube.com để đảm bảo ưu tiên domain YouTube
+        var cookieDict: [String: String] = [:]
+        let sortedCookies = cookies.sorted { c1, _ in
+            !c1.domain.lowercased().contains("youtube.com")
+        }
+        for cookie in sortedCookies {
+            cookieDict[cookie.name] = cookie.value
+        }
+        let cookieHeader = cookieDict.map { "\($0.key)=\($0.value)" }.joined(separator: "; ")
         request.setValue(cookieHeader, forHTTPHeaderField: "Cookie")
         request.setValue("0", forHTTPHeaderField: "X-Goog-AuthUser")
         request.setValue("true", forHTTPHeaderField: "X-Youtube-Bootstrap-Logged-In")
 
-        if let sapisidCookie = cookies.first(where: { $0.name == "SAPISID" || $0.name == "__Secure-3PAPISID" }) {
+        let youtubeCookies = cookies.filter { $0.domain.lowercased().contains("youtube.com") }
+        let sapisidCookie = youtubeCookies.first(where: { $0.name == "SAPISID" })
+            ?? youtubeCookies.first(where: { $0.name == "__Secure-3PAPISID" })
+            ?? cookies.first(where: { $0.name == "SAPISID" })
+            ?? cookies.first(where: { $0.name == "__Secure-3PAPISID" })
+
+        if let sapisidCookie {
             let timestamp = Int(Date().timeIntervalSince1970)
             let origin = "https://music.youtube.com"
             let input = "\(timestamp) \(sapisidCookie.value) \(origin)"
             let hash = Insecure.SHA1.hash(data: Data(input.utf8))
                 .map { String(format: "%02x", $0) }
                 .joined()
-            request.setValue("SAPISIDHASH \(timestamp)_\(hash)", forHTTPHeaderField: "Authorization")
+            let token = "\(timestamp)_\(hash)"
+            let authValue = "SAPISIDHASH \(token) SAPISID1PHASH \(token) SAPISID3PHASH \(token)"
+            request.setValue(authValue, forHTTPHeaderField: "Authorization")
         }
     }
 
@@ -260,8 +276,12 @@ public final class YTMusicClient: Sendable {
             throw YTMusicError.transport(error.localizedDescription)
         }
     }
+}
 
-    private func validate(_ response: HTTPURLResponse, operation: String) throws {
+// MARK: - Response Validation & Diagnostics
+
+private extension YTMusicClient {
+    func validate(_ response: HTTPURLResponse, operation: String) throws {
         let code = response.statusCode
         switch code {
         case 200...299:
@@ -285,7 +305,7 @@ public final class YTMusicClient: Sendable {
         }
     }
 
-    private func logURLError(_ urlError: URLError, operation: String) {
+    func logURLError(_ urlError: URLError, operation: String) {
         let category: String
         switch urlError.code {
         case .notConnectedToInternet, .networkConnectionLost:
@@ -303,7 +323,7 @@ public final class YTMusicClient: Sendable {
         logger.error("operation=\(op, privacy: .public) errorCategory=\(cat, privacy: .public) code=\(code)")
     }
 
-    private static func retryAfter(from value: String?) -> TimeInterval? {
+    static func retryAfter(from value: String?) -> TimeInterval? {
         guard let value else { return nil }
         if let seconds = TimeInterval(value), seconds >= 0 {
             return seconds

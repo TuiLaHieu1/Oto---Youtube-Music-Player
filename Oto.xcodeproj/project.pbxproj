@@ -11,7 +11,6 @@
 		A10100012CE0000100000001 /* Oto/App/OtoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200012CE0000100000001 /* Oto/App/OtoApp.swift */; };
 		A10100022CE0000100000001 /* Oto/Presentation/Navigation/RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200022CE0000100000001 /* Oto/Presentation/Navigation/RootView.swift */; };
 		A10100032CE0000100000001 /* Oto/Presentation/Home/HomeFeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200032CE0000100000001 /* Oto/Presentation/Home/HomeFeedView.swift */; };
-		A10100392CE0000100000001 /* Oto/Presentation/Home/SpeedDialTileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200392CE0000100000001 /* Oto/Presentation/Home/SpeedDialTileView.swift */; };
 		A10100042CE0000100000001 /* Oto/Presentation/Library/LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200042CE0000100000001 /* Oto/Presentation/Library/LibraryView.swift */; };
 		A10100052CE0000100000001 /* Oto/Presentation/Player/MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200052CE0000100000001 /* Oto/Presentation/Player/MiniPlayerView.swift */; };
 		A10100062CE0000100000001 /* Oto/Presentation/Player/FullscreenPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200062CE0000100000001 /* Oto/Presentation/Player/FullscreenPlayerView.swift */; };
@@ -33,13 +32,13 @@
 		A10100302CE0000100000001 /* Oto/Services/API/HomeCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200302CE0000100000001 /* Oto/Services/API/HomeCache.swift */; };
 		A10100312CE0000100000001 /* Oto/ViewModels/LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200312CE0000100000001 /* Oto/ViewModels/LibraryViewModel.swift */; };
 		A10100322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift */; };
-		A10100572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift */; };
 		A10100332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */; };
 		A10100342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */; };
 		A10100352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift */; };
 		A10100362CE0000100000001 /* Oto/Services/API/SpeedDialPinStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200362CE0000100000001 /* Oto/Services/API/SpeedDialPinStore.swift */; };
 		A10100372CE0000100000001 /* Oto/Presentation/Theme/OtoTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200372CE0000100000001 /* Oto/Presentation/Theme/OtoTheme.swift */; };
 		A10100382CE0000100000001 /* Oto/Services/Audio/AudioSessionObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200382CE0000100000001 /* Oto/Services/Audio/AudioSessionObserver.swift */; };
+		A10100392CE0000100000001 /* Oto/Presentation/Home/SpeedDialTileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200392CE0000100000001 /* Oto/Presentation/Home/SpeedDialTileView.swift */; };
 		A10100402CE0000100000001 /* Oto/Presentation/Components/OtoSongRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200402CE0000100000001 /* Oto/Presentation/Components/OtoSongRow.swift */; };
 		A10100412CE0000100000001 /* Oto/Presentation/Components/OtoAlbumCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200412CE0000100000001 /* Oto/Presentation/Components/OtoAlbumCard.swift */; };
 		A10100422CE0000100000001 /* Oto/Presentation/Components/OtoSectionHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200422CE0000100000001 /* Oto/Presentation/Components/OtoSectionHeader.swift */; };
@@ -57,6 +56,7 @@
 		A10100542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift */; };
 		A10100552CE0000100000001 /* Oto/Services/API/YTMusicParsers+SpeedDial.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200552CE0000100000001 /* Oto/Services/API/YTMusicParsers+SpeedDial.swift */; };
 		A10100562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift */; };
+		A10100572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -75,7 +75,6 @@
 		A10200012CE0000100000001 /* Oto/App/OtoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/App/OtoApp.swift; sourceTree = SOURCE_ROOT; };
 		A10200022CE0000100000001 /* Oto/Presentation/Navigation/RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Navigation/RootView.swift; sourceTree = SOURCE_ROOT; };
 		A10200032CE0000100000001 /* Oto/Presentation/Home/HomeFeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Home/HomeFeedView.swift; sourceTree = SOURCE_ROOT; };
-		A10200392CE0000100000001 /* Oto/Presentation/Home/SpeedDialTileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Home/SpeedDialTileView.swift; sourceTree = SOURCE_ROOT; };
 		A10200042CE0000100000001 /* Oto/Presentation/Library/LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/LibraryView.swift; sourceTree = SOURCE_ROOT; };
 		A10200052CE0000100000001 /* Oto/Presentation/Player/MiniPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/MiniPlayerView.swift; sourceTree = SOURCE_ROOT; };
 		A10200062CE0000100000001 /* Oto/Presentation/Player/FullscreenPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/FullscreenPlayerView.swift; sourceTree = SOURCE_ROOT; };
@@ -97,13 +96,13 @@
 		A10200302CE0000100000001 /* Oto/Services/API/HomeCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/API/HomeCache.swift; sourceTree = SOURCE_ROOT; };
 		A10200312CE0000100000001 /* Oto/ViewModels/LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/ViewModels/LibraryViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A10200322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/LikedSongsView.swift; sourceTree = SOURCE_ROOT; };
-		A10200572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/PlaylistDetailView.swift; sourceTree = SOURCE_ROOT; };
 		A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/API/YTMusicParsers.swift; sourceTree = SOURCE_ROOT; };
 		A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/PlayerWebViewContainer.swift; sourceTree = SOURCE_ROOT; };
 		A10200352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/PlayerBridgeScript.swift; sourceTree = SOURCE_ROOT; };
 		A10200362CE0000100000001 /* Oto/Services/API/SpeedDialPinStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/API/SpeedDialPinStore.swift; sourceTree = SOURCE_ROOT; };
 		A10200372CE0000100000001 /* Oto/Presentation/Theme/OtoTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Theme/OtoTheme.swift; sourceTree = SOURCE_ROOT; };
 		A10200382CE0000100000001 /* Oto/Services/Audio/AudioSessionObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/Audio/AudioSessionObserver.swift; sourceTree = SOURCE_ROOT; };
+		A10200392CE0000100000001 /* Oto/Presentation/Home/SpeedDialTileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Home/SpeedDialTileView.swift; sourceTree = SOURCE_ROOT; };
 		A10200402CE0000100000001 /* Oto/Presentation/Components/OtoSongRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Components/OtoSongRow.swift; sourceTree = SOURCE_ROOT; };
 		A10200412CE0000100000001 /* Oto/Presentation/Components/OtoAlbumCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Components/OtoAlbumCard.swift; sourceTree = SOURCE_ROOT; };
 		A10200422CE0000100000001 /* Oto/Presentation/Components/OtoSectionHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Components/OtoSectionHeader.swift; sourceTree = SOURCE_ROOT; };
@@ -121,6 +120,7 @@
 		A10200542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift"; sourceTree = SOURCE_ROOT; };
 		A10200552CE0000100000001 /* Oto/Services/API/YTMusicParsers+SpeedDial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicParsers+SpeedDial.swift"; sourceTree = SOURCE_ROOT; };
 		A10200562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/SpeedDialTests.swift; sourceTree = SOURCE_ROOT; };
+		A10200572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/PlaylistDetailView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -314,7 +314,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1600;
-				LastUpgradeCheck = 1600;
+				LastUpgradeCheck = 2720;
 				TargetAttributes = {
 					A10600012CE0000100000001 = {
 						CreatedOnToolsVersion = 16.0;
@@ -457,6 +457,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = YRXR7F2DR8;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -470,7 +471,9 @@
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNDEFINED_VARIABLES = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
@@ -478,6 +481,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 6.0;
@@ -519,6 +523,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = YRXR7F2DR8;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
@@ -526,13 +531,16 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNDEFINED_VARIABLES = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_VERSION = 6.0;
 				VALIDATE_PRODUCT = YES;
@@ -546,7 +554,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YRXR7F2DR8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Oto/Info.plist;
@@ -572,7 +579,6 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YRXR7F2DR8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Oto/Info.plist;
@@ -597,7 +603,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YRXR7F2DR8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;
@@ -617,7 +622,6 @@
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YRXR7F2DR8;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MARKETING_VERSION = 1.0;

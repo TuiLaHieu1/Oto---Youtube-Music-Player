@@ -71,9 +71,10 @@ public struct HomeFeedView: View {
                     Button {
                         playerVM.showAuth = true
                     } label: {
-                        Image(systemName: "person.circle")
+                        let isAuth = SessionStore.shared.isAuthenticated
+                        Image(systemName: isAuth ? "person.crop.circle.badge.checkmark" : "person.circle")
                             .font(.system(size: 20))
-                            .foregroundStyle(OtoTheme.controlInactive)
+                            .foregroundStyle(isAuth ? OtoTheme.accent : OtoTheme.controlInactive)
                             .frame(width: OtoTheme.minTouchTarget, height: OtoTheme.minTouchTarget)
                     }
                     .buttonStyle(.plain)

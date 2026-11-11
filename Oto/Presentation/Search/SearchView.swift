@@ -111,23 +111,34 @@ public struct SearchView: View {
     private var filterChips: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: OtoTheme.spacing8) {
-                filterChip("Tất cả", selected: true)
-                filterChip("Bài hát", selected: false)
-                filterChip("Album", selected: false)
-                filterChip("Nghệ sĩ", selected: false)
-                filterChip("Playlist", selected: false)
+                ForEach(SearchScope.allCases, id: \.self) { scope in
+                    Button {
+                        #if os(iOS)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        #endif
+                        searchVM.selectedScope = scope
+                    } label: {
+                        Text(scope.rawValue)
+                            .font(OtoTheme.captionFont)
+                            .fontWeight(searchVM.selectedScope == scope ? .semibold : .medium)
+                            .foregroundStyle(
+                                searchVM.selectedScope == scope
+                                    ? OtoTheme.onAccent
+                                    : OtoTheme.secondaryText
+                            )
+                            .padding(.horizontal, OtoTheme.spacing16)
+                            .frame(minHeight: 34)
+                            .background(
+                                searchVM.selectedScope == scope
+                                    ? OtoTheme.accent
+                                    : OtoTheme.surface
+                            )
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(.horizontal, OtoTheme.spacing16)
         }
-    }
-
-    private func filterChip(_ title: String, selected: Bool) -> some View {
-        Text(title)
-            .font(OtoTheme.captionFont)
-            .foregroundStyle(selected ? OtoTheme.accent : OtoTheme.secondaryText)
-            .padding(.horizontal, OtoTheme.spacing12)
-            .frame(minHeight: 34)
-            .background(selected ? OtoTheme.accentSurface : OtoTheme.surface)
-            .clipShape(Capsule())
     }
 }

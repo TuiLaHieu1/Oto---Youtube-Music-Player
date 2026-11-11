@@ -2,6 +2,15 @@ import Foundation
 import SwiftUI
 import OtoCore
 
+/// Phạm vi tìm kiếm âm nhạc.
+public enum SearchScope: String, CaseIterable, Sendable {
+    case all = "Tất cả"
+    case songs = "Bài hát"
+    case albums = "Album"
+    case artists = "Nghệ sĩ"
+    case playlists = "Playlist"
+}
+
 /// ViewModel quản lý tìm kiếm bài hát trực tiếp qua YouTube Music API trên MainActor.
 @MainActor
 @Observable
@@ -9,6 +18,13 @@ public final class SearchViewModel {
     public var query: String = "" {
         didSet {
             handleQueryChange(query)
+        }
+    }
+    public var selectedScope: SearchScope = .all {
+        didSet {
+            if selectedScope != oldValue {
+                handleQueryChange(query)
+            }
         }
     }
     public var searchResults: [Song] = []
@@ -42,7 +58,15 @@ public final class SearchViewModel {
             errorMessage = nil
 
             do {
-                let songs = try await client.searchSongs(query: trimmed)
+                let effectiveQuery: String
+                switch selectedScope {
+                case .all, .songs: effectiveQuery = trimmed
+                case .albums: effectiveQuery = "\(trimmed) album"
+                case .artists: effectiveQuery = "\(trimmed) artist"
+                case .playlists: effectiveQuery = "\(trimmed) playlist"
+                }
+
+                let songs = try await client.searchSongs(query: effectiveQuery)
                 guard !Task.isCancelled else { return }
                 self.searchResults = songs
                 self.isLoading = false

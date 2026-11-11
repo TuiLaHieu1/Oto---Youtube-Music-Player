@@ -151,8 +151,8 @@ public struct LibraryView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     LazyHStack(spacing: OtoTheme.spacing12) {
                         ForEach(libraryVM.playlists) { playlist in
-                            Button {
-                                playerVM.playPlaylist(id: playlist.id)
+                            NavigationLink {
+                                PlaylistDetailView(playlist: playlist, playerVM: playerVM)
                             } label: {
                                 VStack(alignment: .leading, spacing: 6) {
                                     AsyncImage(url: playlist.artworkURL) { img in

@@ -131,16 +131,36 @@ public struct HomeFeedView: View {
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     LazyHStack(spacing: OtoTheme.spacing12) {
                                         ForEach(section.items) { item in
-                                            OtoAlbumCard(
-                                                song: item.asSong,
-                                                isPlaying: playerVM.currentSong?.id == item.id && playerVM.isPlaying,
-                                                size: 152
-                                            ) {
-                                                if item.kind == .song {
+                                            let isCurrent = (playerVM.currentSong?.id == item.id)
+                                                && playerVM.isPlaying
+                                            if item.kind == .song {
+                                                OtoAlbumCard(
+                                                    song: item.asSong,
+                                                    isPlaying: isCurrent,
+                                                    size: 152
+                                                ) {
                                                     playerVM.playWithRadio(song: item.asSong)
-                                                } else {
-                                                    playerVM.playPlaylist(id: item.id, fallbackSong: item.asSong)
                                                 }
+                                            } else {
+                                                NavigationLink {
+                                                    PlaylistDetailView(
+                                                        playlist: Playlist(
+                                                            id: item.id,
+                                                            title: item.title,
+                                                            subtitle: item.subtitle,
+                                                            artworkURL: item.artworkURL,
+                                                            trackCount: nil
+                                                        ),
+                                                        playerVM: playerVM
+                                                    )
+                                                } label: {
+                                                    OtoAlbumCard(
+                                                        song: item.asSong,
+                                                        isPlaying: isCurrent,
+                                                        size: 152
+                                                    ) {}
+                                                }
+                                                .buttonStyle(.plain)
                                             }
                                         }
                                     }

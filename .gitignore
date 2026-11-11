@@ -10,3 +10,7 @@ __pycache__/
 *.xcworkspace/xcuserdata/
 .swiftpm/
 tmp/
+*.MP4
+*.mp4
+*.mov
+Documentation.docc/Resources/

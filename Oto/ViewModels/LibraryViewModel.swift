@@ -8,6 +8,7 @@ import os
 @Observable
 public final class LibraryViewModel {
     public var likedSongs: [Song] = []
+    public var playlists: [Playlist] = []
     public var isLoading: Bool = false
     public var errorMessage: String?
     public var cacheSizeString: String = "0 KB"
@@ -18,6 +19,10 @@ public final class LibraryViewModel {
     public init(client: YTMusicClient = .shared) {
         self.client = client
         updateCacheSize()
+        SessionStore.shared.registerResetHandler { [weak self] in
+            self?.likedSongs = []
+            self?.playlists = []
+        }
     }
 
     /// Tải danh sách bài hát đã thích nếu người dùng đã đăng nhập.
@@ -42,6 +47,23 @@ public final class LibraryViewModel {
             logger.error("Lỗi tải bài hát đã thích: \(error.localizedDescription)")
             errorMessage = error.localizedDescription
             isLoading = false
+        }
+    }
+
+    /// Tải danh sách phát cá nhân của người dùng từ YouTube Music.
+    public func loadPlaylists() async {
+        guard CookieStorage.shared.hasValidSession else {
+            playlists = []
+            return
+        }
+
+        do {
+            let list = try await client.fetchLibraryPlaylists()
+            self.playlists = list
+        } catch is CancellationError {
+            playlists = []
+        } catch {
+            logger.error("Lỗi tải danh sách phát: \(error.localizedDescription)")
         }
     }
 

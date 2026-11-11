@@ -108,6 +108,7 @@ struct SpeedDialTests {
     @MainActor
     func testSpeedDialPinning() {
         let pinStore = SpeedDialPinStore.shared
+        pinStore.clear()
         let item1 = SpeedDialItem(id: "song_1", title: "Song 1", subtitle: "Artist 1")
         let item2 = SpeedDialItem(id: "song_2", title: "Song 2", subtitle: "Artist 2")
         let item3 = SpeedDialItem(id: "song_3", title: "Song 3", subtitle: "Artist 3")
@@ -122,6 +123,7 @@ struct SpeedDialTests {
 
         pinStore.togglePin(item3)
         #expect(pinStore.isPinned(id: "song_3") == false)
+        pinStore.clear()
     }
 
     @Test("parsePlaylistOrShelfSongs phân tích được danh sách bài từ twoColumnBrowseResultsRenderer")
@@ -149,5 +151,36 @@ struct SpeedDialTests {
         #expect(songs.count == 1)
         #expect(songs[0].id == "playlist_track_1")
         #expect(songs[0].title == "Playlist Track 1")
+    }
+
+    @Test("parseLibraryPlaylists phân tích được danh sách phát cá nhân từ FEmusic_liked_playlists")
+    func testLibraryPlaylistsParsing() throws {
+        let playlistItem = Self.makeTwoRowItem(playlistId: "PL_custom_user_1", title: "My User Playlist")
+        let fixture: [String: Any] = [
+            "contents": [
+                "singleColumnBrowseResultsRenderer": [
+                    "tabs": [[
+                        "tabRenderer": [
+                            "content": [
+                                "sectionListRenderer": [
+                                    "contents": [
+                                        [
+                                            "gridRenderer": [
+                                                "items": [playlistItem]
+                                            ]
+                                        ]
+                                    ]
+                                ]
+                            ]
+                        ]
+                    ]]
+                ]
+            ]
+        ]
+        let data = try JSONSerialization.data(withJSONObject: fixture)
+        let playlists = try YTMusicParsers.parseLibraryPlaylists(from: data)
+        #expect(playlists.count == 1)
+        #expect(playlists.first?.id == "PL_custom_user_1")
+        #expect(playlists.first?.title == "My User Playlist")
     }
 }

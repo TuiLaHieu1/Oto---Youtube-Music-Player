@@ -122,48 +122,78 @@ public struct HomeFeedView: View {
                     }
                 }
 
-                // Section 2: Quick Picks (Lựa chọn nhanh để bắt đầu đài phát)
-                if !homeVM.quickPicks.isEmpty {
-                    VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
-                        OtoSectionHeader(title: "Lựa chọn nhanh")
-                            .padding(.horizontal, OtoTheme.spacing16)
+                // Các phân đoạn đề xuất từ YouTube Music (Quick picks, Forgotten Favorites, Daily Discover...)
+                if !homeVM.sections.isEmpty {
+                    ForEach(homeVM.sections) { section in
+                        if !section.items.isEmpty {
+                            VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
+                                OtoSectionHeader(title: section.title)
+                                    .padding(.horizontal, OtoTheme.spacing16)
 
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: OtoTheme.spacing12) {
-                                ForEach(homeVM.quickPicks) { song in
-                                    OtoAlbumCard(
-                                        song: song,
-                                        isPlaying: playerVM.currentSong?.id == song.id && playerVM.isPlaying,
-                                        size: 152
-                                    ) {
-                                        play(song, in: homeVM.quickPicks)
+                                ScrollView(.horizontal, showsIndicators: false) {
+                                    LazyHStack(spacing: OtoTheme.spacing12) {
+                                        ForEach(section.items) { item in
+                                            OtoAlbumCard(
+                                                song: item.asSong,
+                                                isPlaying: playerVM.currentSong?.id == item.id && playerVM.isPlaying,
+                                                size: 152
+                                            ) {
+                                                if item.kind == .song {
+                                                    playerVM.playWithRadio(song: item.asSong)
+                                                } else {
+                                                    playerVM.playPlaylist(id: item.id, fallbackSong: item.asSong)
+                                                }
+                                            }
+                                        }
                                     }
+                                    .padding(.horizontal, OtoTheme.spacing16)
                                 }
                             }
-                            .padding(.horizontal, OtoTheme.spacing16)
                         }
                     }
-                }
+                } else {
+                    // Fallback tương thích dữ liệu cũ
+                    if !homeVM.quickPicks.isEmpty {
+                        VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
+                            OtoSectionHeader(title: "Lựa chọn nhanh")
+                                .padding(.horizontal, OtoTheme.spacing16)
 
-                // Section 3: Listen Again (Nghe lại gần đây / Bản phối)
-                if !homeVM.listenAgain.isEmpty {
-                    VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
-                        OtoSectionHeader(title: "Nghe lại gần đây")
-                            .padding(.horizontal, OtoTheme.spacing16)
-
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            LazyHStack(spacing: OtoTheme.spacing12) {
-                                ForEach(homeVM.listenAgain) { song in
-                                    OtoAlbumCard(
-                                        song: song,
-                                        isPlaying: playerVM.currentSong?.id == song.id && playerVM.isPlaying,
-                                        size: 152
-                                    ) {
-                                        play(song, in: homeVM.listenAgain)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHStack(spacing: OtoTheme.spacing12) {
+                                    ForEach(homeVM.quickPicks) { song in
+                                        OtoAlbumCard(
+                                            song: song,
+                                            isPlaying: playerVM.currentSong?.id == song.id && playerVM.isPlaying,
+                                            size: 152
+                                        ) {
+                                            play(song, in: homeVM.quickPicks)
+                                        }
                                     }
                                 }
+                                .padding(.horizontal, OtoTheme.spacing16)
                             }
-                            .padding(.horizontal, OtoTheme.spacing16)
+                        }
+                    }
+
+                    if !homeVM.listenAgain.isEmpty {
+                        VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
+                            OtoSectionHeader(title: "Nghe lại gần đây")
+                                .padding(.horizontal, OtoTheme.spacing16)
+
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                LazyHStack(spacing: OtoTheme.spacing12) {
+                                    ForEach(homeVM.listenAgain) { song in
+                                        OtoAlbumCard(
+                                            song: song,
+                                            isPlaying: playerVM.currentSong?.id == song.id && playerVM.isPlaying,
+                                            size: 152
+                                        ) {
+                                            play(song, in: homeVM.listenAgain)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, OtoTheme.spacing16)
+                            }
                         }
                     }
                 }

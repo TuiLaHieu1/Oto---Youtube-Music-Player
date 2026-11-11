@@ -47,6 +47,115 @@ public enum YTMusicParsers {
         return results
     }
 
+    /// Phân tích danh sách phát cá nhân của người dùng từ phản hồi FEmusic_liked_playlists.
+    public static func parseLibraryPlaylists(from data: Data) throws -> [Playlist] {
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw YTMusicError.invalidResponse
+        }
+
+        var results: [Playlist] = []
+        let rawItems = extractLibraryItems(from: json)
+
+        for item in rawItems {
+            if let renderer = item["musicTwoRowItemRenderer"] as? [String: Any],
+               let playlist = parsePlaylistFromTwoRow(renderer) {
+                results.append(playlist)
+            } else if let renderer = item["musicResponsiveListItemRenderer"] as? [String: Any],
+                      let playlist = parsePlaylistFromResponsive(renderer) {
+                results.append(playlist)
+            }
+        }
+
+        return results
+    }
+
+    private static func extractLibraryItems(from json: [String: Any]) -> [[String: Any]] {
+        if let contents = json["contents"] as? [String: Any],
+           let singleColumn = contents["singleColumnBrowseResultsRenderer"] as? [String: Any],
+           let tabs = singleColumn["tabs"] as? [[String: Any]],
+           let firstTab = tabs.first,
+           let tabRenderer = firstTab["tabRenderer"] as? [String: Any],
+           let tabContent = tabRenderer["content"] as? [String: Any],
+           let sectionList = tabContent["sectionListRenderer"] as? [String: Any],
+           let sectionContents = sectionList["contents"] as? [[String: Any]] {
+            var items: [[String: Any]] = []
+            for section in sectionContents {
+                if let grid = section["gridRenderer"] as? [String: Any],
+                   let gridItems = grid["items"] as? [[String: Any]] {
+                    items.append(contentsOf: gridItems)
+                }
+                if let shelf = section["musicShelfRenderer"] as? [String: Any],
+                   let shelfItems = shelf["contents"] as? [[String: Any]] {
+                    items.append(contentsOf: shelfItems)
+                }
+            }
+            if !items.isEmpty { return items }
+        }
+        return collectRenderers(named: "musicTwoRowItemRenderer", in: json).map { ["musicTwoRowItemRenderer": $0] }
+    }
+
+    static func parsePlaylistFromTwoRow(_ renderer: [String: Any]) -> Playlist? {
+        let nav = renderer["navigationEndpoint"] as? [String: Any]
+        let browse = nav?["browseEndpoint"] as? [String: Any]
+        let watchPlaylist = nav?["watchPlaylistEndpoint"] as? [String: Any]
+
+        let overlay = renderer["thumbnailOverlay"] as? [String: Any]
+        let overlayItem = overlay?["musicItemThumbnailOverlayRenderer"] as? [String: Any]
+        let playBtn = (overlayItem?["content"] as? [String: Any])?["musicPlayButtonRenderer"] as? [String: Any]
+        let playNav = playBtn?["playNavigationEndpoint"] as? [String: Any]
+        let playWatchPlaylist = playNav?["watchPlaylistEndpoint"] as? [String: Any]
+
+        let rawId = (browse?["browseId"] as? String)
+            ?? (watchPlaylist?["playlistId"] as? String)
+            ?? (playWatchPlaylist?["playlistId"] as? String)
+        guard let rawId, !rawId.isEmpty else { return nil }
+
+        let playlistId = rawId.starts(with: "VL") ? String(rawId.dropFirst(2)) : rawId
+
+        let titleRuns = (renderer["title"] as? [String: Any])?["runs"] as? [[String: Any]]
+        let title = titleRuns?.first?["text"] as? String
+            ?? (renderer["title"] as? [String: Any])?["simpleText"] as? String
+            ?? ""
+        guard !title.isEmpty else { return nil }
+
+        let subRuns = (renderer["subtitle"] as? [String: Any])?["runs"] as? [[String: Any]]
+        let subtitle = subRuns?.compactMap { $0["text"] as? String }.joined(separator: " ")
+            ?? "Danh sách phát"
+
+        let thumbContainer = (renderer["thumbnailRenderer"] as? [String: Any])
+            ?? (renderer["thumbnail"] as? [String: Any])
+
+        return Playlist(
+            id: playlistId,
+            title: title,
+            subtitle: subtitle,
+            artworkURL: extractThumbnailURL(from: thumbContainer)
+        )
+    }
+
+    static func parsePlaylistFromResponsive(_ renderer: [String: Any]) -> Playlist? {
+        let nav = renderer["navigationEndpoint"] as? [String: Any]
+        let browse = nav?["browseEndpoint"] as? [String: Any]
+        let rawId = browse?["browseId"] as? String
+        guard let rawId, !rawId.isEmpty else { return nil }
+        let playlistId = rawId.starts(with: "VL") ? String(rawId.dropFirst(2)) : rawId
+
+        let flexColumns = renderer["flexColumns"] as? [[String: Any]]
+        let firstCol = flexColumns?.first?["musicResponsiveListItemFlexColumnRenderer"] as? [String: Any]
+        let titleRuns = (firstCol?["text"] as? [String: Any])?["runs"] as? [[String: Any]]
+        let titleText = titleRuns?.first?["text"] as? String ?? ""
+        guard !titleText.isEmpty else { return nil }
+
+        let thumbContainer = renderer["thumbnail"] as? [String: Any]
+
+        return Playlist(
+            id: playlistId,
+            title: titleText,
+            subtitle: "Danh sách phát",
+            artworkURL: extractThumbnailURL(from: thumbContainer)
+        )
+    }
+
     // MARK: - Search
 
     public static func parseSongs(from data: Data) throws -> [Song] {

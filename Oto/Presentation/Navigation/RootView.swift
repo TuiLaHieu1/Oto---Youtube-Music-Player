@@ -78,8 +78,11 @@ public struct RootView: View {
 
     @ViewBuilder
     private var phoneLayout: some View {
-        GeometryReader { proxy in
-            let bottomPadding = proxy.safeAreaInsets.bottom + 49 + 4
+        GeometryReader { _ in
+            // TabBar chuẩn trên iPhone cao 49pt. Vì GeometryReader đã nằm trên vùng an toàn Home Indicator,
+            // nên đáy của ZStack đã ở trên đỉnh safeAreaInsets.bottom.
+            // Để MiniPlayer nằm ngay sát mép trên của thanh navigation (cách 4pt), padding đáy là 49 + 4 = 53pt.
+            let bottomPadding: CGFloat = 53
             ZStack(alignment: .bottom) {
                 phoneTabView
 

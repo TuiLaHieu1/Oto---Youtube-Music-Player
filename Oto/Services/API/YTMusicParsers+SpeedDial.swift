@@ -4,20 +4,38 @@ import OtoCore
 // MARK: - Speed Dial & Home Feed Extensions
 
 extension YTMusicParsers {
-    /// Cấu trúc dữ liệu đầy đủ của Trang chủ YouTube Music bao gồm Speed Dial, Quick Picks và Nghe lại.
+    /// Cấu trúc dữ liệu đầy đủ của Trang chủ YouTube Music bao gồm Speed Dial và các phân đoạn nội dung.
     public struct HomeFeedContent: Sendable {
         public let speedDial: [SpeedDialItem]
-        public let quickPicks: [Song]
-        public let listenAgain: [Song]
+        public let sections: [HomeSection]
+
+        public var quickPicks: [Song] {
+            if let qpSection = sections.first(where: {
+                let lower = $0.title.lowercased()
+                return lower.contains("quick") || lower.contains("nhanh")
+            }) {
+                return qpSection.items.map(\.asSong)
+            }
+            return []
+        }
+
+        public var listenAgain: [Song] {
+            if let laSection = sections.first(where: {
+                let lower = $0.title.lowercased()
+                return lower.contains("phối") || lower.contains("dành cho bạn")
+                    || lower.contains("mix") || lower.contains("nghe lại") || lower.contains("listen again")
+            }) {
+                return laSection.items.map(\.asSong)
+            }
+            return []
+        }
 
         public init(
             speedDial: [SpeedDialItem] = [],
-            quickPicks: [Song] = [],
-            listenAgain: [Song] = []
+            sections: [HomeSection] = []
         ) {
             self.speedDial = speedDial
-            self.quickPicks = quickPicks
-            self.listenAgain = listenAgain
+            self.sections = sections
         }
     }
 
@@ -27,57 +45,21 @@ extension YTMusicParsers {
         let items: [SpeedDialItem]
     }
 
-    /// Nạp và phân loại chuẩn xác các khối Home Feed từ YouTube Music.
+    /// Nạp và phân loại chuẩn xác các khối Home Feed từ YouTube Music theo thứ tự danh sách thực tế.
     public static func parseHomeFeed(from data: Data) throws -> HomeFeedContent {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw YTMusicError.invalidResponse
         }
 
-        var shelves = collectRenderers(named: "musicCarouselShelfRenderer", in: json)
-        shelves.append(contentsOf: collectRenderers(named: "musicShelfRenderer", in: json))
-        shelves.append(contentsOf: collectRenderers(named: "musicSpeedDialShelfRenderer", in: json))
-        shelves.append(contentsOf: collectRenderers(named: "musicSpeedDialShelfModel", in: json))
+        let shelves = extractOrderedShelves(from: json)
         guard !shelves.isEmpty else {
             throw YTMusicError.parsingError
         }
 
-        var buckets = classifyShelves(shelves)
-        applyHomeFeedFallbacks(buckets: &buckets)
+        var speedDialItems: [SpeedDialItem] = []
+        var sections: [HomeSection] = []
+        var sectionIndex = 0
 
-        var seenSpeedDialIds = Set<String>()
-        let uniqueSpeedDial = buckets.speedDial.filter { item in
-            guard !seenSpeedDialIds.contains(item.id) else { return false }
-            seenSpeedDialIds.insert(item.id)
-            return true
-        }
-
-        if uniqueSpeedDial.isEmpty && buckets.quickPicks.isEmpty && buckets.listenAgain.isEmpty {
-            throw YTMusicError.parsingError
-        }
-
-        return HomeFeedContent(
-            speedDial: uniqueSpeedDial,
-            quickPicks: buckets.quickPicks,
-            listenAgain: buckets.listenAgain
-        )
-    }
-
-    /// Giữ tương thích ngược với API cũ cho các unit test hiện có.
-    public static func parseHomeSections(from data: Data) throws -> (quickPicks: [Song], listenAgain: [Song]) {
-        let content = try parseHomeFeed(from: data)
-        let picks = content.quickPicks.isEmpty ? content.speedDial.map(\.asSong) : content.quickPicks
-        return (picks, content.listenAgain)
-    }
-
-    private struct ShelfBuckets {
-        var speedDial: [SpeedDialItem] = []
-        var quickPicks: [Song] = []
-        var listenAgain: [Song] = []
-        var otherShelves: [ParsedShelf] = []
-    }
-
-    private static func classifyShelves(_ shelves: [[String: Any]]) -> ShelfBuckets {
-        var buckets = ShelfBuckets()
         for shelf in shelves {
             let parsed = parseCarouselShelf(shelf)
             guard !parsed.items.isEmpty else { continue }
@@ -88,40 +70,72 @@ extension YTMusicParsers {
                 "thường nghe", "nghe nhiều", "gần đây", "recently"
             ].contains { lowerTitle.contains($0) } || shelf["musicSpeedDialShelfRenderer"] != nil
 
-            let isQuickPicks = [
-                "quick picks", "lựa chọn nhanh", "chọn nhanh", "khởi động radio", "start radio"
-            ].contains { lowerTitle.contains($0) }
-
-            let isMixedForYou = [
-                "dành cho bạn", "for you", "gợi ý", "mixed for you", "bản phối", "danh sách kết hợp"
-            ].contains { lowerTitle.contains($0) }
-
-            if isSpeedDial {
-                buckets.speedDial.append(contentsOf: parsed.items)
-            } else if isQuickPicks {
-                buckets.quickPicks.append(contentsOf: parsed.songs)
-            } else if isMixedForYou {
-                buckets.listenAgain.append(contentsOf: parsed.songs)
+            if isSpeedDial && speedDialItems.isEmpty {
+                speedDialItems = parsed.items
             } else {
-                buckets.otherShelves.append(parsed)
+                sectionIndex += 1
+                let sectionId = "\(sectionIndex)_\(parsed.title)"
+                sections.append(HomeSection(id: sectionId, title: parsed.title, items: parsed.items))
             }
         }
-        return buckets
+
+        // Fallback tài khoản khách nếu không có shelf Speed dial riêng:
+        // Nếu shelf đầu tiên không phải Quick picks, dùng làm Speed dial
+        if speedDialItems.isEmpty && !sections.isEmpty {
+            let firstTitle = sections.first?.title.lowercased() ?? ""
+            let isFirstQuickPick = firstTitle.contains("quick") || firstTitle.contains("nhanh")
+            if !isFirstQuickPick {
+                let first = sections.removeFirst()
+                speedDialItems = first.items
+            }
+        }
+
+        var seenSpeedDialIds = Set<String>()
+        let uniqueSpeedDial = speedDialItems.filter { item in
+            guard !seenSpeedDialIds.contains(item.id) else { return false }
+            seenSpeedDialIds.insert(item.id)
+            return true
+        }
+
+        if uniqueSpeedDial.isEmpty && sections.isEmpty {
+            throw YTMusicError.parsingError
+        }
+
+        return HomeFeedContent(speedDial: uniqueSpeedDial, sections: sections)
     }
 
-    private static func applyHomeFeedFallbacks(buckets: inout ShelfBuckets) {
-        if buckets.speedDial.isEmpty && !buckets.otherShelves.isEmpty {
-            let first = buckets.otherShelves.removeFirst()
-            buckets.speedDial = first.items
+    /// Giữ tương thích ngược với API cũ cho các unit test hiện có.
+    public static func parseHomeSections(from data: Data) throws -> (quickPicks: [Song], listenAgain: [Song]) {
+        let content = try parseHomeFeed(from: data)
+        let picks = content.quickPicks.isEmpty ? content.speedDial.map(\.asSong) : content.quickPicks
+        return (picks, content.listenAgain)
+    }
+
+    private static func extractOrderedShelves(from json: [String: Any]) -> [[String: Any]] {
+        var rawShelves: [[String: Any]] = []
+
+        if let contents = json["contents"] as? [String: Any],
+           let singleColumn = contents["singleColumnBrowseResultsRenderer"] as? [String: Any],
+           let tabs = singleColumn["tabs"] as? [[String: Any]],
+           let firstTab = tabs.first,
+           let tabRenderer = firstTab["tabRenderer"] as? [String: Any],
+           let tabContent = tabRenderer["content"] as? [String: Any],
+           let sectionList = tabContent["sectionListRenderer"] as? [String: Any],
+           let sectionContents = sectionList["contents"] as? [[String: Any]] {
+            for container in sectionContents {
+                if let shelf = container["musicCarouselShelfRenderer"] as? [String: Any]
+                    ?? container["musicShelfRenderer"] as? [String: Any]
+                    ?? container["musicSpeedDialShelfRenderer"] as? [String: Any]
+                    ?? container["musicSpeedDialShelfModel"] as? [String: Any] {
+                    rawShelves.append(shelf)
+                }
+            }
         }
-        if buckets.quickPicks.isEmpty && !buckets.otherShelves.isEmpty {
-            let next = buckets.otherShelves.removeFirst()
-            buckets.quickPicks = next.songs
+
+        if rawShelves.isEmpty {
+            rawShelves = collectRenderers(named: "musicCarouselShelfRenderer", in: json)
         }
-        if buckets.listenAgain.isEmpty && !buckets.otherShelves.isEmpty {
-            let next = buckets.otherShelves.removeFirst()
-            buckets.listenAgain = next.songs
-        }
+        return rawShelves
     }
 
     static func parseCarouselShelf(_ carousel: [String: Any]) -> ParsedShelf {
@@ -140,13 +154,14 @@ extension YTMusicParsers {
                 }
             }
         }
-        let shelfTitle = headerTexts.joined(separator: " ").lowercased()
+        let shelfTitle = headerTexts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        let resolvedTitle = shelfTitle.isEmpty ? "Gợi ý cho bạn" : shelfTitle
 
         let rawItems = (carousel["contents"] as? [[String: Any]])
             ?? (carousel["items"] as? [[String: Any]])
             ?? ((carousel["data"] as? [String: Any])?["items"] as? [[String: Any]])
         guard let items = rawItems else {
-            return ParsedShelf(title: shelfTitle, songs: [], items: [])
+            return ParsedShelf(title: resolvedTitle, songs: [], items: [])
         }
 
         var shelfSongs: [Song] = []
@@ -169,7 +184,7 @@ extension YTMusicParsers {
                 speedDialItems.append(SpeedDialItem(song: song))
             }
         }
-        return ParsedShelf(title: shelfTitle, songs: shelfSongs, items: speedDialItems)
+        return ParsedShelf(title: resolvedTitle, songs: shelfSongs, items: speedDialItems)
     }
 
     // MARK: - Speed Dial Item Parsers

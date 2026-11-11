@@ -133,6 +133,27 @@ public final class YTMusicClient: Sendable {
         return try YTMusicParsers.parsePlaylistOrShelfSongs(from: data)
     }
 
+    /// Nạp danh sách phát cá nhân của người dùng từ YouTube Music (FEmusic_liked_playlists).
+    public func fetchLibraryPlaylists() async throws -> [Playlist] {
+        guard CookieStorage.shared.hasValidSession else {
+            return []
+        }
+
+        guard let url = URL(string: "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false") else {
+            throw YTMusicError.invalidURL
+        }
+
+        var request = makeBaseRequest(url: url)
+        let bodyPayload: [String: Any] = [
+            "context": clientContext,
+            "browseId": "FEmusic_liked_playlists"
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
+
+        let data = try await perform(request, operation: "library-playlists")
+        return try YTMusicParsers.parseLibraryPlaylists(from: data)
+    }
+
     /// Nạp danh sách bài hát Radio / Up Next tự động từ YouTube Music theo bài hát chỉ định.
     public func fetchUpNextQueue(videoId: String) async throws -> [Song] {
         let trimmed = videoId.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -88,4 +88,9 @@ public final class SpeedDialPinStore {
         let combined = pinned + remaining
         return Array(combined.prefix(maxItems))
     }
+
+    /// Xóa toàn bộ danh sách ghim của tài khoản hiện tại (dùng khi dọn dẹp hoặc test).
+    public func clear() {
+        userDefaults.removeObject(forKey: storageKey)
+    }
 }

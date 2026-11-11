@@ -36,7 +36,8 @@ public struct LibraryView: View {
 
                     likedSongsLink
 
-                    librarySection(title: "Danh sách phát", icon: "music.note.list")
+                    playlistsSection
+
                     librarySection(title: "Album", icon: "square.stack")
                     librarySection(title: "Nghệ sĩ", icon: "music.mic")
                 }
@@ -51,8 +52,19 @@ public struct LibraryView: View {
                 libraryVM.updateCacheSize()
             }
             .task {
-                if sessionStore.isAuthenticated && libraryVM.likedSongs.isEmpty {
+                if sessionStore.isAuthenticated {
+                    if libraryVM.likedSongs.isEmpty {
+                        await libraryVM.loadLikedSongs()
+                    }
+                    if libraryVM.playlists.isEmpty {
+                        await libraryVM.loadPlaylists()
+                    }
+                }
+            }
+            .refreshable {
+                if sessionStore.isAuthenticated {
                     await libraryVM.loadLikedSongs()
+                    await libraryVM.loadPlaylists()
                 }
             }
             .sheet(isPresented: $showSettings) {
@@ -128,6 +140,54 @@ public struct LibraryView: View {
         .padding(OtoTheme.spacing16)
         .background(OtoTheme.accentSurface)
         .clipShape(RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous))
+    }
+
+    @ViewBuilder
+    private var playlistsSection: some View {
+        if !libraryVM.playlists.isEmpty {
+            VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
+                OtoSectionHeader(title: "Danh sách phát của bạn")
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: OtoTheme.spacing12) {
+                        ForEach(libraryVM.playlists) { playlist in
+                            Button {
+                                playerVM.playPlaylist(id: playlist.id)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    AsyncImage(url: playlist.artworkURL) { img in
+                                        img.resizable().scaledToFill()
+                                    } placeholder: {
+                                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                            .fill(OtoTheme.surface)
+                                            .overlay(
+                                                Image(systemName: "music.note.list")
+                                                    .foregroundStyle(OtoTheme.secondaryText)
+                                            )
+                                    }
+                                    .frame(width: 140, height: 140)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                                    Text(playlist.title)
+                                        .font(OtoTheme.rowTitleFont)
+                                        .foregroundStyle(OtoTheme.primaryText)
+                                        .lineLimit(1)
+
+                                    Text(playlist.subtitle)
+                                        .font(OtoTheme.captionFont)
+                                        .foregroundStyle(OtoTheme.secondaryText)
+                                        .lineLimit(1)
+                                }
+                                .frame(width: 140)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        } else {
+            librarySection(title: "Danh sách phát", icon: "music.note.list")
+        }
     }
 
     private func librarySection(title: String, icon: String) -> some View {

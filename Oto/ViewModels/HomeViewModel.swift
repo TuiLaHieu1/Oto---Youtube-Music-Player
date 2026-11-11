@@ -7,6 +7,7 @@ import OtoCore
 @Observable
 public final class HomeViewModel {
     public var speedDialItems: [SpeedDialItem] = []
+    public var sections: [HomeSection] = []
     public var quickPicks: [Song] = []
     public var listenAgain: [Song] = []
     public var recentlyPlayed: [Song] = []
@@ -46,6 +47,7 @@ public final class HomeViewModel {
         if let cached = await cache.loadCachedFeed() {
             guard !Task.isCancelled else { return }
             self.speedDialItems = pinStore.mergePinned(with: cached.speedDial)
+            self.sections = cached.sections
             self.quickPicks = cached.quickPicks
             self.listenAgain = cached.listenAgain
             self.recentlyPlayed = []
@@ -57,6 +59,7 @@ public final class HomeViewModel {
         loadTask?.cancel()
         loadTask = nil
         self.speedDialItems = []
+        self.sections = []
         self.quickPicks = []
         self.listenAgain = []
         self.recentlyPlayed = []
@@ -70,13 +73,15 @@ public final class HomeViewModel {
 
         do {
             let feed = try await client.fetchHomeFeed()
-            if !feed.speedDial.isEmpty || !feed.quickPicks.isEmpty || !feed.listenAgain.isEmpty {
+            if !feed.speedDial.isEmpty || !feed.sections.isEmpty || !feed.quickPicks.isEmpty {
                 self.speedDialItems = pinStore.mergePinned(with: feed.speedDial)
+                self.sections = feed.sections
                 self.quickPicks = feed.quickPicks
                 self.listenAgain = feed.listenAgain
                 self.recentlyPlayed = []
                 await cache.saveFeed(
                     speedDial: feed.speedDial,
+                    sections: feed.sections,
                     quickPicks: feed.quickPicks,
                     listenAgain: feed.listenAgain
                 )

@@ -6,17 +6,20 @@ import os
 /// Cấu trúc lưu trữ dữ liệu trang chủ kèm thời điểm tạo để tính TTL.
 public struct CachedHomeFeed: Codable, Sendable {
     public let speedDial: [SpeedDialItem]
+    public let sections: [HomeSection]
     public let quickPicks: [Song]
     public let listenAgain: [Song]
     public let timestamp: Date
 
     public init(
         speedDial: [SpeedDialItem] = [],
+        sections: [HomeSection] = [],
         quickPicks: [Song] = [],
         listenAgain: [Song] = [],
         timestamp: Date = Date()
     ) {
         self.speedDial = speedDial
+        self.sections = sections
         self.quickPicks = quickPicks
         self.listenAgain = listenAgain
         self.timestamp = timestamp
@@ -25,6 +28,7 @@ public struct CachedHomeFeed: Codable, Sendable {
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.speedDial = (try? container.decode([SpeedDialItem].self, forKey: .speedDial)) ?? []
+        self.sections = (try? container.decode([HomeSection].self, forKey: .sections)) ?? []
         self.quickPicks = (try? container.decode([Song].self, forKey: .quickPicks)) ?? []
         self.listenAgain = (try? container.decode([Song].self, forKey: .listenAgain)) ?? []
         self.timestamp = (try? container.decode(Date.self, forKey: .timestamp)) ?? Date()
@@ -58,9 +62,19 @@ public actor HomeCache {
     }
 
     /// Lưu dữ liệu trang chủ vào bộ đệm tệp cục bộ theo tài khoản ngoài MainActor.
-    public func saveFeed(speedDial: [SpeedDialItem] = [], quickPicks: [Song], listenAgain: [Song]) {
+    public func saveFeed(
+        speedDial: [SpeedDialItem] = [],
+        sections: [HomeSection] = [],
+        quickPicks: [Song] = [],
+        listenAgain: [Song] = []
+    ) {
         guard let url = cacheFileURL() else { return }
-        let cached = CachedHomeFeed(speedDial: speedDial, quickPicks: quickPicks, listenAgain: listenAgain)
+        let cached = CachedHomeFeed(
+            speedDial: speedDial,
+            sections: sections,
+            quickPicks: quickPicks,
+            listenAgain: listenAgain
+        )
         do {
             let data = try JSONEncoder().encode(cached)
             try data.write(to: url, options: .atomic)

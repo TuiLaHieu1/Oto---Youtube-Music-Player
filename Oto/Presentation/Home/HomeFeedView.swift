@@ -90,9 +90,9 @@ public struct HomeFeedView: View {
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHGrid(
                                 rows: [
-                                    GridItem(.fixed(106), spacing: 8),
-                                    GridItem(.fixed(106), spacing: 8),
-                                    GridItem(.fixed(106), spacing: 8)
+                                    GridItem(.fixed(tileSize), spacing: 8),
+                                    GridItem(.fixed(tileSize), spacing: 8),
+                                    GridItem(.fixed(tileSize), spacing: 8)
                                 ],
                                 spacing: 8
                             ) {
@@ -100,9 +100,11 @@ public struct HomeFeedView: View {
                                     speedDialTile(for: song)
                                 }
                             }
+                            .scrollTargetLayout()
                             .padding(.horizontal, OtoTheme.spacing16)
                             .padding(.vertical, 4)
                         }
+                        .scrollTargetBehavior(.viewAligned)
                     }
                 }
 
@@ -161,6 +163,16 @@ public struct HomeFeedView: View {
         playerVM.playQueue(songs: songs, startIndex: index)
     }
 
+    private var tileSize: CGFloat {
+        #if os(iOS)
+        let screenWidth = UIScreen.main.bounds.width
+        // 3 cột phủ trọn khung nhìn: cột thứ 4 hoàn toàn ngoài màn hình (ẩn 100%)
+        return max(100, ceil((screenWidth - 40) / 3))
+        #else
+        return 116
+        #endif
+    }
+
     private func speedDialTile(for song: Song) -> some View {
         let isCurrent = playerVM.currentSong?.id == song.id && playerVM.isPlaying
         return Button {
@@ -192,7 +204,7 @@ public struct HomeFeedView: View {
                     }
                 }
             }
-            .frame(width: 106, height: 106)
+            .frame(width: tileSize, height: tileSize)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -225,7 +237,7 @@ public struct HomeFeedView: View {
             }
         }
         .id(song.artworkURL)
-        .frame(width: 106, height: 106)
+        .frame(width: tileSize, height: tileSize)
         .clipped()
     }
 }

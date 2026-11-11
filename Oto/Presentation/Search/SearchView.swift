@@ -97,7 +97,7 @@ public struct SearchView: View {
                 }
                 .padding(.horizontal, OtoTheme.spacing16)
             }
-            .padding(.bottom, 120)
+            .padding(.bottom, 160)
         }
     }
 

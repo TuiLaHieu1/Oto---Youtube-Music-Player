@@ -311,11 +311,15 @@ extension YTMusicParsers {
         }
 
         let titleRuns = (renderer["title"] as? [String: Any])?["runs"] as? [[String: Any]]
-        let title = titleRuns?.first?["text"] as? String ?? ""
+        let title = titleRuns?.first?["text"] as? String
+            ?? (renderer["title"] as? [String: Any])?["simpleText"] as? String
+            ?? ""
         guard !title.isEmpty else { return nil }
 
         let subRuns = (renderer["subtitle"] as? [String: Any])?["runs"] as? [[String: Any]]
-        let artist = subRuns?.first?["text"] as? String ?? "Nhiều nghệ sĩ"
+        let artist = subRuns?.first?["text"] as? String
+            ?? (renderer["subtitle"] as? [String: Any])?["simpleText"] as? String
+            ?? "Nhiều nghệ sĩ"
 
         let thumbContainer = (renderer["thumbnailRenderer"] as? [String: Any])
             ?? (renderer["thumbnail"] as? [String: Any])

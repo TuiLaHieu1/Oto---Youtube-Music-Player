@@ -78,14 +78,17 @@ public struct RootView: View {
 
     @ViewBuilder
     private var phoneLayout: some View {
-        ZStack(alignment: .bottom) {
-            phoneTabView
+        GeometryReader { proxy in
+            let bottomPadding = proxy.safeAreaInsets.bottom + 49 + 4
+            ZStack(alignment: .bottom) {
+                phoneTabView
 
-            if shouldShowMiniPlayer {
-                MiniPlayerView(playerVM: playerVM)
-                    .padding(.horizontal, OtoTheme.spacing12)
-                    .padding(.bottom, 92)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                if shouldShowMiniPlayer {
+                    MiniPlayerView(playerVM: playerVM)
+                        .padding(.horizontal, OtoTheme.spacing12)
+                        .padding(.bottom, bottomPadding)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                }
             }
         }
     }

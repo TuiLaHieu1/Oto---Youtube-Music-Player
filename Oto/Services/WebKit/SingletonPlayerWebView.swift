@@ -170,7 +170,10 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
                 self?.webView?.load(URLRequest(url: watchURL))
             }
         }
-        if !shouldPlay {
+        if shouldPlay {
+            let playScript = "if (window.otoPlayer) window.otoPlayer.play();"
+            webView?.evaluateJavaScript(playScript)
+        } else {
             pause()
         }
         logger.info("Đã gửi lệnh đổi bài trong trang (id: \(id), gen: \(generation)).")

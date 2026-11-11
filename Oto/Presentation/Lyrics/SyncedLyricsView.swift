@@ -43,7 +43,7 @@ public struct SyncedLyricsView: View {
                         Spacer()
                     }
                     .padding(.top, OtoTheme.spacing32)
-                    .padding(.bottom, 60)
+                    .padding(.bottom, 120)
                 }
                 .padding(.horizontal, OtoTheme.spacing24)
                 .padding(.top, OtoTheme.spacing32)
@@ -67,8 +67,8 @@ public struct SyncedLyricsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: OtoTheme.spacing16) {
                 Text(lyricsVM.currentDocument.plainLyrics ?? "")
-                    .font(OtoTheme.rowTitleFont)
-                    .foregroundStyle(OtoTheme.primaryText)
+                    .font(.system(size: 20, weight: .medium, design: .rounded))
+                    .foregroundStyle(Color.primary)
                     .lineSpacing(OtoTheme.spacing8)
 
                 Text("Nguồn: \(lyricsVM.currentDocument.source) (Lời tĩnh)")
@@ -77,6 +77,7 @@ public struct SyncedLyricsView: View {
                     .padding(.top, OtoTheme.spacing24)
             }
             .padding(OtoTheme.spacing24)
+            .padding(.bottom, 120)
         }
     }
 
@@ -110,12 +111,12 @@ public struct SyncedLyricsView: View {
 
     private func syncedLine(_ line: LyricsLine, at index: Int) -> some View {
         let isCurrent = lyricsVM.activeLineIndex == index
-        let color = isCurrent ? OtoTheme.accent : OtoTheme.secondaryText.opacity(0.72)
         return Text(line.text)
-            .font(OtoTheme.sectionTitleFont)
-            .fontWeight(isCurrent ? .bold : .semibold)
-            .foregroundStyle(color)
-            .animation(.easeOut(duration: 0.2), value: isCurrent)
+            .font(.system(size: isCurrent ? 28 : 22, weight: .bold, design: .rounded))
+            .foregroundStyle(isCurrent ? Color.primary : Color.primary.opacity(0.35))
+            .blur(radius: isCurrent ? 0 : 0.4)
+            .scaleEffect(isCurrent ? 1.05 : 1.0, anchor: .leading)
+            .animation(.spring(response: 0.35, dampingFraction: 0.75), value: isCurrent)
             .id(index)
             .contentShape(Rectangle())
             .onTapGesture {

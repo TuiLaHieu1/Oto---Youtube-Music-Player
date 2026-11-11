@@ -24,7 +24,13 @@ public struct Song: Identifiable, Sendable, Codable, Hashable {
         self.artist = artist
         self.album = album
         self.duration = duration
-        self.artworkURL = artworkURL
+        if let artworkURL {
+            self.artworkURL = artworkURL
+        } else if !id.isEmpty {
+            self.artworkURL = URL(string: "https://i.ytimg.com/vi/\(id)/hqdefault.jpg")
+        } else {
+            self.artworkURL = nil
+        }
         self.isExplicit = isExplicit
     }
 }

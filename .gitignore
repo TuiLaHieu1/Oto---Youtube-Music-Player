@@ -9,3 +9,4 @@ __pycache__/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcworkspace/xcuserdata/
 .swiftpm/
+tmp/

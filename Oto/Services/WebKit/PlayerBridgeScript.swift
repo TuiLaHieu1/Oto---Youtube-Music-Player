@@ -12,23 +12,20 @@ private let bridgeJavaScript = """
 
       function post(type, data) {
         try {
-          if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.otoPlayback) {
-            window.webkit.messageHandlers.otoPlayback.postMessage(Object.assign({ type: type }, data || {}));
-          }
+          const h = window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.otoPlayback;
+          if (h) h.postMessage(Object.assign({ type: type }, data || {}));
         } catch(e) {}
       }
 
       const style = document.createElement('style');
       style.textContent = 'html, body { overflow: hidden !important; background-color: #000 !important; } ' +
-        'ytmusic-popup-container, ytmusic-dialog, ytmusic-mealbar-promo-renderer, ' +
-        'ytmusic-guide-renderer, ytmusic-nav-bar, #nav-bar-background { display: none !important; }';
+        'ytmusic-popup-container, ytmusic-dialog, ytmusic-guide-renderer { display: none !important; }';
       document.head.appendChild(style);
 
       try {
-        const retF = function() { return false; };
-        const retV = function() { return 'visible'; };
-        Object.defineProperty(document, 'hidden', { get: retF, configurable: true });
-        Object.defineProperty(document, 'visibilityState', { get: retV, configurable: true });
+        const d = document;
+        Object.defineProperty(d, 'hidden', { get: function() { return false; }, configurable: true });
+        Object.defineProperty(d, 'visibilityState', { get: function() { return 'visible'; }, configurable: true });
         window.addEventListener('visibilitychange', function(e) { e.stopImmediatePropagation(); }, true);
       } catch(e) {}
 
@@ -146,11 +143,12 @@ private let bridgeJavaScript = """
         }
 
         const player = document.querySelector('ytmusic-player');
-        if (player && player.playerApi) {
+        const papi = player && player.playerApi;
+        if (papi) {
           try {
-            if (typeof player.playerApi.unMute === 'function') player.playerApi.unMute();
-            if (typeof player.playerApi.setVolume === 'function') player.playerApi.setVolume(100);
-            if (typeof player.playerApi.playVideo === 'function') player.playerApi.playVideo();
+            if (typeof papi.unMute === 'function') papi.unMute();
+            if (typeof papi.setVolume === 'function') papi.setVolume(100);
+            if (typeof papi.playVideo === 'function') papi.playVideo();
           } catch(e) {}
         }
 
@@ -158,17 +156,18 @@ private let bridgeJavaScript = """
         if (targetVideo) {
           try {
             targetVideo.muted = false;
+            targetVideo.defaultMuted = false;
             targetVideo.volume = 1.0;
             const p = targetVideo.play();
             if (p && typeof p.catch === 'function') {
               p.catch(function() {
-                try {
-                  targetVideo.muted = true;
-                  const p2 = targetVideo.play();
-                  if (p2 && typeof p2.then === 'function') {
-                    p2.then(function() { targetVideo.muted = false; }).catch(function() {});
+                setTimeout(function() {
+                  if (!window.__otoUserPaused) {
+                    targetVideo.muted = false;
+                    targetVideo.volume = 1.0;
+                    try { targetVideo.play(); } catch(e3) {}
                   }
-                } catch(e2) {}
+                }, 250);
               });
             }
           } catch(e) {}
@@ -193,10 +192,21 @@ private let bridgeJavaScript = """
           attemptPlay(v);
         }
 
+        function ensureUnmuted(target) {
+          if (!window.__otoUserPaused && target) {
+            try {
+              if (target.muted) target.muted = false;
+              if (target.volume < 1.0) target.volume = 1.0;
+            } catch(e) {}
+          }
+        }
+
         v.addEventListener('play', function() {
+          ensureUnmuted(v);
           post('stateChange', Object.assign({ state: 1 }, messageIdentity()));
         });
         v.addEventListener('playing', function() {
+          ensureUnmuted(v);
           post('stateChange', Object.assign({ state: 1 }, messageIdentity()));
         });
         v.addEventListener('pause', function() {
@@ -212,6 +222,7 @@ private let bridgeJavaScript = """
         v.addEventListener('ended', function() { if (!isAdActive()) checkAndNotifyEnded(v); });
         v.addEventListener('timeupdate', function() {
           if (!isAdActive()) {
+            ensureUnmuted(v);
             checkAndNotifyEnded(v);
             post('timeUpdate', {
               currentTime: Number(v.currentTime) || 0,
@@ -265,13 +276,14 @@ private let bridgeJavaScript = """
           const mp = document.getElementById('movie_player');
           if (mp && typeof mp.loadVideoById === 'function') {
             try {
-              try {
-                mp.loadVideoById(id, startSeconds || 0);
-              } catch(e1) {
-                mp.loadVideoById({ videoId: id, startSeconds: startSeconds || 0 });
-              }
+              try { mp.loadVideoById(id, startSeconds || 0); }
+              catch(e1) { mp.loadVideoById({ videoId: id, startSeconds: startSeconds || 0 }); }
+              if (typeof mp.unMute === 'function') mp.unMute();
+              if (typeof mp.setVolume === 'function') mp.setVolume(100);
               if (shouldPlay !== false && !window.__otoUserPaused) {
                 mp.playVideo();
+                setTimeout(function() { attemptPlay(document.querySelector('video')); }, 250);
+                setTimeout(function() { attemptPlay(document.querySelector('video')); }, 600);
               }
               confirmTrack(id, generation || 0, 0);
               return;
@@ -339,10 +351,10 @@ private let bridgeJavaScript = """
           const mp = document.getElementById('movie_player');
           if (mp) {
             if (typeof startSeconds === 'number' && startSeconds >= 0 && typeof mp.seekTo === 'function') {
-              mp.seekTo(startSeconds, true);
+              try { mp.seekTo(startSeconds, true); } catch(e) {}
             }
             if (shouldPlay && !window.__otoUserPaused && typeof mp.playVideo === 'function') {
-              mp.playVideo();
+              try { mp.playVideo(); } catch(e) {}
             }
           }
           confirmTrack(id, generation || 0, 0);
@@ -350,20 +362,17 @@ private let bridgeJavaScript = """
 
         play: function() {
           window.__otoUserPaused = false;
-          const v = document.querySelector('video');
-          attemptPlay(v);
+          attemptPlay(document.querySelector('video'));
         },
 
         pause: function() {
           window.__otoUserPaused = true;
           try {
             const bar = document.querySelector('ytmusic-player-bar');
-            if (bar && bar.shadowRoot) {
-              const playBtn = bar.shadowRoot.querySelector('#play-pause-button');
-              if (playBtn) {
-                const label = (playBtn.getAttribute('aria-label') || '').toLowerCase();
-                if (label.includes('pause') || label.includes('dừng')) playBtn.click();
-              }
+            const playBtn = bar && bar.shadowRoot && bar.shadowRoot.querySelector('#play-pause-button');
+            if (playBtn) {
+              const label = (playBtn.getAttribute('aria-label') || '').toLowerCase();
+              if (label.includes('pause') || label.includes('dừng')) playBtn.click();
             }
           } catch(e) {}
           const v = document.querySelector('video');

@@ -258,13 +258,15 @@ private struct AmbientBackgroundView: View {
                             .scaledToFill()
                             .frame(width: size.width, height: size.height)
                             .clipped()
-                            .blur(radius: 60)
-                            .opacity(0.40)
+                            .blur(radius: 50)
+                            .opacity(0.50)
+                            .transition(.opacity)
                     default:
                         Color.clear
                     }
                 }
                 .id(artworkURL)
+                .animation(.easeInOut(duration: 0.35), value: artworkURL)
                 .ignoresSafeArea()
             }
 

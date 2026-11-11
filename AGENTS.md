@@ -62,6 +62,18 @@ The repository currently contains planning documents, not a working app or verif
 - Reuse Kaset lyrics/provider/LRC ideas where suitable. LRCLIB and verified YTM are initial candidates; other providers need appropriate access/usage rights before implementation.
 - Preserve recording identity (live/remix/remaster), raw metadata, instrumental state, provider attribution, and actual timing precision. Do not manufacture word timing from plain/line lyrics.
 
+## Regression isolation
+
+- A feature fix must not change shared authentication, session, WebKit, playback, or queue infrastructure until evidence identifies that shared layer as the root cause. Prefer the narrowest adapter, parser, view-model, or presentation change that can satisfy the failing test.
+- Keep catalog/Home authentication and WebKit playback-session responsibilities explicitly separated. A catalog personalization fix must not replace, broaden, clear, restore, or re-sign the playback session as a side effect.
+- Do not modify parser, cache, authentication, UI, and playback layers in one task. If evidence requires changes across layers, split them into independently reviewable task-scoped patches with a failing test and acceptance criteria for each boundary.
+- Any change to `CookieStorage`, `SessionStore`, `WebKitManager`, `SingletonPlayerWebView`, `PlayerBridgeScript`, `PlaybackStateMachine`, or remote-command wiring must run the focused tests for the changed contract and the established Home-to-Playback smoke regression before completion.
+- The Home-to-Playback smoke regression covers: load Home; select a queue item; start audio; confirm current metadata; pause; resume; next; previous; seek; switch to Search and play another result; open and close Fullscreen Player without losing the active session. Automate deterministic portions with injected backends and synthetic data; device- or account-dependent rows require the corresponding existing authorization.
+- After a feature passes its focused test, re-run at least one known-good vertical slice that crosses every shared layer touched by the patch. A passing feature test does not waive regression verification for existing behavior.
+- When behavior that was known-good before a commit regresses, inspect or bisect the causal diff first. Do not add a workaround until the first state transition or boundary that diverges has been identified with a sanitized trace, failing test, or reproducible observation.
+- After two unsuccessful patches for the same symptom without new evidence, stop editing and produce an escalation packet: reproduction, expected versus actual behavior, last known-good revision, attempted diffs, test results, disproven hypotheses, remaining unknowns, and the single next measurement needed.
+- Report verification using `CODED`, `UNIT VERIFIED`, `BUILD VERIFIED`, `SIMULATOR VERIFIED`, `DEVICE VERIFIED`, `ACCOUNT VERIFIED`, or `NOT VERIFIED`. Never promote build success, simulator behavior, or source inspection into device/account verification.
+
 ## UI, performance, and localization
 
 - Design for compact windows, phone landscape, iPad multitasking and resizing; use size/layout constraints rather than only device idiom.

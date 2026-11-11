@@ -3,68 +3,11 @@ import OtoCore
 
 /// Bộ phân tích dữ liệu JSON từ Innertube API của YouTube Music với kiểm tra schema chẩn đoán lỗi.
 public enum YTMusicParsers {
-    // MARK: - Home Feed
-
-    public static func parseHomeSections(from data: Data) throws -> (quickPicks: [Song], listenAgain: [Song]) {
-        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
-            throw YTMusicError.invalidResponse
-        }
-
-        var shelves = collectRenderers(named: "musicCarouselShelfRenderer", in: json)
-        shelves.append(contentsOf: collectRenderers(named: "musicShelfRenderer", in: json))
-        shelves.append(contentsOf: collectRenderers(named: "musicSpeedDialShelfRenderer", in: json))
-        guard !shelves.isEmpty else {
-            throw YTMusicError.parsingError
-        }
-
-        var quickPicks: [Song] = []
-        var listenAgain: [Song] = []
-        var otherShelves: [[Song]] = []
-
-        for shelf in shelves {
-            let (shelfTitle, shelfSongs) = parseCarouselShelf(shelf)
-            guard !shelfSongs.isEmpty else { continue }
-
-            let lowerTitle = shelfTitle.lowercased()
-            let isListenAgain = ["listen again", "nghe lại", "gần đây", "recently", "đã phát"]
-                .contains { lowerTitle.contains($0) }
-            let isQuickPicks = [
-                "quick picks", "lựa chọn nhanh", "speed dial", "speeddial", "quay số nhanh",
-                "dành cho bạn", "for you", "gợi ý", "khởi động radio", "start radio", "mixed for you", "bản phối"
-            ].contains { lowerTitle.contains($0) }
-
-            if isListenAgain {
-                listenAgain.append(contentsOf: shelfSongs)
-            } else if isQuickPicks {
-                quickPicks.append(contentsOf: shelfSongs)
-            } else {
-                otherShelves.append(shelfSongs)
-            }
-        }
-
-        // Nếu cả hai đều rỗng (tiêu đề bản địa không khớp từ khoá cố định),
-        // fallback phân bổ các shelf đã phân tích được để tránh ném lỗi fatal làm hỏng màn hình chính
-        if quickPicks.isEmpty && listenAgain.isEmpty && !otherShelves.isEmpty {
-            quickPicks = otherShelves.removeFirst()
-            if !otherShelves.isEmpty {
-                listenAgain = otherShelves.removeFirst()
-            }
-        }
-
-        // Loại bỏ bài trùng lặp nếu có giữa quickPicks và listenAgain
-        let quickPicksIds = Set(quickPicks.map(\.id))
-        listenAgain.removeAll { quickPicksIds.contains($0.id) }
-
-        if quickPicks.isEmpty && listenAgain.isEmpty {
-            throw YTMusicError.parsingError
-        }
-
-        return (quickPicks, listenAgain)
-    }
+    // MARK: - Internal Helpers
 
     /// Innertube thường thêm wrapper vào Home feed. Chỉ tìm renderer theo key cụ thể,
     /// không biến mọi shelf lạ thành nội dung cá nhân hóa.
-    private static func collectRenderers(named name: String, in value: Any) -> [[String: Any]] {
+    static func collectRenderers(named name: String, in value: Any) -> [[String: Any]] {
         if let dictionary = value as? [String: Any] {
             var results: [[String: Any]] = []
             if let renderer = dictionary[name] as? [String: Any] {
@@ -83,44 +26,6 @@ public enum YTMusicParsers {
         return []
     }
 
-    private static func parseCarouselShelf(_ carousel: [String: Any]) -> (title: String, songs: [Song]) {
-        var headerTexts: [String] = []
-        if let header = carousel["header"] as? [String: Any] {
-            let basicHeader = (header["musicCarouselShelfBasicHeaderRenderer"] as? [String: Any])
-                ?? (header["musicShelfHeaderRenderer"] as? [String: Any])
-            if let basic = basicHeader {
-                if let titleObj = basic["title"] as? [String: Any],
-                   let runs = titleObj["runs"] as? [[String: Any]] {
-                    headerTexts.append(contentsOf: runs.compactMap { $0["text"] as? String })
-                }
-                if let straplineObj = basic["strapline"] as? [String: Any],
-                   let runs = straplineObj["runs"] as? [[String: Any]] {
-                    headerTexts.append(contentsOf: runs.compactMap { $0["text"] as? String })
-                }
-            }
-        }
-        let shelfTitle = headerTexts.joined(separator: " ").lowercased()
-
-        let rawItems = (carousel["contents"] as? [[String: Any]])
-            ?? (carousel["items"] as? [[String: Any]])
-        guard let items = rawItems else {
-            return (shelfTitle, [])
-        }
-
-        var shelfSongs: [Song] = []
-        for item in items {
-            if let renderer = item["musicResponsiveListItemRenderer"] as? [String: Any],
-               let song = parseResponsiveListItem(renderer) {
-                shelfSongs.append(song)
-            } else if let renderer = (item["musicTwoRowItemRenderer"] as? [String: Any])
-                ?? (item["musicSpeedDialItemRenderer"] as? [String: Any]),
-                      let song = parseTwoRowItem(renderer) {
-                shelfSongs.append(song)
-            }
-        }
-        return (shelfTitle, shelfSongs)
-    }
-
     // MARK: - Playlists & Liked Songs
 
     public static func parsePlaylistOrShelfSongs(from data: Data) throws -> [Song] {
@@ -128,31 +33,16 @@ public enum YTMusicParsers {
             throw YTMusicError.invalidResponse
         }
 
-        guard let contents = json["contents"] as? [String: Any],
-              let browseResults = contents["singleColumnBrowseResultsRenderer"] as? [String: Any],
-              let tabs = browseResults["tabs"] as? [[String: Any]],
-              let firstTab = tabs.first,
-              let tabRenderer = firstTab["tabRenderer"] as? [String: Any],
-              let tabContent = tabRenderer["content"] as? [String: Any],
-              let sectionList = tabContent["sectionListRenderer"] as? [String: Any],
-              let sectionContents = sectionList["contents"] as? [[String: Any]] else {
-            throw YTMusicError.parsingError
+        let itemRenderers = collectRenderers(named: "musicResponsiveListItemRenderer", in: json)
+        var results: [Song] = []
+        for renderer in itemRenderers {
+            if let song = parseResponsiveListItem(renderer) {
+                results.append(song)
+            }
         }
 
-        var results: [Song] = []
-        for section in sectionContents {
-            let shelfItems = (section["musicPlaylistShelfRenderer"] as? [String: Any])?["contents"]
-                as? [[String: Any]]
-                ?? (section["musicShelfRenderer"] as? [String: Any])?["contents"] as? [[String: Any]]
-
-            if let items = shelfItems {
-                for item in items {
-                    if let renderer = item["musicResponsiveListItemRenderer"] as? [String: Any],
-                       let song = parseResponsiveListItem(renderer) {
-                        results.append(song)
-                    }
-                }
-            }
+        guard !results.isEmpty else {
+            throw YTMusicError.parsingError
         }
         return results
     }
@@ -365,7 +255,7 @@ extension YTMusicParsers {
         return result
     }
 
-    private static func extractThumbnailURL(from container: [String: Any]?) -> URL? {
+    static func extractThumbnailURL(from container: [String: Any]?) -> URL? {
         guard let container else { return nil }
         let musicThumb = container["musicThumbnailRenderer"] as? [String: Any]
         let thumbObj = (musicThumb?["thumbnail"] as? [String: Any])

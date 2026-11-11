@@ -6,6 +6,7 @@ import OtoCore
 @MainActor
 @Observable
 public final class HomeViewModel {
+    public var speedDialItems: [SpeedDialItem] = []
     public var quickPicks: [Song] = []
     public var listenAgain: [Song] = []
     public var recentlyPlayed: [Song] = []
@@ -14,14 +15,17 @@ public final class HomeViewModel {
 
     private let client: YTMusicClient
     private let cache: HomeCache
+    private let pinStore: SpeedDialPinStore
     private var loadTask: Task<Void, Never>?
 
     public init(
         client: YTMusicClient = .shared,
-        cache: HomeCache = .shared
+        cache: HomeCache = .shared,
+        pinStore: SpeedDialPinStore = .shared
     ) {
         self.client = client
         self.cache = cache
+        self.pinStore = pinStore
         SessionStore.shared.registerResetHandler { [weak self] in
             self?.clearSessionData()
         }
@@ -41,6 +45,7 @@ public final class HomeViewModel {
         guard !Task.isCancelled else { return }
         if let cached = await cache.loadCachedFeed() {
             guard !Task.isCancelled else { return }
+            self.speedDialItems = pinStore.mergePinned(with: cached.speedDial)
             self.quickPicks = cached.quickPicks
             self.listenAgain = cached.listenAgain
             self.recentlyPlayed = []
@@ -51,6 +56,7 @@ public final class HomeViewModel {
     public func clearSessionData() {
         loadTask?.cancel()
         loadTask = nil
+        self.speedDialItems = []
         self.quickPicks = []
         self.listenAgain = []
         self.recentlyPlayed = []
@@ -64,11 +70,16 @@ public final class HomeViewModel {
 
         do {
             let feed = try await client.fetchHomeFeed()
-            if !feed.quickPicks.isEmpty || !feed.listenAgain.isEmpty {
+            if !feed.speedDial.isEmpty || !feed.quickPicks.isEmpty || !feed.listenAgain.isEmpty {
+                self.speedDialItems = pinStore.mergePinned(with: feed.speedDial)
                 self.quickPicks = feed.quickPicks
                 self.listenAgain = feed.listenAgain
                 self.recentlyPlayed = []
-                await cache.saveFeed(quickPicks: feed.quickPicks, listenAgain: feed.listenAgain)
+                await cache.saveFeed(
+                    speedDial: feed.speedDial,
+                    quickPicks: feed.quickPicks,
+                    listenAgain: feed.listenAgain
+                )
             }
         } catch is CancellationError {
             // Phiên cũ đã bị hủy hoặc view không còn hiển thị; không ghi lỗi trễ vào UI.
@@ -77,5 +88,11 @@ public final class HomeViewModel {
         }
 
         isLoading = false
+    }
+
+    /// Ghim hoặc Bỏ ghim một item trong Speed Dial.
+    public func togglePin(for item: SpeedDialItem) {
+        pinStore.togglePin(item)
+        self.speedDialItems = pinStore.mergePinned(with: self.speedDialItems)
     }
 }

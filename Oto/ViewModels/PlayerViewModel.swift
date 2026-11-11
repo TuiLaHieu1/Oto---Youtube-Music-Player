@@ -22,6 +22,7 @@ public final class PlayerViewModel {
     private var stateMachine = PlaybackStateMachine()
     private var positionTimerTask: Task<Void, Never>?
     private var radioLoadTask: Task<Void, Never>?
+    private var playlistLoadTask: Task<Void, Never>?
 
     public init(
         queueManager: QueueManager = QueueManager(),
@@ -94,6 +95,25 @@ public final class PlayerViewModel {
                 }
             } catch {
                 self.logger.warning("Không thể nạp Radio Up Next cho video \(videoId): \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Bắt đầu phát một danh sách phát hoặc album từ YouTube Music.
+    public func playPlaylist(id: String, fallbackSong: Song? = nil) {
+        if let fallbackSong {
+            play(song: fallbackSong)
+        }
+        playlistLoadTask?.cancel()
+        playlistLoadTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let songs = try await YTMusicClient.shared.fetchPlaylistSongs(playlistId: id)
+                guard !Task.isCancelled, !songs.isEmpty else { return }
+                self.playQueue(songs: songs, startIndex: 0)
+                self.logger.info("Đã nạp và phát danh sách phát \(id) với \(songs.count) bài.")
+            } catch {
+                self.logger.warning("Không thể nạp playlist \(id): \(error.localizedDescription)")
             }
         }
     }

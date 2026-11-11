@@ -5,14 +5,29 @@ import os
 
 /// Cấu trúc lưu trữ dữ liệu trang chủ kèm thời điểm tạo để tính TTL.
 public struct CachedHomeFeed: Codable, Sendable {
+    public let speedDial: [SpeedDialItem]
     public let quickPicks: [Song]
     public let listenAgain: [Song]
     public let timestamp: Date
 
-    public init(quickPicks: [Song], listenAgain: [Song], timestamp: Date = Date()) {
+    public init(
+        speedDial: [SpeedDialItem] = [],
+        quickPicks: [Song] = [],
+        listenAgain: [Song] = [],
+        timestamp: Date = Date()
+    ) {
+        self.speedDial = speedDial
         self.quickPicks = quickPicks
         self.listenAgain = listenAgain
         self.timestamp = timestamp
+    }
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.speedDial = (try? container.decode([SpeedDialItem].self, forKey: .speedDial)) ?? []
+        self.quickPicks = (try? container.decode([Song].self, forKey: .quickPicks)) ?? []
+        self.listenAgain = (try? container.decode([Song].self, forKey: .listenAgain)) ?? []
+        self.timestamp = (try? container.decode(Date.self, forKey: .timestamp)) ?? Date()
     }
 }
 
@@ -43,9 +58,9 @@ public actor HomeCache {
     }
 
     /// Lưu dữ liệu trang chủ vào bộ đệm tệp cục bộ theo tài khoản ngoài MainActor.
-    public func saveFeed(quickPicks: [Song], listenAgain: [Song]) {
+    public func saveFeed(speedDial: [SpeedDialItem] = [], quickPicks: [Song], listenAgain: [Song]) {
         guard let url = cacheFileURL() else { return }
-        let cached = CachedHomeFeed(quickPicks: quickPicks, listenAgain: listenAgain)
+        let cached = CachedHomeFeed(speedDial: speedDial, quickPicks: quickPicks, listenAgain: listenAgain)
         do {
             let data = try JSONEncoder().encode(cached)
             try data.write(to: url, options: .atomic)

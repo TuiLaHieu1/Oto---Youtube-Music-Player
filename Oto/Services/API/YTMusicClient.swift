@@ -75,7 +75,7 @@ public final class YTMusicClient: Sendable {
     }
 
     /// Nạp danh mục trang chủ (Home feed) từ YouTube Music.
-    public func fetchHomeFeed() async throws -> (quickPicks: [Song], listenAgain: [Song]) {
+    public func fetchHomeFeed() async throws -> YTMusicParsers.HomeFeedContent {
         guard let url = URL(string: "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false") else {
             throw YTMusicError.invalidURL
         }
@@ -88,7 +88,28 @@ public final class YTMusicClient: Sendable {
         request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
 
         let data = try await perform(request, operation: "home")
-        return try YTMusicParsers.parseHomeSections(from: data)
+        return try YTMusicParsers.parseHomeFeed(from: data)
+    }
+
+    /// Nạp danh sách bài hát từ danh sách phát hoặc album chỉ định trên YouTube Music.
+    public func fetchPlaylistSongs(playlistId: String) async throws -> [Song] {
+        let trimmed = playlistId.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return [] }
+
+        guard let url = URL(string: "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false") else {
+            throw YTMusicError.invalidURL
+        }
+
+        let browseId = trimmed.starts(with: "VL") ? trimmed : "VL\(trimmed)"
+        var request = makeBaseRequest(url: url)
+        let bodyPayload: [String: Any] = [
+            "context": clientContext,
+            "browseId": browseId
+        ]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
+
+        let data = try await perform(request, operation: "playlist")
+        return try YTMusicParsers.parsePlaylistOrShelfSongs(from: data)
     }
 
     /// Nạp danh sách bài hát đã thích (Liked Songs) từ tài khoản YouTube Music.

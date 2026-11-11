@@ -82,7 +82,7 @@ public struct HomeFeedView: View {
                 .padding(.top, OtoTheme.spacing8)
 
                 // Section 1: Speed Dial (Quay số nhanh 3x3 theo chuẩn YouTube Music)
-                if !homeVM.quickPicks.isEmpty {
+                if !homeVM.speedDialItems.isEmpty {
                     VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
                         OtoSectionHeader(title: "Speed dial")
                             .padding(.horizontal, OtoTheme.spacing16)
@@ -96,8 +96,22 @@ public struct HomeFeedView: View {
                                 ],
                                 spacing: 8
                             ) {
-                                ForEach(homeVM.quickPicks) { song in
-                                    speedDialTile(for: song)
+                                ForEach(homeVM.speedDialItems) { item in
+                                    SpeedDialTileView(
+                                        item: item,
+                                        isCurrent: (playerVM.currentSong?.id == item.id) && playerVM.isPlaying,
+                                        size: tileSize,
+                                        onPlay: {
+                                            if item.kind == .song {
+                                                playerVM.playWithRadio(song: item.asSong)
+                                            } else {
+                                                playerVM.playPlaylist(id: item.id, fallbackSong: item.asSong)
+                                            }
+                                        },
+                                        onTogglePin: {
+                                            homeVM.togglePin(for: item)
+                                        }
+                                    )
                                 }
                             }
                             .scrollTargetLayout()
@@ -108,9 +122,34 @@ public struct HomeFeedView: View {
                     }
                 }
 
+                // Section 2: Quick Picks (Lựa chọn nhanh để bắt đầu đài phát)
+                if !homeVM.quickPicks.isEmpty {
+                    VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
+                        OtoSectionHeader(title: "Lựa chọn nhanh")
+                            .padding(.horizontal, OtoTheme.spacing16)
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            LazyHStack(spacing: OtoTheme.spacing12) {
+                                ForEach(homeVM.quickPicks) { song in
+                                    OtoAlbumCard(
+                                        song: song,
+                                        isPlaying: playerVM.currentSong?.id == song.id && playerVM.isPlaying,
+                                        size: 152
+                                    ) {
+                                        play(song, in: homeVM.quickPicks)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, OtoTheme.spacing16)
+                        }
+                    }
+                }
+
+                // Section 3: Listen Again (Nghe lại gần đây / Bản phối)
                 if !homeVM.listenAgain.isEmpty {
                     VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
                         OtoSectionHeader(title: "Nghe lại gần đây")
+                            .padding(.horizontal, OtoTheme.spacing16)
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHStack(spacing: OtoTheme.spacing12) {
@@ -171,73 +210,5 @@ public struct HomeFeedView: View {
         #else
         return 116
         #endif
-    }
-
-    private func speedDialTile(for song: Song) -> some View {
-        let isCurrent = playerVM.currentSong?.id == song.id && playerVM.isPlaying
-        return Button {
-            triggerHaptic()
-            playerVM.playWithRadio(song: song)
-        } label: {
-            ZStack(alignment: .bottomLeading) {
-                speedDialArtwork(for: song)
-
-                LinearGradient(
-                    colors: [.clear, Color.black.opacity(0.85)],
-                    startPoint: .center,
-                    endPoint: .bottom
-                )
-
-                Text(song.title)
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                    .padding(8)
-
-                if isCurrent {
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Circle().fill(OtoTheme.accent).frame(width: 8, height: 8).padding(8)
-                        }
-                        Spacer()
-                    }
-                }
-            }
-            .frame(width: tileSize, height: tileSize)
-            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .stroke(
-                        isCurrent ? OtoTheme.accent : OtoTheme.separator.opacity(0.4),
-                        lineWidth: isCurrent ? 1.5 : 0.5
-                    )
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("\(song.title), \(song.artist)")
-    }
-
-    private func speedDialArtwork(for song: Song) -> some View {
-        AsyncImage(url: song.artworkURL) { phase in
-            switch phase {
-            case .success(let image):
-                image.resizable().scaledToFill()
-            case .failure, .empty:
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(OtoTheme.surface)
-                    Image(systemName: "music.note")
-                        .font(.system(size: 24))
-                        .foregroundStyle(OtoTheme.secondaryText)
-                }
-            @unknown default:
-                Color.clear
-            }
-        }
-        .id(song.artworkURL)
-        .frame(width: tileSize, height: tileSize)
-        .clipped()
     }
 }

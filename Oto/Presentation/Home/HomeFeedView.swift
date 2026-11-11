@@ -16,15 +16,15 @@ public struct HomeFeedView: View {
                 OtoTheme.background.ignoresSafeArea()
 
                 Group {
-                    if homeVM.isLoading && homeVM.quickPicks.isEmpty && homeVM.listenAgain.isEmpty {
+                    if homeVM.isLoading && !homeVM.hasContent {
                         OtoLoadingSkeleton()
-                    } else if let error = homeVM.errorMessage, homeVM.quickPicks.isEmpty && homeVM.listenAgain.isEmpty {
+                    } else if let error = homeVM.errorMessage, !homeVM.hasContent {
                         OtoErrorState(message: error) {
                             Task {
                                 await homeVM.loadFeed()
                             }
                         }
-                    } else if homeVM.quickPicks.isEmpty && homeVM.listenAgain.isEmpty {
+                    } else if !homeVM.hasContent {
                         OtoEmptyState(
                             title: "Chưa có gợi ý âm nhạc",
                             message: "Vuốt xuống để tải lại từ YouTube Music hoặc mở tab Tìm kiếm để chọn bài hát.",
@@ -85,7 +85,6 @@ public struct HomeFeedView: View {
                 if !homeVM.speedDialItems.isEmpty {
                     VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
                         OtoSectionHeader(title: "Speed dial")
-                            .padding(.horizontal, OtoTheme.spacing16)
 
                         ScrollView(.horizontal, showsIndicators: false) {
                             LazyHGrid(
@@ -128,7 +127,6 @@ public struct HomeFeedView: View {
                         if !section.items.isEmpty {
                             VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
                                 OtoSectionHeader(title: section.title)
-                                    .padding(.horizontal, OtoTheme.spacing16)
 
                                 ScrollView(.horizontal, showsIndicators: false) {
                                     LazyHStack(spacing: OtoTheme.spacing12) {
@@ -156,7 +154,6 @@ public struct HomeFeedView: View {
                     if !homeVM.quickPicks.isEmpty {
                         VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
                             OtoSectionHeader(title: "Lựa chọn nhanh")
-                                .padding(.horizontal, OtoTheme.spacing16)
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: OtoTheme.spacing12) {
@@ -178,7 +175,6 @@ public struct HomeFeedView: View {
                     if !homeVM.listenAgain.isEmpty {
                         VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
                             OtoSectionHeader(title: "Nghe lại gần đây")
-                                .padding(.horizontal, OtoTheme.spacing16)
 
                             ScrollView(.horizontal, showsIndicators: false) {
                                 LazyHStack(spacing: OtoTheme.spacing12) {

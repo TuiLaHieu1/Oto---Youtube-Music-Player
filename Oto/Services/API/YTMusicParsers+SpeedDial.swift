@@ -67,7 +67,8 @@ extension YTMusicParsers {
 
             let isSpeedDial = [
                 "speed dial", "speeddial", "quay số nhanh", "listen again", "nghe lại",
-                "thường nghe", "nghe nhiều", "gần đây", "recently"
+                "thường nghe", "nghe nhiều", "gần đây", "recently", "chọn nhanh đài phát",
+                "đài phát nhanh", "chọn nhanh"
             ].contains { lowerTitle.contains($0) } || shelf["musicSpeedDialShelfRenderer"] != nil
 
             if isSpeedDial && speedDialItems.isEmpty {
@@ -79,15 +80,10 @@ extension YTMusicParsers {
             }
         }
 
-        // Fallback tài khoản khách nếu không có shelf Speed dial riêng:
-        // Nếu shelf đầu tiên không phải Quick picks, dùng làm Speed dial
+        // Đảm bảo khối trên cùng luôn là Speed dial 3x3 theo chuẩn YouTube Music iOS
         if speedDialItems.isEmpty && !sections.isEmpty {
-            let firstTitle = sections.first?.title.lowercased() ?? ""
-            let isFirstQuickPick = firstTitle.contains("quick") || firstTitle.contains("nhanh")
-            if !isFirstQuickPick {
-                let first = sections.removeFirst()
-                speedDialItems = first.items
-            }
+            let first = sections.removeFirst()
+            speedDialItems = first.items
         }
 
         var seenSpeedDialIds = Set<String>()

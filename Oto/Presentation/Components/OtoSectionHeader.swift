@@ -20,6 +20,9 @@ public struct OtoSectionHeader: View {
         HStack {
             Text(title)
                 .font(OtoTheme.sectionTitleFont)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .truncationMode(.tail)
                 .foregroundStyle(OtoTheme.primaryText)
 
             Spacer()

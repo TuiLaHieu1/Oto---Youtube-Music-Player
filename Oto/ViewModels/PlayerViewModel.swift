@@ -182,7 +182,7 @@ extension PlayerViewModel {
         if effects.shouldActivateSession {
             Task {
                 do {
-                    try await AudioSessionCoordinator.shared.configureAndActivate()
+                    try await AudioSessionCoordinator.shared.configureAndActivate(force: true)
                 } catch {
                     self.logger.error("Lỗi kích hoạt AVAudioSession: \(error.localizedDescription)")
                 }
@@ -215,6 +215,7 @@ extension PlayerViewModel {
         if let seekTime = effects.shouldSeekEngine {
             clock.seek(to: seekTime)
             backend.seek(to: seekTime)
+            currentPosition = seekTime
         }
 
         if effects.shouldAdvanceToNextTrack {
@@ -362,8 +363,11 @@ extension PlayerViewModel {
         positionTimerTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 100_000_000)
-                guard let self = self, self.isPlaying else { break }
-                self.currentPosition = self.clock.currentPosition()
+                guard let self = self else { break }
+                guard self.stateMachine.userIntent == .playing else { break }
+                if self.isPlaying {
+                    self.currentPosition = self.clock.currentPosition()
+                }
             }
         }
     }

@@ -89,6 +89,12 @@ public struct SearchView: View {
                         let isCurrent = playerVM.currentSong?.id == song.id && playerVM.isPlaying
                         OtoSongRow(song: song, isPlaying: isCurrent) {
                             #if os(iOS)
+                            UIApplication.shared.sendAction(
+                                #selector(UIResponder.resignFirstResponder),
+                                to: nil,
+                                from: nil,
+                                for: nil
+                            )
                             UIImpactFeedbackGenerator(style: .light).impactOccurred()
                             #endif
                             playerVM.playWithRadio(song: song)
@@ -99,6 +105,7 @@ public struct SearchView: View {
             }
             .padding(.bottom, 160)
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 
     private var filterChips: some View {

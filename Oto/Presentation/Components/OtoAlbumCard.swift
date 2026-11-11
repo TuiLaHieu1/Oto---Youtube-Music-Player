@@ -56,7 +56,8 @@ public struct OtoAlbumCard: View {
                     Text(song.title)
                         .font(OtoTheme.cardTitleFont)
                         .foregroundStyle(isPlaying ? OtoTheme.accent : OtoTheme.primaryText)
-                        .lineLimit(1)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
 
                     Text(song.artist)
                         .font(OtoTheme.captionFont)

@@ -14,6 +14,11 @@ public final class HomeViewModel {
     public var isLoading: Bool = false
     public var errorMessage: String?
 
+    /// Kiểm tra xem trang chủ đã có dữ liệu hiển thị hay chưa để tránh chớp màn hình rỗng.
+    public var hasContent: Bool {
+        !speedDialItems.isEmpty || !sections.isEmpty || !quickPicks.isEmpty || !listenAgain.isEmpty
+    }
+
     private let client: YTMusicClient
     private let cache: HomeCache
     private let pinStore: SpeedDialPinStore

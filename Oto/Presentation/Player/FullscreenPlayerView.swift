@@ -47,14 +47,22 @@ public struct FullscreenPlayerView: View {
                 playingFromTitle: playerVM.currentSong?.album ?? "Quick Picks"
             )
 
-            if playerVM.showLyrics {
+            ZStack {
+                artworkView(geo: geo)
+                    .opacity(playerVM.showLyrics ? 0 : 1)
+                    .scaleEffect(reduceMotion ? 1 : (playerVM.showLyrics ? 0.88 : 1.0))
+                    .allowsHitTesting(!playerVM.showLyrics)
+
                 SyncedLyricsView(lyricsVM: lyricsVM) { seekTime in
                     playerVM.seek(to: seekTime)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                artworkView(geo: geo)
+                .opacity(playerVM.showLyrics ? 1 : 0)
+                .scaleEffect(reduceMotion ? 1 : (playerVM.showLyrics ? 1.0 : 0.95))
+                .allowsHitTesting(playerVM.showLyrics)
             }
+            .animation(reduceMotion ? nil : OtoTheme.smoothSpring, value: playerVM.showLyrics)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             VStack(spacing: OtoTheme.spacing24) {
                 trackMetadataView

@@ -20,9 +20,9 @@ public actor AudioSessionCoordinator {
     }
 
     /// Cấu hình và kích hoạt AudioSession cho phát nhạc nền (chỉ chạy ngoài main thread).
-    public func configureAndActivate() async throws {
+    public func configureAndActivate(force: Bool = false) async throws {
         #if os(iOS)
-        guard !isSessionActive else { return }
+        if isSessionActive && !force { return }
 
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playback, mode: .default, policy: .default, options: [])

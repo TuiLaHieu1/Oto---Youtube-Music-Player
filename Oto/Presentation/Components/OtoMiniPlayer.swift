@@ -3,6 +3,8 @@ import OtoCore
 
 /// Thanh MiniPlayer dùng chung theo phong cách Apple Music kết hợp Atelier Light × Spectrum Dark.
 public struct OtoMiniPlayer: View {
+    @Environment(\.displayScale) private var displayScale
+
     public let song: Song?
     public let isPlaying: Bool
     public let currentPosition: TimeInterval
@@ -85,7 +87,7 @@ public struct OtoMiniPlayer: View {
     private var artworkThumbnail: some View {
         Button(action: onExpand) {
             if let song = song {
-                AsyncImage(url: song.artworkURL) { image in
+                AsyncImage(url: OtoArtworkURL.forDisplay(song.artworkURL, points: 42, scale: displayScale)) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
                     ZStack {

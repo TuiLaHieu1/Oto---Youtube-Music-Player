@@ -3,6 +3,8 @@ import OtoCore
 
 /// Thẻ hiển thị trên lưới Speed Dial (Quay số nhanh 3x3) theo chuẩn YouTube Music.
 public struct SpeedDialTileView: View {
+    @Environment(\.displayScale) private var displayScale
+
     public let item: SpeedDialItem
     public let isCurrent: Bool
     public let size: CGFloat
@@ -105,7 +107,7 @@ public struct SpeedDialTileView: View {
     }
 
     private var artwork: some View {
-        AsyncImage(url: item.artworkURL) { phase in
+        AsyncImage(url: OtoArtworkURL.forDisplay(item.artworkURL, points: size, scale: displayScale)) { phase in
             switch phase {
             case .success(let image):
                 image.resizable().scaledToFill()

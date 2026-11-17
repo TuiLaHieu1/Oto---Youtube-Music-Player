@@ -4,6 +4,24 @@ import Testing
 @testable import Oto
 
 struct SpeedDialTests {
+    @Test("Ảnh thẻ nhỏ dùng biến thể vừa đủ và giữ URL gốc khi không hỗ trợ")
+    func artworkURLUsesDisplaySize() {
+        let artwork = URL(string: "https://lh3.googleusercontent.com/cover=w800-h800-l90-rj")
+        let thumbnail = OtoArtworkURL.forDisplay(artwork, points: 44, scale: 3)
+        let card = OtoArtworkURL.forDisplay(artwork, points: 144, scale: 3)
+        let largeTile = OtoArtworkURL.forDisplay(artwork, points: 347, scale: 2)
+        #expect(thumbnail?.absoluteString == "https://lh3.googleusercontent.com/cover=w160-h160-l90-rj")
+        #expect(card?.absoluteString == "https://lh3.googleusercontent.com/cover=w512-h512-l90-rj")
+        #expect(largeTile == artwork)
+
+        let square = URL(string: "https://lh3.googleusercontent.com/cover=s800-c")
+        #expect(OtoArtworkURL.forDisplay(square, points: 100, scale: 2)?.absoluteString
+                == "https://lh3.googleusercontent.com/cover=s256-c")
+
+        let other = URL(string: "https://example.com/cover.jpg")
+        #expect(OtoArtworkURL.forDisplay(other, points: 44, scale: 3) == other)
+    }
+
     private static func makeTwoRowItem(
         videoId: String? = nil,
         playlistId: String? = nil,

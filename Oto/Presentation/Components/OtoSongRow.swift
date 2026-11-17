@@ -3,6 +3,8 @@ import OtoCore
 
 /// Hàng bài hát chuẩn của Oto hiển thị ảnh thumbnail, tên bài hát, nghệ sĩ và hiệu ứng đang phát.
 public struct OtoSongRow: View {
+    @Environment(\.displayScale) private var displayScale
+
     public let song: Song
     public let isPlaying: Bool
     public let action: () -> Void
@@ -17,7 +19,7 @@ public struct OtoSongRow: View {
         Button(action: action) {
             HStack(spacing: OtoTheme.spacing12) {
                 // Ảnh bìa thu nhỏ
-                AsyncImage(url: song.artworkURL) { image in
+                AsyncImage(url: OtoArtworkURL.forDisplay(song.artworkURL, points: 44, scale: displayScale)) { image in
                     image.resizable().scaledToFill()
                 } placeholder: {
                     ZStack {

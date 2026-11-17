@@ -1,8 +1,23 @@
 import SwiftUI
 import OtoCore
 
+enum OtoArtworkURL {
+    static func forDisplay(_ url: URL?, points: CGFloat, scale: CGFloat) -> URL? {
+        guard let url else { return nil }
+        let pixels = max(1, points * scale)
+        let size = [160, 256, 384, 512, 800].first { CGFloat($0) >= pixels } ?? 800
+        let source = url.absoluteString
+        let resized = source
+            .replacingOccurrences(of: "=w800-h800-l90-rj", with: "=w\(size)-h\(size)-l90-rj")
+            .replacingOccurrences(of: "=s800-c", with: "=s\(size)-c")
+        return resized == source ? url : URL(string: resized) ?? url
+    }
+}
+
 /// Thẻ hiển thị bài hát/album theo dạng khối vuông chuẩn Atelier Light × Spectrum Dark.
 public struct OtoAlbumCard: View {
+    @Environment(\.displayScale) private var displayScale
+
     public let song: Song
     public let isPlaying: Bool
     public let size: CGFloat
@@ -25,7 +40,7 @@ public struct OtoAlbumCard: View {
             VStack(alignment: .leading, spacing: OtoTheme.spacing8) {
                 // Artwork Container
                 ZStack(alignment: .bottomTrailing) {
-                    AsyncImage(url: song.artworkURL) { image in
+                    AsyncImage(url: OtoArtworkURL.forDisplay(song.artworkURL, points: size, scale: displayScale)) { image in
                         image.resizable().scaledToFill()
                     } placeholder: {
                         ZStack {

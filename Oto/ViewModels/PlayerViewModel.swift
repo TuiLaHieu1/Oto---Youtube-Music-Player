@@ -13,269 +13,172 @@ public final class PlayerViewModel {
     public var showLyrics: Bool = false
     public var showQueue: Bool = false
     public var showAuth: Bool = false
+    public var playbackErrorMessage: String?
+    private var loadingWatchdogTask: Task<Void, Never>?
+    var isWatchdogActive: Bool { loadingWatchdogTask != nil && !(loadingWatchdogTask?.isCancelled ?? true) }
 
     public let queueManager: QueueManager
     public let clock: InterpolatedClock
-
-    private let backend: any PlaybackBackend
-    private let logger = Logger(subsystem: "com.oto.music", category: "PlayerViewModel")
-    private var stateMachine = PlaybackStateMachine()
+    let backend: any PlaybackBackend
+    let audioSession: any PlaybackAudioSession
+    var activationTask: Task<Void, Never>?
+    var interruptionTask: Task<Void, Never>?
+    var pendingEngineLoad: PlaybackEffects.StartEnginePayload?
+    var engineOperationRevision = 0
+    var selectionRevision = 0
+    var usesRadio = false
+    let catalog: any PlaybackCatalog
+    let updatesSystemNowPlaying: Bool
+    let logger = Logger(subsystem: "com.oto.music", category: "PlayerViewModel")
+    var stateMachine = PlaybackStateMachine()
     private var positionTimerTask: Task<Void, Never>?
-    private var radioLoadTask: Task<Void, Never>?
-    private var playlistLoadTask: Task<Void, Never>?
+    var radioLoadTask: Task<Void, Never>?
+    var playlistLoadTask: Task<Void, Never>?
+    var albumLoadTask: Task<Void, Never>?
 
     public init(
         queueManager: QueueManager = QueueManager(),
         clock: InterpolatedClock = InterpolatedClock(),
-        backend: (any PlaybackBackend)? = nil
+        backend: (any PlaybackBackend)? = nil,
+        audioSession: any PlaybackAudioSession = AudioSessionCoordinator.shared,
+        catalog: any PlaybackCatalog = YTMusicClient.shared,
+        updatesSystemNowPlaying: Bool = true
     ) {
         self.queueManager = queueManager
         self.clock = clock
         self.backend = backend ?? SingletonPlayerWebView.shared
+        self.audioSession = audioSession
+        self.catalog = catalog
+        self.updatesSystemNowPlaying = updatesSystemNowPlaying
         setupPlayerBridge()
         setupAudioSessionObserver()
-        setupNowPlayingCommands()
+        if updatesSystemNowPlaying { setupNowPlayingCommands() }
     }
 
-    public var currentSong: Song? {
-        playbackState.currentSong ?? queueManager.currentSong
-    }
-
-    public var isPlaying: Bool {
-        playbackState.isPlaying
-    }
-
-    public var isBuffering: Bool {
-        playbackState.isBuffering
-    }
-
-    /// Trạng thái nút Play/Pause trên giao diện: hiển thị Pause khi đang phát hoặc đang tải bài mới.
-    public var shouldShowPauseButton: Bool {
-        isPlaying || isBuffering || stateMachine.userIntent == .playing
-    }
-
-    /// Thời lượng phát thực tế đo được từ WebKit engine, bù đắp trường hợp API không trả duration.
+    public var currentSong: Song? { playbackState.currentSong ?? queueManager.currentSong }
+    public var isPlaying: Bool { playbackState.isPlaying }
+    public var isBuffering: Bool { playbackState.isBuffering }
+    public var shouldShowPauseButton: Bool { isPlaying || isBuffering || stateMachine.userIntent == .playing }
     public var runtimeDuration: TimeInterval?
-
-    /// Thời lượng phát hiệu lực ưu tiên runtime duration từ media player.
     public var effectiveDuration: TimeInterval {
-        if let runtime = runtimeDuration, runtime > 0 { return runtime }
-        return currentSong?.duration ?? 0
+        runtimeDuration.flatMap { $0.isFinite && $0 > 0 ? $0 : nil } ?? currentSong?.duration ?? 0
     }
-
     public var isShuffleEnabled: Bool { queueManager.isShuffleEnabled }
     public var repeatMode: RepeatMode { queueManager.repeatMode }
+    public var queueItems: [QueueItem] { queueManager.items }
 
-    // MARK: - User Intent Actions
-
-    /// Bắt đầu phát một bài hát cụ thể từ ý định người dùng và cập nhật hàng đợi.
-    public func play(song: Song) {
-        queueManager.setQueue(songs: [song])
-        applyEffects(stateMachine.userPlay(song: song))
+    public static func shouldLoadRadioQueue(remainingCount: Int, repeatMode: RepeatMode, userInitiated: Bool) -> Bool {
+        (repeatMode != .one || userInitiated) && remainingCount <= 2
     }
 
-    /// Bắt đầu phát bài hát chỉ định và nạp danh sách Radio / Up Next tự động từ YouTube Music.
-    public func playWithRadio(song: Song) {
-        play(song: song)
-        loadRadioQueue(for: song.id)
-    }
-
-    /// Nạp danh sách bài hát gợi ý Radio Up Next từ YouTube Music cho videoId đang phát.
-    public func loadRadioQueue(for videoId: String) {
-        radioLoadTask?.cancel()
-        radioLoadTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                let radioSongs = try await YTMusicClient.shared.fetchUpNextQueue(videoId: videoId)
-                guard !Task.isCancelled, self.currentSong?.id == videoId else { return }
-                let remaining = radioSongs.filter { $0.id != videoId }
-                if !remaining.isEmpty {
-                    self.queueManager.appendQueue(songs: remaining)
-                    self.logger.info("Đã nạp \(remaining.count) bài hát Radio Up Next cho video \(videoId)")
-                }
-            } catch {
-                self.logger.warning("Không thể nạp Radio Up Next cho video \(videoId): \(error.localizedDescription)")
-            }
+    static func stableDisplayedPosition(
+        previous: TimeInterval, candidate: TimeInterval
+    ) -> TimeInterval {
+        guard candidate.isFinite, candidate >= 0 else { return previous }
+        if candidate < previous, previous - candidate <= 1.0 {
+            return previous
         }
+        return candidate
     }
 
-    /// Bắt đầu phát một danh sách phát hoặc album từ YouTube Music.
-    public func playPlaylist(id: String, fallbackSong: Song? = nil) {
-        if let fallbackSong {
-            play(song: fallbackSong)
-        }
-        playlistLoadTask?.cancel()
-        playlistLoadTask = Task { [weak self] in
-            guard let self else { return }
-            do {
-                let songs = try await YTMusicClient.shared.fetchPlaylistSongs(playlistId: id)
-                guard !Task.isCancelled, !songs.isEmpty else { return }
-                self.playQueue(songs: songs, startIndex: 0)
-                self.logger.info("Đã nạp và phát danh sách phát \(id) với \(songs.count) bài.")
-            } catch {
-                self.logger.warning("Không thể nạp playlist \(id): \(error.localizedDescription)")
-            }
-        }
+    public func retryCurrentTrack() {
+        guard let currentSong = queueManager.currentSong else { return }
+        playbackErrorMessage = nil
+        backend.resetCrashRecoveryBudget()
+        applyEffects(stateMachine.userPlay(song: currentSong))
     }
 
-    /// Khởi tạo hàng đợi mới từ danh sách bài hát và bắt đầu phát từ vị trí chỉ định.
-    public func playQueue(songs: [Song], startIndex: Int = 0) {
-        guard !songs.isEmpty else { return }
-        queueManager.setQueue(songs: songs, startIndex: startIndex)
-        if let targetSong = queueManager.currentSong {
-            applyEffects(stateMachine.userPlay(song: targetSong))
-        }
+    public func clearForSignOut() {
+        activationTask?.cancel()
+        activationTask = nil
+        pendingEngineLoad = nil
+        engineOperationRevision += 1
+        cancelLoadingWatchdog()
+        playbackErrorMessage = nil
+        cancelCatalogSelection()
+        positionTimerTask?.cancel()
+        clock.pause(at: 0)
+        currentPosition = 0
+        runtimeDuration = nil
+        isExpanded = false
+        showLyrics = false
+        showQueue = false
+        showAuth = false
+        queueManager.setQueue(songs: [])
+        stateMachine = PlaybackStateMachine()
+        backend.resetForSignOut()
+        syncPublicState()
     }
 
-    /// Phát bài hát tại một vị trí cụ thể trong hàng đợi và cập nhật currentIndex.
-    public func playQueueItem(at index: Int) {
-        if let targetSong = queueManager.skipToIndex(index) {
-            applyEffects(stateMachine.userPlay(song: targetSong))
-        }
-    }
-
-    public func resume() { applyEffects(stateMachine.userResume()) }
-    public func pause() { applyEffects(stateMachine.userPause()) }
-
-    public func togglePlayPause() {
-        if shouldShowPauseButton {
-            pause()
-        } else {
-            resume()
-        }
-    }
-
-    public func next() {
-        if let nextSong = queueManager.next() {
-            applyEffects(stateMachine.userPlay(song: nextSong))
-            if queueManager.remainingCount <= 2 {
-                loadRadioQueue(for: nextSong.id)
-            }
-        } else {
-            pause()
-            seek(to: 0)
-        }
-    }
-
-    public func previous() {
-        if currentPosition > 3.0 {
-            seek(to: 0)
-        } else if let prevSong = queueManager.previous() {
-            applyEffects(stateMachine.userPlay(song: prevSong))
-        } else {
-            seek(to: 0)
-        }
-    }
-
-    public func seek(to position: TimeInterval) {
-        applyEffects(stateMachine.userSeek(to: position))
-    }
-
-    public func toggleShuffle() { queueManager.toggleShuffle() }
-    public func toggleRepeat() { queueManager.toggleRepeat() }
 }
 
 // MARK: - Internal Engine Bridge & Synchronization
-
 extension PlayerViewModel {
-    private func applyEffects(_ effects: PlaybackEffects) {
-        if effects.shouldActivateSession {
-            Task {
-                do {
-                    try await AudioSessionCoordinator.shared.configureAndActivate(force: true)
-                } catch {
-                    self.logger.error("Lỗi kích hoạt AVAudioSession: \(error.localizedDescription)")
-                }
-            }
-        }
-
+    func applyEffects(_ effects: PlaybackEffects) {
         if let payload = effects.shouldStartEngine {
+            cancelLoadingWatchdog()
+            pendingEngineLoad = payload
             runtimeDuration = nil
+            playbackErrorMessage = nil
             clock.pause(at: payload.startSeconds)
-            backend.loadVideo(
-                id: payload.songId,
-                startSeconds: payload.startSeconds,
-                generation: payload.generation,
-                shouldPlay: effects.shouldResumeEngine || stateMachine.userIntent == .playing
-            )
         }
-
-        if effects.shouldResumeEngine {
-            clock.play(from: stateMachine.currentPosition, rate: 1.0)
-            backend.play()
-            startPositionTracking()
+        if effects.shouldActivateSession || effects.shouldStartEngine != nil || effects.shouldResumeEngine {
+            scheduleEngineOperation()
         }
-
         if effects.shouldPauseEngine {
             clock.pause()
             backend.pause()
             stopPositionTracking()
         }
-
         if let seekTime = effects.shouldSeekEngine {
             clock.seek(to: seekTime)
             backend.seek(to: seekTime)
             currentPosition = seekTime
         }
-
-        if effects.shouldAdvanceToNextTrack {
-            next()
-        }
-
+        if effects.shouldAdvanceToNextTrack { advanceQueue(userInitiated: false) }
         syncPublicState()
     }
 
-    private func syncPublicState() {
+    func syncPublicState() {
         playbackState = stateMachine.playbackState
         currentPosition = stateMachine.currentPosition
-
-        NowPlayingManager.shared.updateNowPlaying(
-            song: currentSong,
-            isPlaying: isPlaying,
-            currentTime: currentPosition,
-            duration: effectiveDuration
-        )
+        if updatesSystemNowPlaying { NowPlayingManager.shared.updateNowPlaying(
+            song: currentSong, isPlaying: isPlaying, currentTime: currentPosition, duration: effectiveDuration
+        ) }
     }
-
     private func setupAudioSessionObserver() {
-        AudioSessionObserver.shared.onInterruptionBegan = { [weak self] in
-            guard let self else { return }
-            self.applyEffects(self.stateMachine.interruptionBegan())
+        let obs = AudioSessionObserver.shared
+        obs.onInterruptionBegan = { [weak self] in
+            if let self {
+                self.invalidateAudioSessionForInterruption()
+                self.applyEffects(self.stateMachine.interruptionBegan())
+            }
         }
-        AudioSessionObserver.shared.onInterruptionEnded = { [weak self] shouldResume in
-            guard let self else { return }
-            self.applyEffects(self.stateMachine.interruptionEnded(shouldResume: shouldResume))
+        obs.onInterruptionEnded = { [weak self] shouldResume in
+            if let self { self.applyEffects(self.stateMachine.interruptionEnded(shouldResume: shouldResume)) }
         }
-        AudioSessionObserver.shared.onHeadphonesUnplugged = { [weak self] in
-            guard let self else { return }
-            self.applyEffects(self.stateMachine.routeUnplugged())
+        obs.onHeadphonesUnplugged = { [weak self] in
+            if let self { self.applyEffects(self.stateMachine.routeUnplugged()) }
         }
     }
-
     private func setupPlayerBridge() {
         backend.onTrackActivated = { [weak self] trackId, generation in
-            guard let self,
-                  generation == self.stateMachine.currentGeneration,
+            guard let self, generation == self.stateMachine.currentGeneration,
                   trackId == self.stateMachine.currentSong?.id else { return }
             self.logger.info("Engine đã xác nhận bài active: \(trackId), gen: \(generation)")
         }
-
-        backend.onPlaybackStateChange = { [weak self] (stateCode, gen, trackId) in
+        backend.onPlaybackStateChange = { [weak self] stateCode, gen, trackId in
             self?.handleBridgeStateChange(stateCode: stateCode, generation: gen, trackId: trackId)
         }
-
-        backend.onPositionUpdate = { [weak self] (cur, dur, gen, trackId) in
+        backend.onPositionUpdate = { [weak self] cur, dur, gen, trackId in
             self?.handleBridgePositionUpdate(current: cur, duration: dur, generation: gen, trackId: trackId)
         }
-
         backend.onTrackEnded = { [weak self] gen, trackId in
             self?.handleBridgeTrackEnded(generation: gen, trackId: trackId)
         }
-
-        backend.onError = { [weak self] (code, gen, trackId) in
+        backend.onError = { [weak self] code, gen, trackId in
             self?.handleBridgeError(code: code, generation: gen, trackId: trackId)
         }
-
         backend.onRemoteCommand = { [weak self] command in
             guard let self else { return }
             switch command {
@@ -286,7 +189,6 @@ extension PlayerViewModel {
             case .seek(let position): self.seek(to: position)
             }
         }
-
         backend.onRecoveryRequired = { [weak self] in
             guard let self else { return }
             self.logger.warning("Đang thực hiện khôi phục playback sau sự cố crash...")
@@ -294,58 +196,98 @@ extension PlayerViewModel {
         }
     }
 
+    func startLoadingWatchdog(for generation: Int) {
+        loadingWatchdogTask?.cancel()
+        loadingWatchdogTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 12_000_000_000)
+            guard let self, !Task.isCancelled else { return }
+            guard self.stateMachine.currentGeneration == generation,
+                  self.stateMachine.playbackState.isBuffering,
+                  self.stateMachine.userIntent == .playing else { return }
+
+            self.logger.warning("Playback loading watchdog: Quá thời gian nạp nhạc (12s) cho gen \(generation).")
+            self.activationTask?.cancel()
+            self.activationTask = nil
+            self.pendingEngineLoad = nil
+            self.engineOperationRevision += 1
+            self.playbackErrorMessage = "Không thể phát bài hát này. Hãy thử lại."
+            self.pause()
+        }
+    }
+
+    func cancelLoadingWatchdog() {
+        loadingWatchdogTask?.cancel()
+        loadingWatchdogTask = nil
+    }
     private func handleBridgeStateChange(stateCode: Int, generation: Int, trackId: String) {
         guard generation == stateMachine.currentGeneration, trackId == stateMachine.currentSong?.id else { return }
-
-        let engineState: EnginePlaybackState
-        switch stateCode {
-        case 1: engineState = .playing
-        case 2: engineState = .paused
-        default: engineState = .buffering
-        }
-
+        logger.info("Playback state gen=\(generation) code=\(stateCode)")
+        let engineState: EnginePlaybackState = (stateCode == 1) ? .playing : ((stateCode == 2) ? .paused : .buffering)
         applyEffects(stateMachine.engineStateChanged(engineState, generation: generation))
 
         if engineState == .playing {
+            cancelLoadingWatchdog()
+            playbackErrorMessage = nil
             if !clock.isPlaying { clock.play(from: currentPosition, rate: 1.0) }
             startPositionTracking()
         } else if engineState == .paused || engineState == .buffering {
             clock.pause()
+            if stateMachine.userIntent == .playing, stateMachine.interruptionState == .active {
+                if !isWatchdogActive { startLoadingWatchdog(for: generation) }
+            } else { cancelLoadingWatchdog() }
         }
     }
 
     private func handleBridgePositionUpdate(
-        current: TimeInterval,
-        duration: TimeInterval,
-        generation: Int,
-        trackId: String
+        current: TimeInterval, duration: TimeInterval, generation: Int, trackId: String
     ) {
         guard generation == stateMachine.currentGeneration, trackId == stateMachine.currentSong?.id else { return }
+        guard current.isFinite, current >= 0 else { return }
 
-        if duration > 0 { runtimeDuration = duration }
-        stateMachine.engineTimeUpdated(currentTime: current, generation: generation)
-        let clockPos = clock.currentPosition()
-        if abs(clockPos - current) > 0.5 { clock.seek(to: current) }
-        currentPosition = current
-        NowPlayingManager.shared.updateNowPlaying(
-            song: currentSong,
-            isPlaying: isPlaying,
-            currentTime: current,
-            duration: effectiveDuration
+        if duration.isFinite, duration > 0 { runtimeDuration = duration }
+        let displayedPosition = Self.stableDisplayedPosition(
+            previous: currentPosition, candidate: current
         )
+        stateMachine.engineTimeUpdated(currentTime: displayedPosition, generation: generation)
+        if abs(clock.currentPosition() - current) > 0.5 { clock.seek(to: current) }
+        currentPosition = displayedPosition
+        if updatesSystemNowPlaying { NowPlayingManager.shared.updateNowPlaying(
+            song: currentSong, isPlaying: isPlaying, currentTime: displayedPosition, duration: effectiveDuration
+        ) }
     }
 
     private func handleBridgeTrackEnded(generation: Int, trackId: String) {
-        guard generation == stateMachine.currentGeneration, trackId == stateMachine.currentSong?.id else { return }
+        let matches = generation == stateMachine.currentGeneration && trackId == stateMachine.currentSong?.id
+        let qSnap = queueManager.snapshot()
+        logger.info("""
+            Playback end t=\(ProcessInfo.processInfo.systemUptime, privacy: .public) \
+            gen=\(generation) curGen=\(self.stateMachine.currentGeneration) \
+            match=\(matches) started=\(self.stateMachine.hasStartedForCurrentTrack) \
+            pos=\(self.currentPosition, format: .fixed(precision: 2)) \
+            repeat=\(qSnap.repeatMode.rawValue, privacy: .public) \
+            qIdx=\(qSnap.currentIndex ?? -1) qCount=\(qSnap.items.count) \
+            intent=\(String(describing: self.stateMachine.userIntent), privacy: .public)
+            """)
+        guard matches else { return }
         applyEffects(stateMachine.engineTrackEnded(generation: generation))
     }
-
     private func handleBridgeError(code: Int, generation: Int, trackId: String) {
-        guard generation == stateMachine.currentGeneration else { return }
-        logger.error("Lỗi playback YouTube Web (code: \(code), track: \(trackId), gen: \(generation))")
-        if code == 100 || code == 101 || code == 150 || code == 152 {
+        guard generation == stateMachine.currentGeneration,
+              trackId.isEmpty || trackId == stateMachine.currentSong?.id else { return }
+        logger.error("""
+            Playback error t=\(ProcessInfo.processInfo.systemUptime) code=\(code) \
+            gen=\(generation) intent=\(String(describing: self.stateMachine.userIntent))
+            """)
+        cancelLoadingWatchdog()
+        let isUnavailable = code == 100 || code == 101 || code == 150 || code == 152
+        let canAdvance = queueManager.remainingCount > 0 || (repeatMode == .all && queueManager.items.count > 1)
+        if isUnavailable, canAdvance, stateMachine.userIntent == .playing, repeatMode != .one {
             next()
+            return
         }
+        playbackErrorMessage = code == -999
+            ? "Trình phát đã dừng sau nhiều lần khôi phục. Hãy thử lại." : "Không thể phát bài hát (mã \(code))."
+        pause(reason: "engineError")
     }
 
     private func setupNowPlayingCommands() {
@@ -357,23 +299,39 @@ extension PlayerViewModel {
         mgr.onPreviousCommand = { [weak self] in Task { @MainActor in self?.previous() } }
         mgr.onSeekCommand = { [weak self] pos in Task { @MainActor in self?.seek(to: pos) } }
     }
-
-    private func startPositionTracking() {
+    func startPositionTracking() {
         positionTimerTask?.cancel()
         positionTimerTask = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(nanoseconds: 100_000_000)
-                guard let self = self else { break }
-                guard self.stateMachine.userIntent == .playing else { break }
+                guard let self, self.stateMachine.userIntent == .playing else { break }
                 if self.isPlaying {
-                    self.currentPosition = self.clock.currentPosition()
+                    self.currentPosition = Self.stableDisplayedPosition(
+                        previous: self.currentPosition,
+                        candidate: self.clock.currentPosition()
+                    )
                 }
             }
         }
     }
-
     private func stopPositionTracking() {
         positionTimerTask?.cancel()
         positionTimerTask = nil
+    }
+}
+
+/// Giao diện cho backend hỗ trợ đặt lại ngân sách khôi phục sự cố crash WebKit.
+@MainActor
+public protocol CrashRecoverableBackend: AnyObject {
+    func resetCrashRecoveryBudget()
+}
+
+extension PlaybackBackend {
+    public func resetCrashRecoveryBudget() {
+        if let recoverable = self as? any CrashRecoverableBackend {
+            recoverable.resetCrashRecoveryBudget()
+        } else if let webView = self as? SingletonPlayerWebView {
+            webView.crashRetryCount = 0
+        }
     }
 }

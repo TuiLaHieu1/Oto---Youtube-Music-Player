@@ -8,7 +8,7 @@ extension SingletonPlayerWebView: WKNavigationDelegate {
     public func webView(
         _ webView: WKWebView,
         decidePolicyFor navigationAction: WKNavigationAction,
-        decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        decisionHandler: @escaping @MainActor (WKNavigationActionPolicy) -> Void
     ) {
         guard let url = navigationAction.request.url else {
             decisionHandler(.cancel)
@@ -31,12 +31,6 @@ extension SingletonPlayerWebView: WKNavigationDelegate {
             return
         }
 
-        // Cho phép các iframe và subframe tải tài nguyên DRM, auth và media luồng
-        if navigationAction.targetFrame?.isMainFrame == false {
-            decisionHandler(.allow)
-            return
-        }
-
         // Bắt buộc host thuộc danh sách cho phép của YouTube Music Player và Google Services
         let isAllowedHost = host == "music.youtube.com"
             || host == "accounts.google.com"
@@ -51,7 +45,7 @@ extension SingletonPlayerWebView: WKNavigationDelegate {
 
         // Với link navigation từ người dùng, chỉ cho phép trên các domain YouTube
         if navigationAction.navigationType == .linkActivated {
-            if host.hasSuffix("youtube.com") {
+            if host == "youtube.com" || host.hasSuffix(".youtube.com") {
                 decisionHandler(.allow)
             } else {
                 logger.warning("Chặn click link ngoài allowlist: \(url.absoluteString)")
@@ -64,10 +58,7 @@ extension SingletonPlayerWebView: WKNavigationDelegate {
     }
 
     public func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        logger.info("WebView đã nạp xong: \(webView.url?.absoluteString ?? "unknown")")
-        webView.evaluateJavaScript(PlayerBridgeScript.source) { [weak self] _, _ in
-            self?.checkReadyAndFlush()
-        }
+        logger.info("WebView đã nạp navigation; đang chờ handshake của player.")
     }
 
     public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
@@ -83,6 +74,35 @@ extension SingletonPlayerWebView: WKNavigationDelegate {
         crashRetryCount += 1
         logger.info("Yêu cầu ViewModel/StateMachine phục hồi playback (lần retry: \(self.crashRetryCount))...")
         onRecoveryRequired?()
+    }
+
+    public func webView(
+        _ webView: WKWebView,
+        didFailProvisionalNavigation navigation: WKNavigation!,
+        withError error: Error
+    ) {
+        handleNavigationError(error, phase: "provisional navigation")
+    }
+
+    public func webView(
+        _ webView: WKWebView,
+        didFail navigation: WKNavigation!,
+        withError error: Error
+    ) {
+        handleNavigationError(error, phase: "navigation")
+    }
+
+    private func handleNavigationError(_ error: Error, phase: String) {
+        let nsError = error as NSError
+        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+            logger.debug("Bỏ qua navigation cancelled (-999) trong \(phase)")
+            return
+        }
+
+        logger.error("Lỗi WebKit \(phase): \(error.localizedDescription) (code: \(nsError.code))")
+        isBridgeReady = false
+        let trackId = activeDescriptor?.id ?? currentLoadedVideoId ?? ""
+        onError?(nsError.code, currentGeneration, trackId)
     }
 }
 
@@ -100,8 +120,16 @@ extension SingletonPlayerWebView: WKScriptMessageHandler {
 
         let origin = message.frameInfo.securityOrigin
         let isTrusted = origin.protocol == "https" && origin.host == "music.youtube.com"
+            && (origin.port == 0 || origin.port == 443)
         guard isTrusted else {
             logger.warning("Bỏ qua message từ origin không được ủy quyền: \(origin.host)")
+            return
+        }
+
+        // otoLog: nhận string thẳng từ JS diagnostic (không phải dict)
+        if message.name == "otoLog" {
+            let text = message.body as? String ?? "\(message.body)"
+            logger.debug("JS-diag: \(text, privacy: .public)")
             return
         }
 
@@ -111,5 +139,27 @@ extension SingletonPlayerWebView: WKScriptMessageHandler {
         }
 
         handleMessageBody(body, type: type)
+    }
+}
+
+// MARK: - PendingPlayback Fluent Modifiers
+
+extension SingletonPlayerWebView.PendingPlayback {
+    public func setting(shouldPlay: Bool) -> SingletonPlayerWebView.PendingPlayback {
+        SingletonPlayerWebView.PendingPlayback(
+            id: id,
+            startSeconds: startSeconds,
+            generation: generation,
+            shouldPlay: shouldPlay
+        )
+    }
+
+    public func seeking(to position: TimeInterval) -> SingletonPlayerWebView.PendingPlayback {
+        SingletonPlayerWebView.PendingPlayback(
+            id: id,
+            startSeconds: position,
+            generation: generation,
+            shouldPlay: shouldPlay
+        )
     }
 }

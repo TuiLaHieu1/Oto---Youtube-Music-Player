@@ -56,6 +56,7 @@
 		A10100542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift */; };
 		A10100552CE0000100000001 /* Oto/Services/API/YTMusicParsers+SpeedDial.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200552CE0000100000001 /* Oto/Services/API/YTMusicParsers+SpeedDial.swift */; };
 		A10100562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift */; };
+		F3C0A1110000000000000001 /* Tests/OtoTests/NowPlayingArtworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C0A1110000000000000002 /* Tests/OtoTests/NowPlayingArtworkTests.swift */; };
 		A10100572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift */; };
 		7EB9B33F3813BC58D22D00A5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC9B3F20520C527AD87131A1; };
 /* End PBXBuildFile section */
@@ -121,6 +122,7 @@
 		A10200542CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/WebKit/SingletonPlayerWebView+Delegates.swift"; sourceTree = SOURCE_ROOT; };
 		A10200552CE0000100000001 /* Oto/Services/API/YTMusicParsers+SpeedDial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicParsers+SpeedDial.swift"; sourceTree = SOURCE_ROOT; };
 		A10200562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/SpeedDialTests.swift; sourceTree = SOURCE_ROOT; };
+		F3C0A1110000000000000002 /* Tests/OtoTests/NowPlayingArtworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/OtoTests/NowPlayingArtworkTests.swift"; sourceTree = SOURCE_ROOT; };
 		A10200572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/PlaylistDetailView.swift; sourceTree = SOURCE_ROOT; };
 		DC9B3F20520C527AD87131A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Oto/Resources/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -262,6 +264,7 @@
 			children = (
 				A10200502CE0000100000001 /* Tests/OtoTests/PlayerViewModelTests.swift */,
 				A10200562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift */,
+				F3C0A1110000000000000002 /* Tests/OtoTests/NowPlayingArtworkTests.swift */,
 				A10200512CE0000100000001 /* Tests/OtoTests/SessionStoreTests.swift */,
 			);
 			name = Tests;
@@ -415,6 +418,7 @@
 			files = (
 				A10100502CE0000100000001 /* Tests/OtoTests/PlayerViewModelTests.swift in Sources */,
 				A10100562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift in Sources */,
+				F3C0A1110000000000000001 /* Tests/OtoTests/NowPlayingArtworkTests.swift in Sources */,
 				A10100512CE0000100000001 /* Tests/OtoTests/SessionStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

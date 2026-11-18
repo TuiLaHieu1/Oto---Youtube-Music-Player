@@ -1,5 +1,7 @@
 import Foundation
+import ImageIO
 import MediaPlayer
+import UniformTypeIdentifiers
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -15,18 +17,41 @@ public final class NowPlayingManager: @unchecked Sendable {
     public var onNextCommand: (@Sendable () -> Void)?
     public var onPreviousCommand: (@Sendable () -> Void)?
     public var onSeekCommand: (@Sendable (TimeInterval) -> Void)?
+    private let fetchArtwork: @Sendable (URL) async throws -> Data
 
     #if canImport(UIKit)
-    private var cachedArtworkSongId: String?
-    private var cachedArtworkImage: UIImage?
-    private var artworkTask: Task<Void, Never>?
-    #endif
+    private struct ArtworkKey: Equatable {
+        let songId: String
+        let url: URL
+    }
 
-    private init() {
-        setupRemoteCommands()
+    private var cachedArtworkKey: ArtworkKey?
+    private var cachedArtworkImage: UIImage?
+    private var currentArtworkKey: ArtworkKey?
+    private var artworkRequestGeneration = 0
+    private var loadingArtworkKey: ArtworkKey?
+    private var failedArtworkKey: ArtworkKey?
+    private var artworkRetryCount = 0
+    private var artworkTask: Task<Void, Never>?
+    private var thumbnailTask: Task<Data?, Never>?
+    private var retryArtworkTask: Task<Void, Never>?
+    #endif
+    private let retryArtworkDelayNanoseconds: UInt64
+
+    init(
+        fetchArtwork: @escaping @Sendable (URL) async throws -> Data = { url in
+            try await URLSession.shared.data(from: url).0
+        },
+        registerRemoteCommands: Bool = true,
+        retryArtworkDelayNanoseconds: UInt64 = 30_000_000_000
+    ) {
+        self.fetchArtwork = fetchArtwork
+        self.retryArtworkDelayNanoseconds = retryArtworkDelayNanoseconds
+        if registerRemoteCommands { setupRemoteCommands() }
     }
 
     /// Cập nhật thông tin bài hát đang phát lên NowPlayingInfoCenter với hỗ trợ runtime duration.
+    @MainActor
     public func updateNowPlaying(
         song: Song?,
         isPlaying: Bool,
@@ -35,6 +60,7 @@ public final class NowPlayingManager: @unchecked Sendable {
     ) {
         #if os(iOS)
         guard let song = song else {
+            clearArtwork()
             MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
             return
         }
@@ -62,17 +88,15 @@ public final class NowPlayingManager: @unchecked Sendable {
 
         #if canImport(UIKit)
         if let artworkURL = song.artworkURL {
-            if cachedArtworkSongId == song.id, let image = cachedArtworkImage {
+            let key = ArtworkKey(songId: song.id, url: artworkURL)
+            selectArtwork(key)
+            if cachedArtworkKey == key, let image = cachedArtworkImage {
                 info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
             } else {
-                loadArtworkAsync(
-                    for: song,
-                    url: artworkURL,
-                    currentTime: currentTime,
-                    duration: totalDuration,
-                    isPlaying: isPlaying
-                )
+                loadArtworkAsync(for: key)
             }
+        } else {
+            clearArtwork()
         }
         #endif
 
@@ -91,22 +115,116 @@ public final class NowPlayingManager: @unchecked Sendable {
     }
 
     #if canImport(UIKit)
-    private func loadArtworkAsync(
-        for song: Song,
-        url: URL,
-        currentTime: TimeInterval,
-        duration: TimeInterval,
-        isPlaying: Bool
-    ) {
+    @MainActor
+    private func selectArtwork(_ key: ArtworkKey) {
+        guard currentArtworkKey != key else { return }
         artworkTask?.cancel()
+        artworkTask = nil
+        thumbnailTask?.cancel()
+        thumbnailTask = nil
+        retryArtworkTask?.cancel()
+        retryArtworkTask = nil
+        loadingArtworkKey = nil
+        failedArtworkKey = nil
+        artworkRetryCount = 0
+        artworkRequestGeneration += 1
+        currentArtworkKey = key
+    }
+
+    @MainActor
+    private func loadArtworkAsync(for key: ArtworkKey) {
+        guard loadingArtworkKey != key else { return }
+        guard failedArtworkKey != key else { return }
+        loadingArtworkKey = key
+        let requestGeneration = artworkRequestGeneration
         artworkTask = Task { [weak self] in
-            guard let (data, _) = try? await URLSession.shared.data(from: url),
-                  let image = UIImage(data: data) else { return }
-            guard !Task.isCancelled else { return }
-            self?.cachedArtworkSongId = song.id
-            self?.cachedArtworkImage = image
-            self?.updateNowPlaying(song: song, isPlaying: isPlaying, currentTime: currentTime, duration: duration)
+            guard let self else { return }
+            let imageData: Data?
+            if let data = try? await self.fetchArtwork(key.url) {
+                guard !Task.isCancelled, self.artworkRequestGeneration == requestGeneration else { return }
+                let task = Task.detached(priority: .utility) {
+                    Self.downsampleArtwork(data)
+                }
+                self.thumbnailTask = task
+                imageData = await task.value
+                if self.artworkRequestGeneration == requestGeneration { self.thumbnailTask = nil }
+            } else {
+                imageData = nil
+            }
+            guard let imageData, let image = UIImage(data: imageData) else {
+                if !Task.isCancelled,
+                   self.artworkRequestGeneration == requestGeneration,
+                   self.loadingArtworkKey == key {
+                    self.loadingArtworkKey = nil
+                    self.artworkTask = nil
+                    self.failedArtworkKey = key
+                    if self.artworkRetryCount < 2 {
+                        self.artworkRetryCount += 1
+                        self.retryArtworkTask = Task { [weak self] in
+                            guard let self else { return }
+                            try? await Task.sleep(nanoseconds: self.retryArtworkDelayNanoseconds)
+                            guard !Task.isCancelled, self.artworkRequestGeneration == requestGeneration else {
+                                return
+                            }
+                            self.failedArtworkKey = nil
+                            self.retryArtworkTask = nil
+                            self.loadArtworkAsync(for: key)
+                        }
+                    }
+                }
+                return
+            }
+            guard !Task.isCancelled,
+                  self.artworkRequestGeneration == requestGeneration,
+                  self.loadingArtworkKey == key else { return }
+            self.loadingArtworkKey = nil
+            self.artworkTask = nil
+            self.failedArtworkKey = nil
+            self.artworkRetryCount = 0
+            self.cachedArtworkKey = key
+            self.cachedArtworkImage = image
+            guard var info = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
+            info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         }
+    }
+
+    private static func downsampleArtwork(_ data: Data) -> Data? {
+        guard !Task<Never, Never>.isCancelled else { return nil }
+        guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 1_024
+        ]
+        guard let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            return nil
+        }
+        guard !Task<Never, Never>.isCancelled else { return nil }
+        let output = NSMutableData()
+        guard let destination = CGImageDestinationCreateWithData(
+            output, UTType.png.identifier as CFString, 1, nil
+        ) else { return nil }
+        CGImageDestinationAddImage(destination, thumbnail, nil)
+        guard CGImageDestinationFinalize(destination) else { return nil }
+        return output as Data
+    }
+
+    @MainActor
+    private func clearArtwork() {
+        artworkTask?.cancel()
+        artworkTask = nil
+        thumbnailTask?.cancel()
+        thumbnailTask = nil
+        retryArtworkTask?.cancel()
+        retryArtworkTask = nil
+        currentArtworkKey = nil
+        artworkRequestGeneration += 1
+        loadingArtworkKey = nil
+        failedArtworkKey = nil
+        artworkRetryCount = 0
+        cachedArtworkKey = nil
+        cachedArtworkImage = nil
     }
     #endif
 

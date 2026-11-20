@@ -65,7 +65,10 @@ private let bridgeJavaScript = """
         const transport = function(command) {
           return function() {
             if (command === 'pause') window.__otoUserPaused = true;
-            if (command === 'play') window.__otoUserPaused = false;
+            // Khi trang đã lấy lại focus, bỏ Play được giao muộn lúc mở app.
+            // Chỉ lệnh play đã qua native mới được gỡ cờ pause.
+            if (command === 'play' && window.__otoUserPaused === true &&
+                document.visibilityState === 'visible' && document.hasFocus()) return;
             post('remoteCommand', Object.assign({ command: command }, messageIdentity()));
           };
         };

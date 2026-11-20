@@ -8,6 +8,7 @@ const source = swift.split('"""')[1];
 
 function fixture() {
   const timers = [], messages = [], navigations = [];
+  const mediaActions = {};
   let video = null, moviePlayer = null, observerCallback = null;
   const app = { resolveCommand() {} };
   const document = {
@@ -22,7 +23,9 @@ function fixture() {
     webkit: { messageHandlers: { otoPlayback: { postMessage: value => messages.push(value) } } },
   };
   const sandbox = {
-    window, document, navigator: {}, URL,
+    window, document, navigator: { mediaSession: {
+      setActionHandler(action, handler) { mediaActions[action] = handler; },
+    } }, URL,
     localStorage: { getItem() {}, setItem() {}, removeItem() {} },
     MutationObserver: class {
       constructor(callback) { observerCallback = callback; }
@@ -37,7 +40,7 @@ function fixture() {
   vm.runInNewContext(diagnostics, sandbox);
   vm.runInNewContext(source, sandbox);
   return {
-    window, timers, messages, navigations,
+    window, document, mediaActions, timers, messages, navigations,
     setVideo: value => { video = value; },
     setMoviePlayer: value => { moviePlayer = value; },
     triggerObserver: () => { if (observerCallback) observerCallback(); },
@@ -162,20 +165,7 @@ function fixture() {
 
 {
   const f = fixture();
-  const handlers = {};
-  const mediaSession = { setActionHandler(action, handler) { handlers[action] = handler; } };
-  const sandbox = {
-    window: f.window,
-    document: {
-      head: { appendChild() {} }, documentElement: {}, createElement: () => ({}),
-      getElementById: () => null, querySelector: () => null,
-    },
-    navigator: { mediaSession }, URL,
-    localStorage: { getItem() {}, setItem() {}, removeItem() {} },
-    MutationObserver: class { observe() {} }, setInterval() {}, setTimeout() {},
-  };
-  delete f.window.__otoScriptInjected;
-  vm.runInNewContext(source, sandbox);
+  const handlers = f.mediaActions;
   assert.equal(handlers.seekforward, null);
   assert.equal(handlers.seekbackward, null);
   assert.equal(typeof handlers.play, 'function');
@@ -188,12 +178,21 @@ function fixture() {
   handlers.previoustrack();
   assert.equal(f.messages.at(-2).command, 'next');
   assert.equal(f.messages.at(-1).command, 'previous');
-  handlers.pause();
-  assert.equal(f.window.__otoUserPaused, true, 'Pause từ Lock Screen chặn auto-play ngay');
-  assert.equal(f.messages.at(-1).command, 'pause');
-  handlers.play();
-  assert.equal(f.window.__otoUserPaused, false, 'Play từ Lock Screen cập nhật intent bridge');
-  assert.equal(f.messages.at(-1).command, 'play');
+  f.mediaActions.pause();
+  f.document.visibilityState = 'visible';
+  f.document.hasFocus = () => true;
+  f.mediaActions.play();
+  const commands = () => f.messages.filter(message => message.type === 'remoteCommand')
+    .map(message => message.command).slice(2);
+  assert.deepEqual(commands(), ['pause'], 'Play giao lúc mở lại trang không được đổi ý định pause');
+  f.document.hasFocus = () => false;
+  f.mediaActions.play();
+  f.document.visibilityState = 'hidden';
+  f.mediaActions.play();
+  assert.deepEqual(commands(), ['pause', 'play', 'play']);
+  assert.equal(f.window.__otoUserPaused, true, 'Chờ native xác nhận Play trước khi mở khóa pause');
+  f.window.otoPlayer.play();
+  assert.equal(f.window.__otoUserPaused, false);
 }
 
 for (const method of ['adoptLoadedVideo', 'adoptCurrentVideo']) {

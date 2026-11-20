@@ -48,6 +48,11 @@ private final class PlayerWebViewHost: UIView {
         if window == nil { detach() } else { updateAttachment() }
     }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        if onVideoResult != nil, window != nil { Self.attachPlayer() }
+    }
+
     func updateAttachment() {
         guard window != nil else { return }
         if onVideoResult != nil {
@@ -64,8 +69,13 @@ private final class PlayerWebViewHost: UIView {
         Self.attachPlayer()
     }
 
+    private static var readyVideoHost: PlayerWebViewHost? {
+        guard let host = videoHost, host.bounds.width > 0, host.bounds.height > 0 else { return nil }
+        return host
+    }
+
     private static func attachPlayer() {
-        guard let host = videoHost ?? backgroundHost,
+        guard let host = readyVideoHost ?? backgroundHost,
               let webView = SingletonPlayerWebView.shared.webView,
               webView.superview !== host else { return }
         webView.frame = host.bounds
@@ -118,7 +128,7 @@ private final class PlayerWebViewHost: UIView {
     if (typeof video.showPopover !== 'function' || video.hasAttribute('popover')) return 'popover-unavailable';
     const style = document.createElement('style');
     style.id = id;
-    style.textContent = 'video[' + marker + ']:popover-open { position: fixed !important;' +
+    style.textContent = 'video[' + marker + ']:popover-open { display: block !important; position: fixed !important;' +
         'inset: 0 !important; margin: 0 !important; border: 0 !important; padding: 0 !important;' +
         'width: 100vw !important; height: 100vh !important; max-width: none !important;' +
         'max-height: none !important; transform: none !important; object-fit: contain !important;' +
@@ -127,7 +137,13 @@ private final class PlayerWebViewHost: UIView {
     video.setAttribute(marker, '');
     video.setAttribute('popover', 'manual');
     video.showPopover();
-    const bounds = video.getBoundingClientRect();
-    return video.matches(':popover-open') && bounds.width > 0 && bounds.height > 0 ? 'ready' : 'no-visible-bounds';
+    for (let attempt = 0; attempt < 12; attempt++) {
+      if (window.__otoVideoPresentationRequest !== request) return 'superseded';
+      if (!video.matches(':popover-open')) return 'popover-closed';
+      const bounds = video.getBoundingClientRect();
+      if (bounds.width > 0 && bounds.height > 0) return 'ready';
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    return 'no-visible-bounds';
     """
 }

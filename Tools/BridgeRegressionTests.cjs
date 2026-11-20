@@ -306,6 +306,8 @@ async function testVideoPresentation() {
   const attributes = new Map();
   let visible = false;
   let style;
+  let layoutReads = 0;
+  let alwaysZeroBounds = false;
   const video = {
     readyState: 2, videoWidth: 1280, videoHeight: 720,
     showPopover() { visible = true; },
@@ -314,7 +316,8 @@ async function testVideoPresentation() {
     hasAttribute: key => attributes.has(key),
     setAttribute: (key, value) => attributes.set(key, value),
     removeAttribute: key => attributes.delete(key),
-    getBoundingClientRect: () => ({ width: 320, height: 180 }),
+    getBoundingClientRect: () => (++layoutReads === 1 || alwaysZeroBounds
+      ? { width: 0, height: 0 } : { width: 320, height: 180 }),
   };
   const document = {
     querySelector(selector) {
@@ -334,10 +337,14 @@ async function testVideoPresentation() {
   });
   assert.equal(await present(true), 'ready');
   assert.equal(visible, true);
+  assert.equal(layoutReads, 2, 'Đợi layout WebKit sau khi mở video');
   assert.equal(await present(false), 'artwork');
   assert.equal(attributes.size, 0);
   assert.equal(visible, false);
   assert.equal(style, undefined);
+  alwaysZeroBounds = true;
+  assert.equal(await present(true), 'no-visible-bounds');
+  assert.equal(await present(false), 'artwork');
   video.videoWidth = 0;
   assert.equal(await present(true), 'no-video-frame');
   assert.equal(visible, false);

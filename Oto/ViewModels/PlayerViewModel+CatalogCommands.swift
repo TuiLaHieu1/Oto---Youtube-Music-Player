@@ -124,6 +124,11 @@ extension PlayerViewModel {
         cancelLoadingWatchdog()
         applyEffects(stateMachine.userPause())
     }
+    /// Khi app quay về foreground: nếu người dùng đang dừng thì bảo đảm engine cũng dừng, không tự phát.
+    public func syncIntentAfterForeground() {
+        guard stateMachine.userIntent == .paused, currentSong != nil else { return }
+        backend.pause()
+    }
     public func togglePlayPause() {
         if shouldShowPauseButton { pause() } else { resume() }
     }

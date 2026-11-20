@@ -92,6 +92,9 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
             forMainFrameOnly: true
         )
         contentController.addUserScript(userScript)
+        contentController.addUserScript(WKUserScript(
+            source: PlayerIntentScript.source, injectionTime: .atDocumentEnd, forMainFrameOnly: true
+        ))
 
         let config = WebKitManager.shared.makePlayerConfiguration()
         config.userContentController = contentController

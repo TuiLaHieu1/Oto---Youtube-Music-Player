@@ -5,6 +5,7 @@ import OtoCore
 public struct RootView: View {
     @Bindable var playerVM: PlayerViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: TabItem? = .home
     @State private var windowOrientation = PlayerWindowOrientation()
     @AppStorage("app_language") private var selectedLanguage = AppLanguage.system.rawValue
@@ -52,6 +53,9 @@ public struct RootView: View {
             }
         }
         .environment(\.locale, (AppLanguage(rawValue: selectedLanguage) ?? .system).locale)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { playerVM.syncIntentAfterForeground() }
+        }
     }
 
     @ViewBuilder

@@ -226,6 +226,45 @@ for (const method of ['adoptLoadedVideo', 'adoptCurrentVideo']) {
 }
 console.log('PASS: hồi quy bridge, gồm ba lượt Restart trên video đã kết thúc');
 
+{
+  // PlayerIntentScript: đã dừng thì thẻ media không được tự chạy, đang phát thì không bị chặn.
+  const intent = fs.readFileSync(
+    path.join(__dirname, '../Oto/Services/WebKit/PlayerIntentScript.swift'), 'utf8'
+  ).split('"""')[1];
+  const ticks = [];
+  const video = { paused: false, ended: false, pause() { this.paused = true; } };
+  const calls = [];
+  const otoPlayer = {};
+  for (const name of ['play', 'pause', 'loadVideo', 'adoptLoadedVideo', 'adoptCurrentVideo']) {
+    otoPlayer[name] = () => { calls.push(name); };
+  }
+  const window = { otoPlayer, __otoUserPaused: true };
+  vm.runInNewContext(intent, {
+    window, document: { querySelector: selector => selector === 'video' ? video : null },
+    setInterval: callback => { ticks.push(callback); }, setTimeout() {},
+  });
+  assert.equal(window.__otoPauseGuard, false, 'Mặc định chưa chặn để lần nạp đầu không bị dừng');
+  ticks[0]();
+  assert.equal(video.paused, false, 'Chưa có lệnh dừng thì không đụng media');
+  window.otoPlayer.pause();
+  assert.equal(window.__otoPauseGuard, true);
+  assert.deepEqual(calls, ['pause'], 'Hàm gốc vẫn được gọi');
+  ticks[0]();
+  assert.equal(video.paused, true, 'Đã dừng thì media tự chạy lại phải bị dừng');
+  video.paused = false;
+  window.__otoUserPaused = false;
+  ticks[0]();
+  assert.equal(video.paused, false, 'Cờ dừng của bridge đã tắt thì không chặn');
+  window.__otoUserPaused = true;
+  window.otoPlayer.play();
+  ticks[0]();
+  assert.equal(video.paused, false, 'play() tắt chế độ chặn');
+  window.otoPlayer.loadVideo('A', 0, 1, false);
+  assert.equal(window.__otoPauseGuard, true, 'Nạp không phát thì bật chặn');
+  window.otoPlayer.adoptCurrentVideo('A', 0, 2, true);
+  assert.equal(window.__otoPauseGuard, false, 'Nạp có phát thì tắt chặn');
+  console.log('PASS: PlayerIntentScript giữ ý định dừng và không chặn lệnh phát');
+}
 async function testVideoPresentation() {
   const swift = fs.readFileSync(path.join(__dirname, '../Oto/Services/WebKit/PlayerWebViewContainer.swift'), 'utf8');
   const source = swift.split('"""')[1];

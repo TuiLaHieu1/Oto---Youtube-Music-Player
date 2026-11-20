@@ -152,6 +152,11 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
     }
 
     public func play() {
+        let appState = UIApplication.shared.applicationState.rawValue
+        logger.notice("""
+            Playback WebKit play t=\(ProcessInfo.processInfo.systemUptime) gen=\(self.currentGeneration) \
+            ready=\(self.isBridgeReady) reload=\(self.needsReloadOnPlay) appState=\(appState)
+            """)
         updatePlaybackIntent(shouldPlay: true)
         if needsReloadOnPlay, let descriptor = activeDescriptor {
             crashRetryCount = 0

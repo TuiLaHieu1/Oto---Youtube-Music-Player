@@ -1,6 +1,7 @@
 import Foundation
 import ImageIO
 import MediaPlayer
+import os
 import UniformTypeIdentifiers
 #if canImport(UIKit)
 import UIKit
@@ -8,7 +9,6 @@ import UIKit
 import OtoCore
 #if DEBUG && os(iOS) && OTO_HAPTICS_PILOT
 import MediaAccessibility
-import os
 #endif
 
 #if DEBUG && os(iOS) && OTO_HAPTICS_PILOT
@@ -281,6 +281,7 @@ public final class NowPlayingManager: @unchecked Sendable {
     private func setupRemoteCommands() {
         #if os(iOS)
         let commandCenter = MPRemoteCommandCenter.shared()
+        let logger = Logger(subsystem: "com.oto.music", category: "NativeRemoteCommand")
 
         // Oto phát nhạc theo track. Tắt các lệnh tua kiểu podcast để hệ thống ưu tiên Previous/Next.
         commandCenter.skipForwardCommand.isEnabled = false
@@ -292,18 +293,21 @@ public final class NowPlayingManager: @unchecked Sendable {
 
         commandCenter.playCommand.isEnabled = true
         commandCenter.playCommand.addTarget { [weak self] _ in
+            logger.notice("Playback native remote t=\(ProcessInfo.processInfo.systemUptime) command=play")
             self?.onPlayCommand?()
             return .success
         }
 
         commandCenter.pauseCommand.isEnabled = true
         commandCenter.pauseCommand.addTarget { [weak self] _ in
+            logger.notice("Playback native remote t=\(ProcessInfo.processInfo.systemUptime) command=pause")
             self?.onPauseCommand?()
             return .success
         }
 
         commandCenter.togglePlayPauseCommand.isEnabled = true
         commandCenter.togglePlayPauseCommand.addTarget { [weak self] _ in
+            logger.notice("Playback native remote t=\(ProcessInfo.processInfo.systemUptime) command=toggle")
             if let onToggle = self?.onTogglePlayPauseCommand {
                 onToggle()
             } else {

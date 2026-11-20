@@ -5,12 +5,16 @@ import OtoCore
 struct FullscreenHeaderBar<Mode: View, Controls: View, Actions: View>: View {
     @Binding var isExpanded: Bool
     var playingFromTitle: String = "Quick Picks"
+    var extraControlCount = 0
     @ViewBuilder var mode: () -> Mode
     @ViewBuilder var controls: () -> Controls
     @ViewBuilder var actions: () -> Actions
 
     var body: some View {
-        HStack {
+        let spacing: CGFloat = 8
+        let sideWidth = OtoTheme.minTouchTarget * CGFloat(extraControlCount + 1)
+            + spacing * CGFloat(extraControlCount)
+        HStack(spacing: spacing) {
             Button {
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -25,8 +29,7 @@ struct FullscreenHeaderBar<Mode: View, Controls: View, Actions: View>: View {
                     .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
                     .contentShape(Rectangle())
             }
-
-            Spacer()
+            .frame(width: sideWidth, alignment: .leading)
 
             VStack(spacing: 2) {
                 if !playingFromTitle.isEmpty {
@@ -41,19 +44,21 @@ struct FullscreenHeaderBar<Mode: View, Controls: View, Actions: View>: View {
                 }
                 mode()
             }
+            .frame(maxWidth: .infinity)
 
-            Spacer()
+            HStack(spacing: spacing) {
+                controls()
 
-            controls()
-
-            Menu(content: actions) {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(OtoTheme.secondaryText)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
-                    .contentShape(Rectangle())
+                Menu(content: actions) {
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(OtoTheme.secondaryText)
+                        .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Tùy chọn bài hát")
             }
-            .accessibilityLabel("Tùy chọn bài hát")
+            .frame(width: sideWidth, alignment: .trailing)
         }
         .padding(.horizontal, OtoTheme.spacing16)
         .padding(.top, OtoTheme.spacing8)

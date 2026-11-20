@@ -132,7 +132,6 @@ public struct FullscreenPlayerView: View {
             playerHeader(wide: true, isLandscape: size.width > size.height)
                 .contentShape(Rectangle())
                 .simultaneousGesture(playerSwipe)
-
             let short = size.height < 540
             HStack(alignment: .top, spacing: short ? 12 : OtoTheme.spacing32) {
                 Group {
@@ -199,7 +198,8 @@ public struct FullscreenPlayerView: View {
     private func playerHeader(wide: Bool = false, isLandscape: Bool = false) -> some View {
         FullscreenHeaderBar(
             isExpanded: $playerVM.isExpanded,
-            playingFromTitle: playerVM.playbackSourceTitle ?? ""
+            playingFromTitle: playerVM.playbackSourceTitle ?? "",
+            extraControlCount: wide ? 2 : 0
         ) {
             if !wide, canShowVideo { PlayerMediaModePicker(showsVideo: showsVideo, selectVideo: selectVideo) }
         } controls: {

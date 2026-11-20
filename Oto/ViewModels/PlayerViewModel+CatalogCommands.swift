@@ -16,6 +16,12 @@ extension PlayerViewModel {
         applyEffects(stateMachine.userPlay(song: song))
     }
     public func playWithRadio(song: Song, sourceTitle: String? = nil, isVideo: Bool = false) {
+        if self.usesRadio, !self.waitsForArtistRadio, self.currentSong?.id == song.id,
+           self.playbackSourceTitle == sourceTitle, (self.confirmedVideoSelectionID == song.id) == isVideo,
+           self.playbackErrorMessage == nil {
+            if self.stateMachine.userIntent == .paused { self.resume() }
+            return
+        }
         play(song: song, sourceTitle: sourceTitle)
         if isVideo { confirmedVideoSelectionID = song.id }
         usesRadio = true
@@ -231,6 +237,8 @@ extension PlayerViewModel {
         let position: TimeInterval
         let sourceTitle: String?
         let videoID: String?
+        let usesRadio: Bool?
+        let waitsForArtistRadio: Bool?
     }
 
     func preparePlaybackResumePoint() async {
@@ -258,6 +266,8 @@ extension PlayerViewModel {
         self.queueManager.restore(point.queue)
         self.playbackSourceTitle = point.sourceTitle
         self.confirmedVideoSelectionID = point.videoID == song.id ? point.videoID : nil
+        self.usesRadio = point.usesRadio ?? false
+        self.waitsForArtistRadio = point.waitsForArtistRadio ?? false
         self.pendingEngineLoad = self.stateMachine.restorePaused(song: song, position: point.position)
         self.clock.pause(at: point.position)
         self.syncPublicState()
@@ -272,7 +282,8 @@ extension PlayerViewModel {
         guard queue.items.indices.contains(index) else { return }
         let point = ResumePoint(
             queue: queue, position: self.currentPosition,
-            sourceTitle: self.playbackSourceTitle, videoID: self.confirmedVideoSelectionID
+            sourceTitle: self.playbackSourceTitle, videoID: self.confirmedVideoSelectionID,
+            usesRadio: self.usesRadio, waitsForArtistRadio: self.waitsForArtistRadio
         )
         if let data = try? JSONEncoder().encode(point) { UserDefaults.standard.set(data, forKey: key) }
     }

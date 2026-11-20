@@ -12,6 +12,32 @@ struct PlaybackIntentSyncTests {
         PlayerViewModel(backend: backend, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
     }
 
+    @Test("Yêu cầu Radio lặp lại giữ nguyên vị trí và generation")
+    func repeatedRadioSelectionKeepsPosition() async {
+        let backend = MockPlaybackBackend()
+        let player = PlayerViewModel(
+            backend: backend, audioSession: TestAudioSession(), catalog: DeferredCatalog(),
+            updatesSystemNowPlaying: false
+        )
+        player.playWithRadio(song: self.song, sourceTitle: "Radio")
+        await player.waitForPendingAudioOperation()
+        await player.radioLoadTask?.value
+        backend.onPlaybackStateChange?(1, 1, self.song.id)
+        backend.onPositionUpdate?(115, 180, 1, self.song.id)
+
+        player.playWithRadio(song: self.song, sourceTitle: "Radio")
+        await player.waitForPendingAudioOperation()
+        #expect(backend.loadCalls.count == 1)
+        #expect(player.currentPosition == 115)
+
+        player.pause()
+        player.playWithRadio(song: self.song, sourceTitle: "Radio")
+        await player.waitForPendingAudioOperation()
+        #expect(backend.loadCalls.count == 1)
+        #expect(backend.playCount == 1)
+        #expect(player.currentPosition == 115)
+    }
+
     @Test("Mở lại giữ đúng lượt bài và vị trí nhưng đợi Play")
     func restoresPausedQueueAndPosition() async {
         let key = "test.playback.resume.\(UUID())"

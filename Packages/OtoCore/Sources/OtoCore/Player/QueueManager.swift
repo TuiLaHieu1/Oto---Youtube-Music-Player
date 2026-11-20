@@ -16,29 +16,45 @@ public final class QueueManager: @unchecked Sendable {
         onQueueChanged?()
     }
 
-    public struct Snapshot: Sendable {
+    public struct Snapshot: Sendable, Codable {
         public let items: [QueueItem]
         public let originalItems: [QueueItem]
         public let currentIndex: Int?
         public let isShuffleEnabled: Bool
         public let repeatMode: RepeatMode
+        let hasNavigatedInShuffle: Bool
 
         public init(
             items: [QueueItem],
             originalItems: [QueueItem],
             currentIndex: Int?,
             isShuffleEnabled: Bool,
-            repeatMode: RepeatMode
+            repeatMode: RepeatMode,
+            hasNavigatedInShuffle: Bool = false
         ) {
             self.items = items
             self.originalItems = originalItems
             self.currentIndex = currentIndex
             self.isShuffleEnabled = isShuffleEnabled
             self.repeatMode = repeatMode
+            self.hasNavigatedInShuffle = hasNavigatedInShuffle
         }
     }
 
     public init() {}
+
+    public func restore(_ snapshot: Snapshot) {
+        guard let index = snapshot.currentIndex, snapshot.items.indices.contains(index) else { return }
+        self.lock.lock()
+        self.itemsStorage = snapshot.items
+        self.originalItemsStorage = snapshot.originalItems
+        self.currentIndexStorage = index
+        self.shuffleEnabledStorage = snapshot.isShuffleEnabled
+        self.repeatModeStorage = snapshot.repeatMode
+        self.hasNavigatedInShuffle = snapshot.hasNavigatedInShuffle
+        self.lock.unlock()
+        self.notifyQueueChanged()
+    }
 
     public func snapshot() -> Snapshot {
         lock.lock()
@@ -48,7 +64,8 @@ public final class QueueManager: @unchecked Sendable {
             originalItems: originalItemsStorage,
             currentIndex: currentIndexStorage,
             isShuffleEnabled: shuffleEnabledStorage,
-            repeatMode: repeatModeStorage
+            repeatMode: repeatModeStorage,
+            hasNavigatedInShuffle: hasNavigatedInShuffle
         )
     }
 

@@ -13,9 +13,17 @@ struct OtoApp: App {
 
         let vm = PlayerViewModel()
         _playerVM = State(initialValue: vm)
+        SessionStore.shared.registerResetHandler { [weak vm] in
+            vm?.clearPlaybackResumePoint()
+            vm?.clearForSignOut()
+        }
+        SessionStore.shared.registerSignInHandler { [weak vm] in
+            Task { @MainActor [weak vm] in await vm?.preparePlaybackResumePoint() }
+        }
 
         Task { @MainActor in
             await WebKitManager.shared.restoreSession()
+            await vm.preparePlaybackResumePoint()
         }
     }
 

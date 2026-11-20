@@ -80,6 +80,15 @@ public struct PlaybackStateMachine: Sendable {
 
     // MARK: - User Intent Actions
 
+    public mutating func restorePaused(song: Song, position: TimeInterval) -> PlaybackEffects.StartEnginePayload {
+        _ = self.userPlay(song: song, startSeconds: position)
+        self.userIntent = .paused
+        self.engineState = .paused
+        return PlaybackEffects.StartEnginePayload(
+            songId: song.id, startSeconds: position, generation: self.currentGeneration
+        )
+    }
+
     /// Người dùng chọn phát một bài hát cụ thể (hỗ trợ vị trí bắt đầu startSeconds).
     public mutating func userPlay(song: Song, startSeconds: TimeInterval = 0) -> PlaybackEffects {
         userIntent = .playing

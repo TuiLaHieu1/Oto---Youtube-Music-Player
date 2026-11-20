@@ -55,6 +55,7 @@ public struct RootView: View {
         .environment(\.locale, (AppLanguage(rawValue: selectedLanguage) ?? .system).locale)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { playerVM.syncIntentAfterForeground() }
+            if phase == .background { playerVM.savePlaybackResumePoint() }
         }
     }
 

@@ -123,6 +123,7 @@ extension PlayerViewModel {
         cancelPendingCollectionLoads()
         cancelLoadingWatchdog()
         applyEffects(stateMachine.userPause())
+        self.savePlaybackResumePoint()
     }
     /// Khi app quay về foreground: nếu người dùng đang dừng thì bảo đảm engine cũng dừng, không tự phát.
     public func syncIntentAfterForeground() {
@@ -220,5 +221,64 @@ extension PlayerViewModel {
 
     func cancelCatalogSelection() {
         cancelPendingCollectionLoads()
+    }
+}
+
+@MainActor
+extension PlayerViewModel {
+    private struct ResumePoint: Codable {
+        let queue: QueueManager.Snapshot
+        let position: TimeInterval
+        let sourceTitle: String?
+        let videoID: String?
+    }
+
+    func preparePlaybackResumePoint() async {
+        let session = SessionStore.shared
+        let generation = session.sessionGeneration
+        let scope = await HomeCache.shared.accountScopeKey()
+        guard !Task.isCancelled, generation == session.sessionGeneration else { return }
+        let key = "oto.playback.resume.v1.\(scope)"
+        if let previousKey = self.playbackResumeStorageKey, previousKey != key {
+            self.clearPlaybackResumePoint()
+            guard self.currentSong == nil else { return }
+        }
+        self.restorePlaybackResumePoint(storageKey: key)
+    }
+
+    func restorePlaybackResumePoint(storageKey key: String) {
+        self.playbackResumeStorageKey = key
+        guard self.currentSong == nil,
+              let data = UserDefaults.standard.data(forKey: key),
+              let point = try? JSONDecoder().decode(ResumePoint.self, from: data),
+              point.position.isFinite, point.position >= 0,
+              let index = point.queue.currentIndex, point.queue.items.indices.contains(index) else { return }
+        let song = point.queue.items[index].song
+        guard !song.isLocal || LocalMusicStore.file(for: song.id) != nil else { return }
+        self.queueManager.restore(point.queue)
+        self.playbackSourceTitle = point.sourceTitle
+        self.confirmedVideoSelectionID = point.videoID == song.id ? point.videoID : nil
+        self.pendingEngineLoad = self.stateMachine.restorePaused(song: song, position: point.position)
+        self.clock.pause(at: point.position)
+        self.syncPublicState()
+    }
+
+    func savePlaybackResumePoint() {
+        guard let key = self.playbackResumeStorageKey,
+              let index = self.queueManager.currentIndex,
+              self.queueManager.currentSong?.id == self.stateMachine.currentSong?.id,
+              self.currentPosition.isFinite, self.currentPosition >= 0 else { return }
+        let queue = self.queueManager.snapshot()
+        guard queue.items.indices.contains(index) else { return }
+        let point = ResumePoint(
+            queue: queue, position: self.currentPosition,
+            sourceTitle: self.playbackSourceTitle, videoID: self.confirmedVideoSelectionID
+        )
+        if let data = try? JSONEncoder().encode(point) { UserDefaults.standard.set(data, forKey: key) }
+    }
+
+    func clearPlaybackResumePoint() {
+        if let key = self.playbackResumeStorageKey { UserDefaults.standard.removeObject(forKey: key) }
+        self.playbackResumeStorageKey = nil
     }
 }

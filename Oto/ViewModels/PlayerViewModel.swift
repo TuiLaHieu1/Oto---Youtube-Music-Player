@@ -16,6 +16,7 @@ public final class PlayerViewModel {
     public var playbackErrorMessage: String?
     var playbackSourceTitle: String?
     var confirmedVideoSelectionID: String?
+    var playbackResumeStorageKey: String?
     private var loadingWatchdogTask: Task<Void, Never>?
     var isWatchdogActive: Bool { loadingWatchdogTask != nil && !(loadingWatchdogTask?.isCancelled ?? true) }
 

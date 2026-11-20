@@ -12,6 +12,36 @@ struct PlaybackIntentSyncTests {
         PlayerViewModel(backend: backend, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
     }
 
+    @Test("Mở lại giữ đúng lượt bài và vị trí nhưng đợi Play")
+    func restoresPausedQueueAndPosition() async {
+        let key = "test.playback.resume.\(UUID())"
+        defer { UserDefaults.standard.removeObject(forKey: key) }
+        let first = self.makePlayer(MockPlaybackBackend())
+        first.restorePlaybackResumePoint(storageKey: key)
+        first.playQueue(songs: [self.song, self.song], startIndex: 1, sourceTitle: "Album")
+        await first.waitForPendingAudioOperation()
+        first.seek(to: 102)
+        first.pause()
+
+        let backend = MockPlaybackBackend()
+        let restored = self.makePlayer(backend)
+        restored.restorePlaybackResumePoint(storageKey: key)
+        #expect(restored.currentSong == self.song)
+        #expect(restored.queueSnapshot.currentIndex == 1)
+        #expect(restored.currentPosition == 102)
+        #expect(restored.playbackSourceTitle == "Album")
+        #expect(!restored.shouldShowPauseButton)
+        #expect(backend.loadCalls.isEmpty)
+        #expect(backend.playCount == 0)
+
+        restored.resume()
+        await restored.waitForPendingAudioOperation()
+        #expect(backend.loadCalls.first?.startSeconds == 102)
+        #expect(backend.loadCalls.first?.shouldPlay == true)
+        restored.clearPlaybackResumePoint()
+        #expect(UserDefaults.standard.data(forKey: key) == nil)
+    }
+
     @Test("Đã dừng thì quay lại foreground sẽ bảo engine dừng, không phát lại")
     func foregroundKeepsPausedIntent() async {
         let backend = MockPlaybackBackend()

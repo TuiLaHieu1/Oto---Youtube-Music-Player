@@ -77,6 +77,7 @@ public enum OtoTheme {
     public static let accentSurface = dynamicColor(light: "F3DED4", dark: "36304D")
 
     /// Wash tĩnh cho player; không dùng blur liên tục.
+    static let homeAmbient = dynamicColor(light: "E4BE9D", dark: "39304F")
     public static let atmosphere = dynamicColor(light: "EBD4C2", dark: "382C3A")
 
     /// Separator / Border:

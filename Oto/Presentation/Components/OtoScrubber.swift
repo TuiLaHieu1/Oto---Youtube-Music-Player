@@ -19,9 +19,18 @@ public struct OtoScrubber: View {
         self.onSeek = onSeek
     }
 
+    private var knownDuration: TimeInterval? {
+        duration.isFinite && duration > 0 ? duration : nil
+    }
+
+    private func boundedTime(_ time: TimeInterval) -> TimeInterval {
+        guard time.isFinite else { return 0 }
+        return min(max(0, time), knownDuration ?? .greatestFiniteMagnitude)
+    }
+
     public var body: some View {
-        let displayedTime = isScrubbing ? scrubPosition : currentTime
-        let remainingTime = max(0, duration - displayedTime)
+        let displayedTime = boundedTime(isScrubbing ? scrubPosition : currentTime)
+        let remainingTime = knownDuration.map { $0 - displayedTime }
 
         VStack(spacing: OtoTheme.spacing8) {
             progressTrack(displayedTime: displayedTime)
@@ -33,20 +42,24 @@ public struct OtoScrubber: View {
 
                 Spacer()
 
-                Text("-\(formatDuration(remainingTime))")
+                Text(verbatim: remainingTime.map { $0 >= 1 ? "-\(formatDuration($0))" : "0:00" } ?? "–:––")
                     .font(OtoTheme.timeFont)
                     .foregroundStyle(OtoTheme.secondaryText)
             }
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Tiến trình phát: \(formatDuration(displayedTime)) trên \(formatDuration(duration))")
+        .accessibilityLabel("Tiến trình phát")
+        .accessibilityValue(
+            Text(verbatim: "\(formatDuration(displayedTime)) / \(knownDuration.map(formatDuration) ?? "–:––")")
+        )
         .accessibilityAdjustableAction { direction in
+            guard knownDuration != nil else { return }
             let step: TimeInterval = 10
             switch direction {
             case .increment:
-                onSeek(min(duration, currentTime + step))
+                onSeek(boundedTime(displayedTime + step))
             case .decrement:
-                onSeek(max(0, currentTime - step))
+                onSeek(boundedTime(displayedTime - step))
             @unknown default:
                 break
             }
@@ -56,7 +69,7 @@ public struct OtoScrubber: View {
     private func progressTrack(displayedTime: TimeInterval) -> some View {
         GeometryReader { geometry in
             let width = max(1, geometry.size.width)
-            let progress = duration > 0 ? min(1, max(0, displayedTime / duration)) : 0
+            let progress = knownDuration.map { displayedTime / $0 } ?? 0
 
             ZStack(alignment: .leading) {
                 Capsule()
@@ -70,7 +83,7 @@ public struct OtoScrubber: View {
                 Circle()
                     .fill(OtoTheme.primaryText)
                     .frame(width: 12, height: 12)
-                    .offset(x: min(max(0, width * progress - 6), width - 12))
+                    .offset(x: min(max(0, width * progress - 6), max(0, width - 12)))
                     .opacity(isScrubbing ? 1 : 0)
             }
             .frame(maxHeight: .infinity, alignment: .center)
@@ -78,14 +91,16 @@ public struct OtoScrubber: View {
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onChanged { value in
+                        guard knownDuration != nil else { return }
                         isScrubbing = true
                         scrubPosition = seekPosition(for: value.location.x, width: width)
                     }
                     .onEnded { value in
+                        defer { isScrubbing = false }
+                        guard knownDuration != nil else { return }
                         let target = seekPosition(for: value.location.x, width: width)
                         scrubPosition = target
                         onSeek(target)
-                        isScrubbing = false
                         #if os(iOS)
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         #endif
@@ -97,14 +112,13 @@ public struct OtoScrubber: View {
     }
 
     private func seekPosition(for locationX: CGFloat, width: CGFloat) -> TimeInterval {
-        guard duration > 0 else { return 0 }
+        guard let knownDuration else { return 0 }
         let fraction = min(1, max(0, locationX / max(1, width)))
-        return duration * fraction
+        return knownDuration * fraction
     }
 
     private func formatDuration(_ seconds: TimeInterval) -> String {
-        guard !seconds.isNaN, !seconds.isInfinite, seconds >= 0 else { return "0:00" }
-        let total = Int(seconds)
+        guard let total = Int(exactly: seconds.rounded(.down)), total >= 0 else { return "0:00" }
         let mins = total / 60
         let secs = total % 60
         let hours = mins / 60

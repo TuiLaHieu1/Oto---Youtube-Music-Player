@@ -8,27 +8,27 @@ public struct SpeedDialTileView: View {
     public let item: SpeedDialItem
     public let isCurrent: Bool
     public let size: CGFloat
-    public let onPlay: () -> Void
+    public let onSelect: () -> Void
     public let onTogglePin: () -> Void
 
     public init(
         item: SpeedDialItem,
         isCurrent: Bool,
         size: CGFloat,
-        onPlay: @escaping () -> Void,
+        onSelect: @escaping () -> Void,
         onTogglePin: @escaping () -> Void
     ) {
         self.item = item
         self.isCurrent = isCurrent
         self.size = size
-        self.onPlay = onPlay
+        self.onSelect = onSelect
         self.onTogglePin = onTogglePin
     }
 
     public var body: some View {
         Button {
             triggerHaptic()
-            onPlay()
+            onSelect()
         } label: {
             ZStack(alignment: .bottomLeading) {
                 artwork
@@ -59,12 +59,13 @@ public struct SpeedDialTileView: View {
                 onTogglePin()
             } label: {
                 Label(
-                    item.isPinned ? "Bỏ ghim khỏi Speed dial" : "Ghim vào Speed dial",
+                    item.isPinned ? "Bỏ ghim trong Oto" : "Ghim trong Oto",
                     systemImage: item.isPinned ? "pin.slash" : "pin"
                 )
             }
         }
         .accessibilityLabel("\(item.title), \(item.subtitle)")
+        .accessibilityHint(accessibilityHint)
     }
 
     private var tileLabels: some View {
@@ -80,6 +81,13 @@ public struct SpeedDialTileView: View {
                 .lineLimit(1)
         }
         .padding(8)
+    }
+
+    private var accessibilityHint: String {
+        switch item.kind {
+        case .song: "Phát bài hát"
+        case .album, .playlist, .artist: "Mở trang chi tiết"
+        }
     }
 
     private var topBadges: some View {
@@ -132,5 +140,53 @@ public struct SpeedDialTileView: View {
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         #endif
+    }
+}
+
+struct HomeShelfTitle: View {
+    let title: String
+    let subtitle: String?
+
+    var body: some View {
+        if let subtitle, !subtitle.isEmpty {
+            Text(subtitle)
+                .font(OtoTheme.captionFont)
+                .foregroundStyle(OtoTheme.secondaryText)
+                .padding(.horizontal, OtoTheme.spacing16)
+        }
+        OtoSectionHeader(title: title)
+    }
+}
+
+struct HomeTileShelf<Content: View>: View {
+    let title: String
+    let subtitle: String?
+    let size: CGFloat
+    let items: [SpeedDialItem]
+    @ViewBuilder let tile: (SpeedDialItem) -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
+            HomeShelfTitle(title: title, subtitle: subtitle)
+            ScrollView(.horizontal, showsIndicators: false) {
+                LazyHGrid(rows: Array(repeating: GridItem(.fixed(size), spacing: 8),
+                                      count: min(3, items.count)), spacing: 8) {
+                    ForEach(items, content: tile)
+                }
+                .scrollTargetLayout()
+                .padding(.horizontal, OtoTheme.spacing16)
+                .padding(.vertical, 4)
+            }
+            .scrollTargetBehavior(.viewAligned)
+        }
+    }
+}
+
+struct HomeRecommendationsTail: View {
+    var body: some View {
+        Text("Chưa tải được thêm gợi ý")
+            .font(OtoTheme.captionFont)
+            .foregroundStyle(OtoTheme.secondaryText)
+            .padding(.horizontal, OtoTheme.spacing16)
     }
 }

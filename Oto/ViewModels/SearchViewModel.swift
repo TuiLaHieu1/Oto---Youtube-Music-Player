@@ -6,6 +6,7 @@ import OtoCore
 public enum SearchScope: String, CaseIterable, Sendable {
     case all = "Tất cả"
     case songs = "Bài hát"
+    case videos = "Video"
     case albums = "Album"
     case artists = "Nghệ sĩ"
     case playlists = "Playlist"
@@ -27,10 +28,14 @@ public final class SearchViewModel {
             }
         }
     }
-    public var searchResults: [Song] = []
+    var searchResults = MusicSearchPage()
+    private(set) var recentQueries: [String] = []
     public var isLoading: Bool = false
     public var errorMessage: String?
 
+    private(set) var isLoadingMore = false
+    private(set) var loadMoreFailed = false
+    private var loadedTokens = Set<String>()
     private var currentSearchTask: Task<Void, Never>?
     private let client: YTMusicClient
 
@@ -41,15 +46,22 @@ public final class SearchViewModel {
     /// Xử lý truy vấn tìm kiếm với cơ chế debounce 350ms chống quá tải mạng.
     private func handleQueryChange(_ newQuery: String) {
         currentSearchTask?.cancel()
+        isLoadingMore = false
+        loadMoreFailed = false
+        loadedTokens.removeAll()
 
         let trimmed = newQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            searchResults = []
+            searchResults = MusicSearchPage()
             isLoading = false
             errorMessage = nil
             return
         }
 
+        let scope = selectedScope
+        searchResults = MusicSearchPage()
+        isLoading = true
+        errorMessage = nil
         currentSearchTask = Task {
             try? await Task.sleep(nanoseconds: 350_000_000) // 350ms debounce
             guard !Task.isCancelled else { return }
@@ -58,17 +70,9 @@ public final class SearchViewModel {
             errorMessage = nil
 
             do {
-                let effectiveQuery: String
-                switch selectedScope {
-                case .all, .songs: effectiveQuery = trimmed
-                case .albums: effectiveQuery = "\(trimmed) album"
-                case .artists: effectiveQuery = "\(trimmed) artist"
-                case .playlists: effectiveQuery = "\(trimmed) playlist"
-                }
-
-                let songs = try await client.searchSongs(query: effectiveQuery)
+                let results = try await client.searchMusic(query: trimmed, scope: scope)
                 guard !Task.isCancelled else { return }
-                self.searchResults = songs
+                self.searchResults = results
                 self.isLoading = false
             } catch {
                 guard !Task.isCancelled else { return }
@@ -78,11 +82,46 @@ public final class SearchViewModel {
         }
     }
 
+    func loadMore() {
+        guard !isLoading, !isLoadingMore, let token = searchResults.nextToken else { return }
+        let scope = selectedScope
+        let query = self.query
+        isLoadingMore = true
+        loadMoreFailed = false
+        currentSearchTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let page = try await self.client.searchMusic(query: query, scope: scope, continuation: token)
+                guard !Task.isCancelled else { return }
+                var seen = Set(self.searchResults.results.map(\.id))
+                self.searchResults.results.append(contentsOf: page.results.filter { seen.insert($0.id).inserted })
+                self.loadedTokens.insert(token)
+                self.searchResults.nextToken = page.nextToken.flatMap { self.loadedTokens.contains($0) ? nil : $0 }
+            } catch {
+                guard !Task.isCancelled else { return }
+                self.loadMoreFailed = true
+            }
+            self.isLoadingMore = false
+        }
+    }
+
+    func recordCurrentQuery() {
+        let term = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !term.isEmpty else { return }
+        recentQueries.removeAll { $0.compare(term, options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame }
+        recentQueries.insert(term, at: 0)
+        recentQueries = Array(recentQueries.prefix(6))
+    }
+
+    func clearRecentQueries() {
+        recentQueries.removeAll()
+    }
+
     /// Làm sạch ô tìm kiếm và kết quả.
     public func clear() {
         currentSearchTask?.cancel()
         query = ""
-        searchResults = []
+        searchResults = MusicSearchPage()
         isLoading = false
         errorMessage = nil
     }

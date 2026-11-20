@@ -34,6 +34,7 @@ public struct PlaylistDetailView: View {
         }
         .navigationTitle(playlist.title)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
         .task {
             await loadSongs()
         }
@@ -90,7 +91,7 @@ public struct PlaylistDetailView: View {
 
             VStack(spacing: 4) {
                 Text(playlist.title)
-                    .font(OtoTheme.sectionTitleFont)
+                    .font(.system(.title, design: .serif, weight: .bold))
                     .foregroundStyle(OtoTheme.primaryText)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -107,6 +108,10 @@ public struct PlaylistDetailView: View {
             }
             .padding(.horizontal, OtoTheme.spacing16)
         }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, OtoTheme.spacing24)
+        .background(OtoTheme.accentSurface, in: RoundedRectangle(cornerRadius: OtoTheme.cardRadius))
+        .padding(.horizontal, OtoTheme.spacing16)
         .padding(.top, OtoTheme.spacing16)
     }
 
@@ -116,7 +121,7 @@ public struct PlaylistDetailView: View {
                 #if os(iOS)
                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 #endif
-                playerVM.playQueue(songs: songs, startIndex: 0)
+                playerVM.playQueue(songs: songs, startIndex: 0, sourceTitle: playlist.title)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "play.fill")
@@ -140,7 +145,7 @@ public struct PlaylistDetailView: View {
                 #endif
                 var shuffled = songs
                 shuffled.shuffle()
-                playerVM.playQueue(songs: shuffled, startIndex: 0)
+                playerVM.playQueue(songs: shuffled, startIndex: 0, sourceTitle: playlist.title)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: "shuffle")
@@ -173,7 +178,7 @@ public struct PlaylistDetailView: View {
                     #if os(iOS)
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     #endif
-                    playerVM.playQueue(songs: songs, startIndex: index)
+                    playerVM.playQueue(songs: songs, startIndex: index, sourceTitle: playlist.title)
                 }
             }
         }

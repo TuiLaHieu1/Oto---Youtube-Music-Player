@@ -59,6 +59,8 @@ public struct QueueView: View {
                                     active: playerVM.isShuffleEnabled,
                                     action: playerVM.toggleShuffle
                                 )
+                                .disabled(!playerVM.canShuffle)
+                                .opacity(playerVM.canShuffle ? 1 : 0.45)
                                 queueModeButton(
                                     title: repeatTitle,
                                     active: playerVM.repeatMode != .off,
@@ -75,8 +77,9 @@ public struct QueueView: View {
                                 .foregroundStyle(OtoTheme.primaryText)
                                 .padding(.horizontal, OtoTheme.spacing16)
 
-                            let items = playerVM.queueManager.items
-                            let currentIndex = playerVM.queueManager.currentIndex ?? 0
+                            let snapshot = playerVM.queueSnapshot
+                            let items = snapshot.items
+                            let currentIndex = snapshot.currentIndex ?? 0
                             let upcomingIndices = Array(items.indices.filter { $0 > currentIndex })
 
                             if upcomingIndices.isEmpty {
@@ -154,7 +157,7 @@ public struct QueueView: View {
         }
     }
 
-    private var repeatTitle: String {
+    private var repeatTitle: LocalizedStringKey {
         switch playerVM.repeatMode {
         case .off: return "Lặp tắt"
         case .all: return "Lặp tất cả"
@@ -162,7 +165,7 @@ public struct QueueView: View {
         }
     }
 
-    private func queueModeButton(title: String, active: Bool, action: @escaping () -> Void) -> some View {
+    private func queueModeButton(title: LocalizedStringKey, active: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
                 .font(OtoTheme.captionFont)

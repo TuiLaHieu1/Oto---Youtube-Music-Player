@@ -57,9 +57,8 @@ public actor MultiSourceLyricsService {
             return fallbackPlain
         }
 
-        let noneDoc = LyricsDocument(type: .none)
-        saveToCache(songId: song.id, doc: noneDoc)
-        return noneDoc
+        // Không giữ kết quả rỗng: một nguồn bị lỗi mạng hôm nay vẫn có thể trả lời ở lần thử sau.
+        return LyricsDocument(type: .none)
     }
 
     private func saveToCache(songId: String, doc: LyricsDocument) {

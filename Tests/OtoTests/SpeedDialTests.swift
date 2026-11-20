@@ -66,7 +66,7 @@ struct SpeedDialTests {
         ]
     }
 
-    @Test("Home parser phân biệt chuẩn Speed dial (Nghe lại) và Quick picks (Chọn nhanh)")
+    @Test("Home giữ Nghe lại và Chọn nhanh ở đúng mục của máy chủ")
     func testParseHomeFeedSeparation() throws {
         let listenAgainItem = Self.makeTwoRowItem(videoId: "fav_song_1", title: "Favorite Track")
         let playlistItem = Self.makeTwoRowItem(playlistId: "RDCLAK5uy_custom_mix", title: "My Custom Mix")
@@ -112,14 +112,10 @@ struct SpeedDialTests {
         let data = try JSONSerialization.data(withJSONObject: fixture)
         let homeContent = try YTMusicParsers.parseHomeFeed(from: data)
 
-        #expect(homeContent.speedDial.count == 2)
-        #expect(homeContent.speedDial[0].id == "fav_song_1")
-        #expect(homeContent.speedDial[0].kind == .song)
-        #expect(homeContent.speedDial[1].id == "RDCLAK5uy_custom_mix")
-        #expect(homeContent.speedDial[1].kind == .playlist)
-
-        #expect(homeContent.quickPicks.count == 1)
-        #expect(homeContent.quickPicks[0].id == "quick_radio_1")
+        #expect(homeContent.speedDial.isEmpty)
+        #expect(homeContent.sections.map(\.title) == ["Nghe lại", "Chọn nhanh"])
+        #expect(homeContent.sections.first?.items.map(\.id) == ["fav_song_1", "RDCLAK5uy_custom_mix"])
+        #expect(homeContent.quickPicks.map(\.id) == ["quick_radio_1"])
     }
 
     @Test("SpeedDialPinStore ghim và đưa mục ghim lên đầu danh sách Speed dial")

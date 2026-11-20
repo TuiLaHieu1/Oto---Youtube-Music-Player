@@ -29,9 +29,14 @@ public enum YTMusicParsers {
     // MARK: - Playlists & Liked Songs
 
     private static let categoryLabels: Set<String> = [
-        "album", "ep", "single", "đĩa đơn", "bài hát", "song", "danh sách phát", "playlist", "video"
+        "album", "ep", "single", "đĩa đơn", "đĩa nhạc", "bài hát", "song", "danh sách phát", "playlist", "video",
+        "various artists", "nhiều nghệ sĩ"
     ]
     private static let separatorSymbols: Set<String> = ["•", "·", "-", ","]
+
+    static func isNonArtistLabel(_ name: String) -> Bool {
+        categoryLabels.contains(name.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+    }
 
     /// Trích xuất chính xác tên nghệ sĩ từ đối tượng subtitle hoặc runs, lọc bỏ nhãn phân loại, dấu phân cách và năm.
     public static func extractArtist(from subtitleObj: [String: Any]?, fallback: String = "Nhiều nghệ sĩ") -> String {
@@ -47,6 +52,8 @@ public enum YTMusicParsers {
             }
             for run in runs {
                 guard let text = run["text"] as? String else { continue }
+                let navigation = run["navigationEndpoint"] as? [String: Any]
+                if navigation?["browseEndpoint"] != nil { continue }
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard !trimmed.isEmpty else { continue }
                 if categoryLabels.contains(trimmed.lowercased()) || separatorSymbols.contains(trimmed) { continue }
@@ -138,6 +145,18 @@ public enum YTMusicParsers {
         return collectRenderers(named: "musicTwoRowItemRenderer", in: json).map { ["musicTwoRowItemRenderer": $0] }
     }
 
+    static func overlayPlaylistID(in renderer: [String: Any]) -> String? {
+        // Một số thẻ cũ chỉ đặt playlist ID trong nút phát trên ảnh bìa.
+        let overlay = renderer["thumbnailOverlay"] as? [String: Any]
+        let wrapper = overlay?["musicItemThumbnailOverlayRenderer"] as? [String: Any]
+        let content = wrapper?["content"] as? [String: Any]
+        let button = content?["musicPlayButtonRenderer"] as? [String: Any]
+        let playNav = button?["playNavigationEndpoint"] as? [String: Any]
+        let playlist = playNav?["watchPlaylistEndpoint"] as? [String: Any]
+        guard let id = playlist?["playlistId"] as? String, !id.isEmpty, id != "VL" else { return nil }
+        return id.hasPrefix("VL") ? String(id.dropFirst(2)) : id
+    }
+
     static func parsePlaylistFromTwoRow(_ renderer: [String: Any]) -> Playlist? {
         let nav = renderer["navigationEndpoint"] as? [String: Any]
         let browse = nav?["browseEndpoint"] as? [String: Any]
@@ -216,10 +235,12 @@ public enum YTMusicParsers {
         let col0Runs = (col0?["text"] as? [String: Any])?["runs"] as? [[String: Any]]
         let title = col0Runs?.first?["text"] as? String ?? ""
 
-        if videoId == nil, let runs = col0Runs, let firstRun = runs.first {
-            let nav = firstRun["navigationEndpoint"] as? [String: Any]
-            let watch = nav?["watchEndpoint"] as? [String: Any]
-            videoId = watch?["videoId"] as? String
+        if videoId == nil {
+            let titleNavigation = col0Runs?.first?["navigationEndpoint"] as? [String: Any]
+            let rowNavigation = renderer["navigationEndpoint"] as? [String: Any]
+            let titleWatch = titleNavigation?["watchEndpoint"] as? [String: Any]
+            let rowWatch = rowNavigation?["watchEndpoint"] as? [String: Any]
+            videoId = (titleWatch?["videoId"] as? String) ?? (rowWatch?["videoId"] as? String)
         }
 
         guard let id = videoId, !id.isEmpty, !title.isEmpty else { return nil }
@@ -291,7 +312,7 @@ extension YTMusicParsers {
         return URL(string: upgradeThumbnailURLString(urlStr))
     }
 
-    private static func parseDurationString(_ text: String) -> TimeInterval {
+    static func parseDurationString(_ text: String) -> TimeInterval {
         let parts = text.components(separatedBy: ":").compactMap { Double($0.trimmingCharacters(in: .whitespaces)) }
         if parts.count == 2 { return (parts[0] * 60) + parts[1] }
         if parts.count == 3 { return (parts[0] * 3600) + (parts[1] * 60) + parts[2] }

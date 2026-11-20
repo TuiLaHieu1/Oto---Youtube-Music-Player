@@ -14,6 +14,8 @@
 		A10100042CE0000100000001 /* Oto/Presentation/Library/LibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200042CE0000100000001 /* Oto/Presentation/Library/LibraryView.swift */; };
 		A10100052CE0000100000001 /* Oto/Presentation/Player/MiniPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200052CE0000100000001 /* Oto/Presentation/Player/MiniPlayerView.swift */; };
 		A10100062CE0000100000001 /* Oto/Presentation/Player/FullscreenPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200062CE0000100000001 /* Oto/Presentation/Player/FullscreenPlayerView.swift */; };
+		5970E1B3F3624C57A3A47383 /* Oto/Presentation/Player/FullscreenPlayerActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 854F8843BA4745B5BA1C195B /* Oto/Presentation/Player/FullscreenPlayerActions.swift */; };
+		E034E623DB18485ABEEEE48F /* Oto/Presentation/Player/FullscreenPlayerMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6482EE24D4AD40E9B9EC3204 /* Oto/Presentation/Player/FullscreenPlayerMedia.swift */; };
 		A10100072CE0000100000001 /* Oto/Presentation/Player/QueueView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200072CE0000100000001 /* Oto/Presentation/Player/QueueView.swift */; };
 		A10100082CE0000100000001 /* Oto/Presentation/Lyrics/SyncedLyricsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200082CE0000100000001 /* Oto/Presentation/Lyrics/SyncedLyricsView.swift */; };
 		A10100092CE0000100000001 /* Oto/ViewModels/PlayerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200092CE0000100000001 /* Oto/ViewModels/PlayerViewModel.swift */; };
@@ -34,6 +36,7 @@
 		A10100322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift */; };
 		A10100332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */; };
 		A10100332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift */; };
+		C40200012CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40200022CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift */; };
 		A10100342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */; };
 		A10100352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift */; };
 		A10100362CE0000100000001 /* Oto/Services/API/SpeedDialPinStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200362CE0000100000001 /* Oto/Services/API/SpeedDialPinStore.swift */; };
@@ -60,6 +63,28 @@
 		F3C0A1110000000000000001 /* Tests/OtoTests/NowPlayingArtworkTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C0A1110000000000000002 /* Tests/OtoTests/NowPlayingArtworkTests.swift */; };
 		A10100572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift */; };
 		7EB9B33F3813BC58D22D00A5 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = DC9B3F20520C527AD87131A1; };
+		C50100000000000000000001 /* Oto/App/AppLanguage.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50200000000000000000001 /* Oto/App/AppLanguage.swift */; };
+		C50100000000000000000002 /* Oto/Presentation/Library/AlbumDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50200000000000000000002 /* Oto/Presentation/Library/AlbumDetailView.swift */; };
+		C50100000000000000000003 /* Oto/Presentation/Library/ArtistDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50200000000000000000003 /* Oto/Presentation/Library/ArtistDetailView.swift */; };
+		C50100000000000000000004 /* Oto/Services/API/YTMusicClient+Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50200000000000000000004 /* Oto/Services/API/YTMusicClient+Artist.swift */; };
+		C50100000000000000000005 /* Oto/Services/API/YTMusicClient+Home.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50200000000000000000005 /* Oto/Services/API/YTMusicClient+Home.swift */; };
+		C50100000000000000000006 /* Oto/Services/API/YTMusicLyricsProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50200000000000000000006 /* Oto/Services/API/YTMusicLyricsProvider.swift */; };
+		C50100000000000000000007 /* Oto/Services/API/YTMusicParsers+Artist.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50200000000000000000007 /* Oto/Services/API/YTMusicParsers+Artist.swift */; };
+		C50100000000000000000008 /* Oto/Services/Playback/PlaybackCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50200000000000000000008 /* Oto/Services/Playback/PlaybackCatalog.swift */; };
+		C50100000000000000000009 /* Oto/Services/WebKit/PlayerDiagnosticScript.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50200000000000000000009 /* Oto/Services/WebKit/PlayerDiagnosticScript.swift */; };
+		C5010000000000000000000A /* Oto/ViewModels/PlayerViewModel+Activation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5020000000000000000000A /* Oto/ViewModels/PlayerViewModel+Activation.swift */; };
+		C5010000000000000000000B /* Oto/ViewModels/PlayerViewModel+CatalogCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5020000000000000000000B /* Oto/ViewModels/PlayerViewModel+CatalogCommands.swift */; };
+		C50300000000000000000001 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = C50300000000000000000002 /* Localizable.xcstrings */; };
+		C50400000000000000000001 /* Oto/Presentation/Settings/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50400000000000000000002 /* Oto/Presentation/Settings/SettingsView.swift */; };
+		C50500000000000000000001 /* Oto/Services/API/YTMusicClient+Library.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50500000000000000000002 /* Oto/Services/API/YTMusicClient+Library.swift */; };
+		C50600000000000000000001 /* Tests/OtoTests/PlaybackRepairTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50600000000000000000002 /* Tests/OtoTests/PlaybackRepairTests.swift */; };
+		C50700000000000000000001 /* Tests/OtoTests/LibraryCollectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50700000000000000000002 /* Tests/OtoTests/LibraryCollectionTests.swift */; };
+		C50800000000000000000001 /* Tests/OtoTests/MusicSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50800000000000000000002 /* Tests/OtoTests/MusicSearchTests.swift */; };
+		D674F621CFF74BD2A099481B /* Tests/OtoTests/HomeFeedLoadTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F45EA8AFE424FBE8E9FC04A /* Tests/OtoTests/HomeFeedLoadTests.swift */; };
+		C50900000000000000000001 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50900000000000000000002 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift */; };
+		C51000000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51100000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift */; };
+		C51000000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51100000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift */; };
+		C51000000000000000000003 /* Oto/Presentation/Library/LocalMusicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51100000000000000000003 /* Oto/Presentation/Library/LocalMusicView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +106,8 @@
 		A10200042CE0000100000001 /* Oto/Presentation/Library/LibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/LibraryView.swift; sourceTree = SOURCE_ROOT; };
 		A10200052CE0000100000001 /* Oto/Presentation/Player/MiniPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/MiniPlayerView.swift; sourceTree = SOURCE_ROOT; };
 		A10200062CE0000100000001 /* Oto/Presentation/Player/FullscreenPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/FullscreenPlayerView.swift; sourceTree = SOURCE_ROOT; };
+		854F8843BA4745B5BA1C195B /* Oto/Presentation/Player/FullscreenPlayerActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/FullscreenPlayerActions.swift; sourceTree = SOURCE_ROOT; };
+		6482EE24D4AD40E9B9EC3204 /* Oto/Presentation/Player/FullscreenPlayerMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/FullscreenPlayerMedia.swift; sourceTree = SOURCE_ROOT; };
 		A10200072CE0000100000001 /* Oto/Presentation/Player/QueueView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Player/QueueView.swift; sourceTree = SOURCE_ROOT; };
 		A10200082CE0000100000001 /* Oto/Presentation/Lyrics/SyncedLyricsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Lyrics/SyncedLyricsView.swift; sourceTree = SOURCE_ROOT; };
 		A10200092CE0000100000001 /* Oto/ViewModels/PlayerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/ViewModels/PlayerViewModel.swift; sourceTree = SOURCE_ROOT; };
@@ -101,6 +128,7 @@
 		A10200322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/LikedSongsView.swift; sourceTree = SOURCE_ROOT; };
 		A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/API/YTMusicParsers.swift; sourceTree = SOURCE_ROOT; };
 		A10200332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicParsers+Queue.swift"; sourceTree = SOURCE_ROOT; };
+		C40200022CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicParsers+HomeContinuation.swift"; sourceTree = SOURCE_ROOT; };
 		A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/PlayerWebViewContainer.swift; sourceTree = SOURCE_ROOT; };
 		A10200352CE0000100000001 /* Oto/Services/WebKit/PlayerBridgeScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/PlayerBridgeScript.swift; sourceTree = SOURCE_ROOT; };
 		A10200362CE0000100000001 /* Oto/Services/API/SpeedDialPinStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/API/SpeedDialPinStore.swift; sourceTree = SOURCE_ROOT; };
@@ -127,6 +155,28 @@
 		F3C0A1110000000000000002 /* Tests/OtoTests/NowPlayingArtworkTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/OtoTests/NowPlayingArtworkTests.swift"; sourceTree = SOURCE_ROOT; };
 		A10200572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/PlaylistDetailView.swift; sourceTree = SOURCE_ROOT; };
 		DC9B3F20520C527AD87131A1 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Oto/Resources/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
+		C50200000000000000000001 /* Oto/App/AppLanguage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/App/AppLanguage.swift"; sourceTree = SOURCE_ROOT; };
+		C50200000000000000000002 /* Oto/Presentation/Library/AlbumDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Presentation/Library/AlbumDetailView.swift"; sourceTree = SOURCE_ROOT; };
+		C50200000000000000000003 /* Oto/Presentation/Library/ArtistDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Presentation/Library/ArtistDetailView.swift"; sourceTree = SOURCE_ROOT; };
+		C50200000000000000000004 /* Oto/Services/API/YTMusicClient+Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicClient+Artist.swift"; sourceTree = SOURCE_ROOT; };
+		C50200000000000000000005 /* Oto/Services/API/YTMusicClient+Home.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicClient+Home.swift"; sourceTree = SOURCE_ROOT; };
+		C50200000000000000000006 /* Oto/Services/API/YTMusicLyricsProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicLyricsProvider.swift"; sourceTree = SOURCE_ROOT; };
+		C50200000000000000000007 /* Oto/Services/API/YTMusicParsers+Artist.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicParsers+Artist.swift"; sourceTree = SOURCE_ROOT; };
+		C50200000000000000000008 /* Oto/Services/Playback/PlaybackCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/Playback/PlaybackCatalog.swift"; sourceTree = SOURCE_ROOT; };
+		C50200000000000000000009 /* Oto/Services/WebKit/PlayerDiagnosticScript.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/WebKit/PlayerDiagnosticScript.swift"; sourceTree = SOURCE_ROOT; };
+		C5020000000000000000000A /* Oto/ViewModels/PlayerViewModel+Activation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/ViewModels/PlayerViewModel+Activation.swift"; sourceTree = SOURCE_ROOT; };
+		C5020000000000000000000B /* Oto/ViewModels/PlayerViewModel+CatalogCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/ViewModels/PlayerViewModel+CatalogCommands.swift"; sourceTree = SOURCE_ROOT; };
+		C50300000000000000000002 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Oto/Resources/Localizable.xcstrings; sourceTree = SOURCE_ROOT; };
+		C50400000000000000000002 /* Oto/Presentation/Settings/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Presentation/Settings/SettingsView.swift"; sourceTree = SOURCE_ROOT; };
+		C50500000000000000000002 /* Oto/Services/API/YTMusicClient+Library.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicClient+Library.swift"; sourceTree = SOURCE_ROOT; };
+		C50600000000000000000002 /* Tests/OtoTests/PlaybackRepairTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/OtoTests/PlaybackRepairTests.swift"; sourceTree = SOURCE_ROOT; };
+		C50700000000000000000002 /* Tests/OtoTests/LibraryCollectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/OtoTests/LibraryCollectionTests.swift"; sourceTree = SOURCE_ROOT; };
+		C50800000000000000000002 /* Tests/OtoTests/MusicSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/OtoTests/MusicSearchTests.swift"; sourceTree = SOURCE_ROOT; };
+		8F45EA8AFE424FBE8E9FC04A /* Tests/OtoTests/HomeFeedLoadTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/OtoTests/HomeFeedLoadTests.swift"; sourceTree = SOURCE_ROOT; };
+		C50900000000000000000002 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Presentation/Settings/NativeHapticsProbeView.swift"; sourceTree = SOURCE_ROOT; };
+		C51100000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/Playback/LocalMusicStore.swift"; sourceTree = SOURCE_ROOT; };
+		C51100000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/Playback/LocalMusicPlaybackRouter.swift"; sourceTree = SOURCE_ROOT; };
+		C51100000000000000000003 /* Oto/Presentation/Library/LocalMusicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Presentation/Library/LocalMusicView.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -169,6 +219,7 @@
 			isa = PBXGroup;
 			children = (
 				DC9B3F20520C527AD87131A1 /* Assets.xcassets */,
+				C50300000000000000000002 /* Localizable.xcstrings */,
 				1C3F102330A2D4CD00604B34 /* Documentation.docc */,
 				A10500012CE0000100000001 /* Oto */,
 				A10500072CE0000100000001 /* Tests */,
@@ -192,6 +243,21 @@
 		A10500022CE0000100000001 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				C50200000000000000000004 /* Oto/Services/API/YTMusicClient+Artist.swift */,
+				C50200000000000000000005 /* Oto/Services/API/YTMusicClient+Home.swift */,
+				C50200000000000000000006 /* Oto/Services/API/YTMusicLyricsProvider.swift */,
+				C50200000000000000000007 /* Oto/Services/API/YTMusicParsers+Artist.swift */,
+				C50200000000000000000008 /* Oto/Services/Playback/PlaybackCatalog.swift */,
+				C50200000000000000000009 /* Oto/Services/WebKit/PlayerDiagnosticScript.swift */,
+
+				C5020000000000000000000A /* Oto/ViewModels/PlayerViewModel+Activation.swift */,
+				C5020000000000000000000B /* Oto/ViewModels/PlayerViewModel+CatalogCommands.swift */,
+
+				C50200000000000000000002 /* Oto/Presentation/Library/AlbumDetailView.swift */,
+				C50200000000000000000003 /* Oto/Presentation/Library/ArtistDetailView.swift */,
+
+				C50200000000000000000001 /* Oto/App/AppLanguage.swift */,
+
 				A10200012CE0000100000001 /* Oto/App/OtoApp.swift */,
 			);
 			path = App;
@@ -200,12 +266,17 @@
 		A10500032CE0000100000001 /* Presentation */ = {
 			isa = PBXGroup;
 			children = (
+				C51100000000000000000003 /* Oto/Presentation/Library/LocalMusicView.swift */,
+				C50900000000000000000002 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift */,
+				C50400000000000000000002 /* Oto/Presentation/Settings/SettingsView.swift */,
 				A10200022CE0000100000001 /* Oto/Presentation/Navigation/RootView.swift */,
 				A10200032CE0000100000001 /* Oto/Presentation/Home/HomeFeedView.swift */,
 				A10200392CE0000100000001 /* Oto/Presentation/Home/SpeedDialTileView.swift */,
 				A10200042CE0000100000001 /* Oto/Presentation/Library/LibraryView.swift */,
 				A10200052CE0000100000001 /* Oto/Presentation/Player/MiniPlayerView.swift */,
 				A10200062CE0000100000001 /* Oto/Presentation/Player/FullscreenPlayerView.swift */,
+				854F8843BA4745B5BA1C195B /* Oto/Presentation/Player/FullscreenPlayerActions.swift */,
+				6482EE24D4AD40E9B9EC3204 /* Oto/Presentation/Player/FullscreenPlayerMedia.swift */,
 				A10200072CE0000100000001 /* Oto/Presentation/Player/QueueView.swift */,
 				A10200082CE0000100000001 /* Oto/Presentation/Lyrics/SyncedLyricsView.swift */,
 				A10200322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift */,
@@ -238,11 +309,15 @@
 		A10500052CE0000100000001 /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				C51100000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift */,
+				C51100000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift */,
+				C50500000000000000000002 /* Oto/Services/API/YTMusicClient+Library.swift */,
 				A102000C2CE0000100000001 /* Oto/Services/Audio/AudioSessionCoordinator.swift */,
 				A10200382CE0000100000001 /* Oto/Services/Audio/AudioSessionObserver.swift */,
 				A102000D2CE0000100000001 /* Oto/Services/Audio/NowPlayingManager.swift */,
 				A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */,
 				A10200332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift */,
+				C40200022CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift */,
 				A10200552CE0000100000001 /* Oto/Services/API/YTMusicParsers+SpeedDial.swift */,
 				A10200362CE0000100000001 /* Oto/Services/API/SpeedDialPinStore.swift */,
 				A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */,
@@ -265,6 +340,10 @@
 		A10500072CE0000100000001 /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				C50800000000000000000002 /* Tests/OtoTests/MusicSearchTests.swift */,
+				8F45EA8AFE424FBE8E9FC04A /* Tests/OtoTests/HomeFeedLoadTests.swift */,
+				C50700000000000000000002 /* Tests/OtoTests/LibraryCollectionTests.swift */,
+				C50600000000000000000002 /* Tests/OtoTests/PlaybackRepairTests.swift */,
 				A10200502CE0000100000001 /* Tests/OtoTests/PlayerViewModelTests.swift */,
 				A10200562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift */,
 				F3C0A1110000000000000002 /* Tests/OtoTests/NowPlayingArtworkTests.swift */,
@@ -342,6 +421,7 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				vi,
 				Base,
 			);
 			mainGroup = A10500002CE0000100000001;
@@ -359,7 +439,7 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		EFF7D534A559118106F15080 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (7EB9B33F3813BC58D22D00A5 /* Assets.xcassets in Resources */,); runOnlyForDeploymentPostprocessing = 0; };
+		EFF7D534A559118106F15080 /* Resources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (7EB9B33F3813BC58D22D00A5 /* Assets.xcassets in Resources */, C50300000000000000000001 /* Localizable.xcstrings in Resources */,); runOnlyForDeploymentPostprocessing = 0; };
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -367,12 +447,32 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C51000000000000000000003 /* Oto/Presentation/Library/LocalMusicView.swift in Sources */,
+				C51000000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift in Sources */,
+				C51000000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift in Sources */,
+				C50900000000000000000001 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift in Sources */,
+				C50500000000000000000001 /* Oto/Services/API/YTMusicClient+Library.swift in Sources */,
+				C50400000000000000000001 /* Oto/Presentation/Settings/SettingsView.swift in Sources */,
+				C50100000000000000000001 /* Oto/App/AppLanguage.swift in Sources */,
+				C50100000000000000000002 /* Oto/Presentation/Library/AlbumDetailView.swift in Sources */,
+				C50100000000000000000003 /* Oto/Presentation/Library/ArtistDetailView.swift in Sources */,
+				C50100000000000000000004 /* Oto/Services/API/YTMusicClient+Artist.swift in Sources */,
+				C50100000000000000000005 /* Oto/Services/API/YTMusicClient+Home.swift in Sources */,
+				C50100000000000000000006 /* Oto/Services/API/YTMusicLyricsProvider.swift in Sources */,
+				C50100000000000000000007 /* Oto/Services/API/YTMusicParsers+Artist.swift in Sources */,
+				C50100000000000000000008 /* Oto/Services/Playback/PlaybackCatalog.swift in Sources */,
+				C50100000000000000000009 /* Oto/Services/WebKit/PlayerDiagnosticScript.swift in Sources */,
+				C5010000000000000000000A /* Oto/ViewModels/PlayerViewModel+Activation.swift in Sources */,
+				C5010000000000000000000B /* Oto/ViewModels/PlayerViewModel+CatalogCommands.swift in Sources */,
+
 				A10100012CE0000100000001 /* Oto/App/OtoApp.swift in Sources */,
 				A10100022CE0000100000001 /* Oto/Presentation/Navigation/RootView.swift in Sources */,
 				A10100032CE0000100000001 /* Oto/Presentation/Home/HomeFeedView.swift in Sources */,
 				A10100042CE0000100000001 /* Oto/Presentation/Library/LibraryView.swift in Sources */,
 				A10100052CE0000100000001 /* Oto/Presentation/Player/MiniPlayerView.swift in Sources */,
 				A10100062CE0000100000001 /* Oto/Presentation/Player/FullscreenPlayerView.swift in Sources */,
+				5970E1B3F3624C57A3A47383 /* Oto/Presentation/Player/FullscreenPlayerActions.swift in Sources */,
+				E034E623DB18485ABEEEE48F /* Oto/Presentation/Player/FullscreenPlayerMedia.swift in Sources */,
 				A10100072CE0000100000001 /* Oto/Presentation/Player/QueueView.swift in Sources */,
 				A10100082CE0000100000001 /* Oto/Presentation/Lyrics/SyncedLyricsView.swift in Sources */,
 				A10100092CE0000100000001 /* Oto/ViewModels/PlayerViewModel.swift in Sources */,
@@ -394,6 +494,7 @@
 				A10100572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift in Sources */,
 				A10100332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift in Sources */,
 				A10100332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift in Sources */,
+				C40200012CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift in Sources */,
 				A10100342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift in Sources */,
 				1C3F102430A2D4CE00604B34 /* Documentation.docc in Sources */,
 				A10100372CE0000100000001 /* Oto/Presentation/Theme/OtoTheme.swift in Sources */,
@@ -420,6 +521,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C50800000000000000000001 /* Tests/OtoTests/MusicSearchTests.swift in Sources */,
+				D674F621CFF74BD2A099481B /* Tests/OtoTests/HomeFeedLoadTests.swift in Sources */,
+				C50700000000000000000001 /* Tests/OtoTests/LibraryCollectionTests.swift in Sources */,
+				C50600000000000000000001 /* Tests/OtoTests/PlaybackRepairTests.swift in Sources */,
 				A10100502CE0000100000001 /* Tests/OtoTests/PlayerViewModelTests.swift in Sources */,
 				A10100562CE0000100000001 /* Tests/OtoTests/SpeedDialTests.swift in Sources */,
 				F3C0A1110000000000000001 /* Tests/OtoTests/NowPlayingArtworkTests.swift in Sources */,

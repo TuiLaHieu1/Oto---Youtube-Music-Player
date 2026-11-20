@@ -5,6 +5,9 @@ import os
 
 /// Cấu trúc lưu trữ dữ liệu trang chủ kèm thời điểm tạo để tính TTL.
 public struct CachedHomeFeed: Codable, Sendable {
+    public static let schemaVersion: Int = 3
+
+    public let schemaVersion: Int
     public let speedDial: [SpeedDialItem]
     public let sections: [HomeSection]
     public let quickPicks: [Song]
@@ -12,12 +15,14 @@ public struct CachedHomeFeed: Codable, Sendable {
     public let timestamp: Date
 
     public init(
+        schemaVersion: Int = CachedHomeFeed.schemaVersion,
         speedDial: [SpeedDialItem] = [],
         sections: [HomeSection] = [],
         quickPicks: [Song] = [],
         listenAgain: [Song] = [],
         timestamp: Date = Date()
     ) {
+        self.schemaVersion = schemaVersion
         self.speedDial = speedDial
         self.sections = sections
         self.quickPicks = quickPicks
@@ -27,6 +32,7 @@ public struct CachedHomeFeed: Codable, Sendable {
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.schemaVersion = (try? container.decode(Int.self, forKey: .schemaVersion)) ?? 1
         self.speedDial = (try? container.decode([SpeedDialItem].self, forKey: .speedDial)) ?? []
         self.sections = (try? container.decode([HomeSection].self, forKey: .sections)) ?? []
         self.quickPicks = (try? container.decode([Song].self, forKey: .quickPicks)) ?? []
@@ -58,7 +64,7 @@ public actor HomeCache {
 
     private func cacheFileURL() -> URL? {
         fileManager.urls(for: .cachesDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("home_feed_\(accountScopeKey()).json")
+            .appendingPathComponent("home_feed_\(accountScopeKey())_\(AppLanguage.current.effectiveCode).json")
     }
 
     /// Lưu dữ liệu trang chủ vào bộ đệm tệp cục bộ theo tài khoản ngoài MainActor.
@@ -93,14 +99,23 @@ public actor HomeCache {
         do {
             let data = try Data(contentsOf: url)
             let cached = try JSONDecoder().decode(CachedHomeFeed.self, from: data)
+            guard cached.schemaVersion == CachedHomeFeed.schemaVersion else {
+                logger.info(
+                    "Bộ đệm không khớp schema version (\(cached.schemaVersion) != \(CachedHomeFeed.schemaVersion))."
+                )
+                try? fileManager.removeItem(at: url)
+                return nil
+            }
             if Date().timeIntervalSince(cached.timestamp) > ttlSeconds {
                 logger.info("Bộ đệm trang chủ đã hết hạn.")
+                try? fileManager.removeItem(at: url)
                 return nil
             }
             logger.info("Đã khôi phục dữ liệu từ bộ đệm trang chủ.")
             return cached
         } catch {
             logger.error("Không thể đọc bộ đệm trang chủ: \(error.localizedDescription)")
+            try? fileManager.removeItem(at: url)
             return nil
         }
     }

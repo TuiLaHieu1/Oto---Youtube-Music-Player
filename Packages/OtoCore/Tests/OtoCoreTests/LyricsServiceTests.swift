@@ -161,6 +161,31 @@ struct LyricsServiceTests {
         #expect(doc.lines.isEmpty)
     }
 
+    @Test("Kết quả không có lyrics được thử lại thay vì cache vĩnh viễn")
+    func missingLyricsCanRetry() async {
+        actor LookupState {
+            var count = 0
+            func next() -> Int {
+                count += 1
+                return count
+            }
+        }
+        struct RetryProvider: LyricsProvider {
+            let providerName = "Retry"
+            let state: LookupState
+            func fetchLyrics(for song: Song) async throws -> LyricsDocument? {
+                let attempt = await state.next()
+                return attempt == 1 ? nil : LyricsDocument(type: .plain, plainLyrics: "Có lời", source: providerName)
+            }
+        }
+        let state = LookupState()
+        let service = MultiSourceLyricsService(providers: [RetryProvider(state: state)])
+        let song = Song(id: "retry", title: "Test", artist: "Artist")
+
+        #expect(await service.resolveLyrics(for: song).type == .none)
+        #expect(await service.resolveLyrics(for: song).type == .plain)
+    }
+
     @Test("MultiSourceLyricsService clearCache removes all cached lyrics")
     func testClearCacheRemovesCachedLyrics() async {
         final class CounterProvider: LyricsProvider, @unchecked Sendable {

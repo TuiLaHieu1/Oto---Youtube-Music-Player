@@ -5,6 +5,7 @@ import OtoCore
 public struct OtoPlaybackControls: View {
     public let isPlaying: Bool
     public let isShuffleEnabled: Bool
+    public let canShuffle: Bool
     public let repeatMode: RepeatMode
     public let playButtonSize: CGFloat
     public let onShuffle: () -> Void
@@ -16,6 +17,7 @@ public struct OtoPlaybackControls: View {
     public init(
         isPlaying: Bool,
         isShuffleEnabled: Bool = false,
+        canShuffle: Bool = true,
         repeatMode: RepeatMode = .off,
         playButtonSize: CGFloat = 64,
         onShuffle: @escaping () -> Void,
@@ -26,6 +28,7 @@ public struct OtoPlaybackControls: View {
     ) {
         self.isPlaying = isPlaying
         self.isShuffleEnabled = isShuffleEnabled
+        self.canShuffle = canShuffle
         self.repeatMode = repeatMode
         self.playButtonSize = playButtonSize
         self.onShuffle = onShuffle
@@ -46,9 +49,12 @@ public struct OtoPlaybackControls: View {
                     .font(.system(size: 19))
                     .foregroundStyle(isShuffleEnabled ? OtoTheme.accent : OtoTheme.secondaryText)
                     .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(isShuffleEnabled ? "Tắt xáo trộn" : "Bật xáo trộn")
+            .disabled(!canShuffle)
+            .opacity(canShuffle ? 1 : 0.45)
+            .accessibilityLabel(Text(isShuffleEnabled ? LocalizedStringKey("Tắt xáo trộn") : "Bật xáo trộn"))
 
             // Nút Previous
             Button {
@@ -104,13 +110,14 @@ public struct OtoPlaybackControls: View {
                     .font(.system(size: 19))
                     .foregroundStyle(repeatMode != .off ? OtoTheme.accent : OtoTheme.secondaryText)
                     .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(repeatAccessibilityLabel)
+            .accessibilityLabel(Text(repeatAccessibilityLabel))
         }
     }
 
-    private var repeatAccessibilityLabel: String {
+    private var repeatAccessibilityLabel: LocalizedStringKey {
         switch repeatMode {
         case .off:
             return "Bật lặp lại tất cả"

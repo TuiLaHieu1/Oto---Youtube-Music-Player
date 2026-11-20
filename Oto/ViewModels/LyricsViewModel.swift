@@ -16,7 +16,7 @@ public final class LyricsViewModel {
     private var scrollResetTask: Task<Void, Never>?
     private var fetchLyricsTask: Task<Void, Never>?
 
-    public init(lyricsService: MultiSourceLyricsService = .shared) {
+    public init(lyricsService: MultiSourceLyricsService = .otoShared) {
         self.lyricsService = lyricsService
     }
 
@@ -28,9 +28,10 @@ public final class LyricsViewModel {
 
         fetchLyricsTask?.cancel()
         currentSongID = song.id
-        isLoading = true
+        isLoading = !song.isLocal
         currentDocument = LyricsDocument(type: .none)
         activeLineIndex = nil
+        guard !song.isLocal else { return }
 
         fetchLyricsTask = Task {
             let doc = await lyricsService.resolveLyrics(for: song)
@@ -49,13 +50,25 @@ public final class LyricsViewModel {
         }
     }
 
-    /// Ghi nhận khi người dùng chủ động vuốt xem lời (tạm dừng auto-scroll trong 4 giây).
-    public func userDidScroll() {
+    /// Dừng bám dòng khi bắt đầu kéo; chỉ tạo timer một lần lúc thả tay.
+    public func beginManualScroll() {
+        guard !userIsScrolling else { return }
         userIsScrolling = true
         scrollResetTask?.cancel()
+    }
+
+    public func finishManualScroll() {
+        guard userIsScrolling else { return }
+        scrollResetTask?.cancel()
         scrollResetTask = Task {
-            try? await Task.sleep(nanoseconds: 4_000_000_000) // 4s
+            try? await Task.sleep(nanoseconds: 4_000_000_000)
+            guard !Task.isCancelled else { return }
             self.userIsScrolling = false
         }
+    }
+
+    public func resumeAutoScroll() {
+        scrollResetTask?.cancel()
+        userIsScrolling = false
     }
 }

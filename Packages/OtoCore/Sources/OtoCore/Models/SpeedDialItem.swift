@@ -14,6 +14,7 @@ public struct SpeedDialItem: Identifiable, Sendable, Codable, Hashable {
     public let title: String
     public let subtitle: String
     public let artworkURL: URL?
+    private let artists: [ArtistReference]?
     public let kind: Kind
     public var isPinned: Bool
 
@@ -23,12 +24,14 @@ public struct SpeedDialItem: Identifiable, Sendable, Codable, Hashable {
         subtitle: String,
         artworkURL: URL? = nil,
         kind: Kind = .song,
-        isPinned: Bool = false
+        isPinned: Bool = false,
+        artists: [ArtistReference] = []
     ) {
         self.id = id
         self.title = title
         self.subtitle = subtitle
         self.artworkURL = artworkURL
+        self.artists = artists.isEmpty ? nil : artists
         self.kind = kind
         self.isPinned = isPinned
     }
@@ -39,16 +42,19 @@ public struct SpeedDialItem: Identifiable, Sendable, Codable, Hashable {
         self.title = song.title
         self.subtitle = song.artist
         self.artworkURL = song.artworkURL
+        self.artists = song.artists.isEmpty ? nil : song.artists
         self.kind = .song
         self.isPinned = isPinned
     }
 
-    /// Chuyển đổi thành Song đối với các item thuộc loại bài hát.
-    public var asSong: Song {
-        Song(
+    /// Chuyển đổi thành Song đối với các item thuộc loại bài hát, trả về nil nếu là album, playlist hoặc artist.
+    public var asSong: Song? {
+        guard kind == .song else { return nil }
+        return Song(
             id: id,
             title: title,
             artist: subtitle,
+            artists: artists ?? [],
             artworkURL: artworkURL
         )
     }

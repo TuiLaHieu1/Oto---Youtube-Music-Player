@@ -4,6 +4,70 @@ import Foundation
 
 @Suite("Player Queue and Clock Tests")
 struct PlayerTests {
+    @Test("Repeat One không chặn nút Previous hoặc Next thủ công")
+    func manualTransportWithRepeatOne() {
+        let first = Song(id: "first", title: "First", artist: "Artist")
+        let second = Song(id: "second", title: "Second", artist: "Artist")
+        let queue = QueueManager()
+        queue.setQueue(songs: [first, second], startIndex: 1)
+        queue.toggleRepeat()
+        queue.toggleRepeat()
+        #expect(queue.previous()?.id == first.id)
+        #expect(queue.next()?.id == first.id)
+        #expect(queue.next(userInitiated: true)?.id == second.id)
+    }
+
+    @Test("Ended trùng chỉ chuyển bài một lần cho mỗi generation")
+    func duplicateTrackEndedAdvancesOnce() {
+        var machine = PlaybackStateMachine()
+        let song = Song(id: "track", title: "Track", artist: "Artist")
+        _ = machine.userPlay(song: song)
+        _ = machine.engineStateChanged(.playing, generation: machine.currentGeneration)
+
+        let first = machine.engineTrackEnded(generation: machine.currentGeneration)
+        let duplicate = machine.engineTrackEnded(generation: machine.currentGeneration)
+        #expect(first.shouldAdvanceToNextTrack)
+        #expect(!duplicate.shouldAdvanceToNextTrack)
+    }
+
+    @Test("Ended cũ không kết thúc bài vừa nạp lại trước khi engine phát")
+    func endedBeforeNewPlaybackStartsIsIgnored() {
+        var machine = PlaybackStateMachine()
+        let song = Song(id: "same-id", title: "Track", artist: "Artist")
+
+        _ = machine.userPlay(song: song)
+        let firstGeneration = machine.currentGeneration
+        _ = machine.engineStateChanged(.playing, generation: firstGeneration)
+        #expect(machine.engineTrackEnded(generation: firstGeneration).shouldAdvanceToNextTrack)
+
+        // Repeat One nạp lại đúng bài, generation mới chưa xác nhận playing.
+        _ = machine.userPlay(song: song)
+        let replayGeneration = machine.currentGeneration
+        #expect(replayGeneration != firstGeneration)
+        #expect(!machine.engineTrackEnded(generation: replayGeneration).shouldAdvanceToNextTrack)
+
+        // Khi engine xác nhận phát, ended thật mới được chấp nhận.
+        _ = machine.engineStateChanged(.playing, generation: replayGeneration)
+        #expect(machine.engineTrackEnded(generation: replayGeneration).shouldAdvanceToNextTrack)
+    }
+
+    @Test("Ended từ generation cũ bị loại bỏ")
+    func staleTrackEndedIsIgnored() {
+        var machine = PlaybackStateMachine()
+        let first = Song(id: "first", title: "First", artist: "Artist")
+        let second = Song(id: "second", title: "Second", artist: "Artist")
+
+        _ = machine.userPlay(song: first)
+        let oldGeneration = machine.currentGeneration
+        _ = machine.engineStateChanged(.playing, generation: oldGeneration)
+        _ = machine.userPlay(song: second)
+        let newGeneration = machine.currentGeneration
+        _ = machine.engineStateChanged(.playing, generation: newGeneration)
+
+        #expect(!machine.engineTrackEnded(generation: oldGeneration).shouldAdvanceToNextTrack)
+        #expect(machine.engineTrackEnded(generation: newGeneration).shouldAdvanceToNextTrack)
+    }
+
     @Test("InterpolatedClock calculates elapsed time and pauses accurately")
     func testInterpolatedClock() async throws {
         let clock = InterpolatedClock(initialPosition: 10.0, initialRate: 1.0)

@@ -29,8 +29,9 @@ public final class AudioSessionObserver {
             let userInfo = notification.userInfo
             let typeValue = userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
             let optionsValue = userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
+            let reasonValue = userInfo?[AVAudioSessionInterruptionReasonKey] as? UInt
             Task { @MainActor [weak self] in
-                self?.handleInterruption(typeValue: typeValue, optionsValue: optionsValue)
+                self?.handleInterruption(typeValue: typeValue, optionsValue: optionsValue, reasonValue: reasonValue)
             }
         }
 
@@ -49,14 +50,21 @@ public final class AudioSessionObserver {
     }
 
     #if os(iOS)
-    private func handleInterruption(typeValue: UInt?, optionsValue: UInt) {
+    private func handleInterruption(typeValue: UInt?, optionsValue: UInt, reasonValue: UInt?) {
         guard let typeValue, let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
             return
         }
 
+        // Chỉ ghi mã hệ thống, không suy interruption là cuộc gọi hay Siri.
+        let timestamp = ProcessInfo.processInfo.systemUptime
+        let reason = reasonValue.map(String.init) ?? "missing"
+        logger.info("""
+            Playback interruption t=\(timestamp) type=\(typeValue) \
+            reason=\(reason, privacy: .public) options=\(optionsValue)
+            """)
         switch type {
         case .began:
-            logger.info("Hệ thống thông báo: AVAudioSession bị gián đoạn (cuộc gọi / Siri).")
+            logger.info("Hệ thống thông báo: AVAudioSession bị gián đoạn; chưa xác định tác nhân.")
             onInterruptionBegan?()
 
         case .ended:
@@ -76,8 +84,17 @@ public final class AudioSessionObserver {
         }
 
         if reason == .oldDeviceUnavailable {
+            logger.info("""
+                Playback route t=\(ProcessInfo.processInfo.systemUptime) \
+                reason=\(reasonValue) action=unplug
+                """)
             logger.info("Tai nghe đã rút hoặc bluetooth ngắt kết nối: Kích hoạt bảo vệ loa ngoài.")
             onHeadphonesUnplugged?()
+        } else {
+            logger.info("""
+                Playback route t=\(ProcessInfo.processInfo.systemUptime) \
+                reason=\(reasonValue) action=none
+                """)
         }
     }
     #endif

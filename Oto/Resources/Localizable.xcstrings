@@ -1,0 +1,1826 @@
+{
+  "sourceLanguage" : "vi",
+  "strings" : {
+    "%@, %@" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, %2$@"
+          }
+        }
+      }
+    },
+    "%@, nghệ sĩ %@" : {
+      "localizations" : {
+        "vi" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@, nghệ sĩ %2$@"
+          }
+        }
+      }
+    },
+    "%lld bài hát" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld song"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld songs"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld danh sách phát" : {
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld playlist"
+                }
+              },
+              "other" : {
+                "stringUnit" : {
+                  "state" : "translated",
+                  "value" : "%lld playlists"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "Album" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Albums"
+          }
+        }
+      }
+    },
+    "Album & Đĩa đơn" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Albums & singles"
+          }
+        }
+      }
+    },
+    "Album này hiện chưa có bài hát khả dụng." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No songs are available in this album."
+          }
+        }
+      }
+    },
+    "Ẩn lời bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Hide lyrics"
+          }
+        }
+      }
+    },
+    "Bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Songs"
+          }
+        }
+      }
+    },
+    "Bài hát đã thích" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Liked songs"
+          }
+        }
+      }
+    },
+    "Bài hát không lời (Instrumental)" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Instrumental"
+          }
+        }
+      }
+    },
+    "Bài hát nổi bật" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Popular songs"
+          }
+        }
+      }
+    },
+    "Bài hát, album, nghệ sĩ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Songs, albums, artists"
+          }
+        }
+      }
+    },
+    "Bài tiếp theo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Next track"
+          }
+        }
+      }
+    },
+    "Bài trước" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Previous track"
+          }
+        }
+      }
+    },
+    "Bạn có chắc muốn đăng xuất khỏi tài khoản YouTube Music?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out of YouTube Music?"
+          }
+        }
+      }
+    },
+    "Bạn có chắc muốn xóa toàn bộ bộ nhớ đệm và ảnh bìa không?" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear all cached data and artwork?"
+          }
+        }
+      }
+    },
+    "Bao gồm ảnh bìa album, dữ liệu trang chủ và bộ đệm lời bài hát." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Includes album artwork, Home data, and cached lyrics."
+          }
+        }
+      }
+    },
+    "Bật lặp lại một bài" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat one"
+          }
+        }
+      }
+    },
+    "Bật lặp lại tất cả" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat all"
+          }
+        }
+      }
+    },
+    "Bật xáo trộn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn shuffle on"
+          }
+        }
+      }
+    },
+    "Bỏ ghim khỏi Speed dial" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unpin from Speed dial"
+          }
+        }
+      }
+    },
+    "Bỏ ghim trong Oto" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Unpin in Oto"
+          }
+        }
+      }
+    },
+    "Bộ nhớ đệm" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cache"
+          }
+        }
+      }
+    },
+    "Bộ nhớ đệm & Lưu trữ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cache & Storage"
+          }
+        }
+      }
+    },
+    "Các bài hát bạn nhấn Thích trên YouTube Music sẽ xuất hiện tại đây." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Songs you like on YouTube Music will appear here."
+          }
+        }
+      }
+    },
+    "Cài đặt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        }
+      }
+    },
+    "Cảm hứng" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Feel good"
+          }
+        }
+      }
+    },
+    "Chạm vào thông tin bài hát để mở trình phát toàn màn hình" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tap song information to open the player"
+          }
+        }
+      }
+    },
+    "Chạm vào thông tin bài hát để mở trình phát toàn màn hình. Vuốt ngang để đổi bài." : {
+
+    },
+    "Chế độ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mode"
+          }
+        }
+      }
+    },
+    "Chia sẻ bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Share song"
+          }
+        }
+      }
+    },
+    "Chính sách bảo mật" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Privacy policy"
+          }
+        }
+      }
+    },
+    "Chọn một bài hát để bắt đầu" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose a song to start"
+          }
+        }
+      }
+    },
+    "Chưa có bài hát" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No songs yet"
+          }
+        }
+      }
+    },
+    "Chưa có bài hát yêu thích nào" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No liked songs yet"
+          }
+        }
+      }
+    },
+    "Chưa có gợi ý âm nhạc" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No music recommendations yet"
+          }
+        }
+      }
+    },
+    "Chưa có lời cho bài hát này" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No lyrics found for this song"
+          }
+        }
+      }
+    },
+    "Chưa có nhạc trên thiết bị" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No music on this device yet"
+          }
+        }
+      }
+    },
+    "Chưa có nội dung" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No content yet"
+          }
+        }
+      }
+    },
+    "Chưa có thông tin" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No information yet"
+          }
+        }
+      }
+    },
+    "Chưa đăng nhập" : {
+
+    },
+    "Chưa hiển thị được video" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Video could not be displayed"
+          }
+        }
+      }
+    },
+    "Chưa phát" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Not playing"
+          }
+        }
+      }
+    },
+    "Chưa phát bài nào" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Nothing playing"
+          }
+        }
+      }
+    },
+    "Chưa tải đủ gợi ý mới · Thử lại" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load all new recommendations · Retry"
+          }
+        }
+      }
+    },
+    "Chưa tải được thêm gợi ý" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More recommendations are unavailable"
+          }
+        }
+      }
+    },
+    "Đã đăng nhập phiên an toàn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signed in"
+          }
+        }
+      }
+    },
+    "Đã đăng nhập thành công và đồng bộ phiên Keychain." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Signed in and saved the session securely."
+          }
+        }
+      }
+    },
+    "Đã ghim trong Oto" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pinned in Oto"
+          }
+        }
+      }
+    },
+    "Đã kết nối YouTube Music" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connected to YouTube Music"
+          }
+        }
+      }
+    },
+    "Đã phát gần đây" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recently played"
+          }
+        }
+      }
+    },
+    "Đăng nhập" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in"
+          }
+        }
+      }
+    },
+    "Đăng nhập để nghe nhạc theo sở thích" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in for personalized music"
+          }
+        }
+      }
+    },
+    "Đăng nhập để xem thư viện" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to view your library"
+          }
+        }
+      }
+    },
+    "Đăng nhập Google" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in with Google"
+          }
+        }
+      }
+    },
+    "Đang nhập nhạc…" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Importing music…"
+          }
+        }
+      }
+    },
+    "Đăng nhập YouTube Music" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in to YouTube Music"
+          }
+        }
+      }
+    },
+    "Đang phát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Now playing"
+          }
+        }
+      }
+    },
+    "Đang tải bài hát đã thích..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading liked songs…"
+          }
+        }
+      }
+    },
+    "Đang tải danh sách bài hát..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading songs…"
+          }
+        }
+      }
+    },
+    "Đang tải lời bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading lyrics"
+          }
+        }
+      }
+    },
+    "Đang tải thông tin album..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading album…"
+          }
+        }
+      }
+    },
+    "Đang tải thông tin nghệ sĩ..." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading artist…"
+          }
+        }
+      }
+    },
+    "Đang trộn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shuffling"
+          }
+        }
+      }
+    },
+    "Đăng xuất" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign out"
+          }
+        }
+      }
+    },
+    "Dành cho bạn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "For you"
+          }
+        }
+      }
+    },
+    "Danh sách phát" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playlists"
+          }
+        }
+      }
+    },
+    "Danh sách phát của bạn" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your playlists"
+          }
+        }
+      }
+    },
+    "Danh sách phát này chưa có bài hát nào." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This playlist has no songs yet."
+          }
+        }
+      }
+    },
+    "Đi tới album" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Go to album"
+          }
+        }
+      }
+    },
+    "Đổi tài khoản" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Switch account"
+          }
+        }
+      }
+    },
+    "Đóng" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Close"
+          }
+        }
+      }
+    },
+    "Dung lượng" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Size"
+          }
+        }
+      }
+    },
+    "Dung lượng bộ đệm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cache size"
+          }
+        }
+      }
+    },
+    "Ghim trong Oto" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pin in Oto"
+          }
+        }
+      }
+    },
+    "Ghim vào Speed dial" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pin to Speed dial"
+          }
+        }
+      }
+    },
+    "Giao diện" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Appearance"
+          }
+        }
+      }
+    },
+    "Hàng đợi" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Queue"
+          }
+        }
+      }
+    },
+    "Hiện ảnh bìa" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show artwork"
+          }
+        }
+      }
+    },
+    "Hiện lời bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show lyrics"
+          }
+        }
+      }
+    },
+    "Hip-hop" : {
+
+    },
+    "Hủy" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cancel"
+          }
+        }
+      }
+    },
+    "Jazz" : {
+
+    },
+    "Kết quả hàng đầu" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Top Result"
+          }
+        }
+      }
+    },
+    "Khám phá thể loại" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Explore genres"
+          }
+        }
+      }
+    },
+    "Không có bài hát tiếp theo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No upcoming songs"
+          }
+        }
+      }
+    },
+    "Không thể đọc một số tệp nhạc." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Some music files could not be read."
+          }
+        }
+      }
+    },
+    "Không thể tải album" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load album"
+          }
+        }
+      }
+    },
+    "Không thể tải danh sách" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load playlist"
+          }
+        }
+      }
+    },
+    "Không thể tải danh sách bài hát. Vui lòng thử lại." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load songs. Please try again."
+          }
+        }
+      }
+    },
+    "Không thể tải dữ liệu" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load data"
+          }
+        }
+      }
+    },
+    "Không thể tải thêm kết quả." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load more results."
+          }
+        }
+      }
+    },
+    "Không thể tải thông tin nghệ sĩ" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load artist"
+          }
+        }
+      }
+    },
+    "Không thể tìm kiếm" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search failed"
+          }
+        }
+      }
+    },
+    "Không thể xoay màn hình" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not rotate the screen"
+          }
+        }
+      }
+    },
+    "Không tìm thấy album chứa bài này" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No album containing this track was found."
+          }
+        }
+      }
+    },
+    "Không tìm thấy kết quả" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No results found"
+          }
+        }
+      }
+    },
+    "Lặp một bài" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat one"
+          }
+        }
+      }
+    },
+    "Lặp tắt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat off"
+          }
+        }
+      }
+    },
+    "Lặp tất cả" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Repeat all"
+          }
+        }
+      }
+    },
+    "Lo-fi" : {
+
+    },
+    "Lời bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lyrics"
+          }
+        }
+      }
+    },
+    "Lời bài hát ngang" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Landscape lyrics"
+          }
+        }
+      }
+    },
+    "Lựa chọn nhanh" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Quick picks"
+          }
+        }
+      }
+    },
+    "Mở trang chi tiết" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open details"
+          }
+        }
+      }
+    },
+    "Mở video toàn màn hình" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Expand video"
+          }
+        }
+      }
+    },
+    "Một khoảng nhỏ để lắng nghe." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "A little space to listen."
+          }
+        }
+      }
+    },
+    "Nghe lại gần đây" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Listen again"
+          }
+        }
+      }
+    },
+    "Nghệ sĩ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Artists"
+          }
+        }
+      }
+    },
+    "Nghệ sĩ này hiện chưa có bài hát hoặc album khả dụng." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No songs or albums are available for this artist."
+          }
+        }
+      }
+    },
+    "Ngôn ngữ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Language"
+          }
+        }
+      }
+    },
+    "Ngôn ngữ ứng dụng" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App language"
+          }
+        }
+      }
+    },
+    "Nguồn: %@" : {
+
+    },
+    "Nguồn: %@ (Lời tĩnh)" : {
+
+    },
+    "Nhạc điện tử" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Electronic"
+          }
+        }
+      }
+    },
+    "Nhạc trên thiết bị" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On-device music"
+          }
+        }
+      }
+    },
+    "Nhạc Việt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vietnamese music"
+          }
+        }
+      }
+    },
+    "Nhấn đúp để phát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double tap to play"
+          }
+        }
+      }
+    },
+    "Nhấn đúp để phát bài hát này" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Double tap to play this song"
+          }
+        }
+      }
+    },
+    "Nhập nhạc" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Import music"
+          }
+        }
+      }
+    },
+    "Nội dung khả dụng sẽ xuất hiện tại đây." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Available content will appear here."
+          }
+        }
+      }
+    },
+    "OK" : {
+
+    },
+    "Oto" : {
+
+    },
+    "Oto lưu trữ cookie phiên an toàn trong Keychain của thiết bị và không bao giờ chia sẻ ra bên ngoài." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oto stores session cookies in the device Keychain and does not share them."
+          }
+        }
+      }
+    },
+    "Phát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play"
+          }
+        }
+      }
+    },
+    "Phát bài hát" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play song"
+          }
+        }
+      }
+    },
+    "Phát tất cả" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play all"
+          }
+        }
+      }
+    },
+    "Phát tiếp theo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Play next"
+          }
+        }
+      }
+    },
+    "Phiên bản" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Version"
+          }
+        }
+      }
+    },
+    "PLAYING FROM" : {
+
+    },
+    "Playlist" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playlists"
+          }
+        }
+      }
+    },
+    "Pop" : {
+
+    },
+    "R&B" : {
+
+    },
+    "Rock" : {
+
+    },
+    "Sáng" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Light"
+          }
+        }
+      }
+    },
+    "Tải gợi ý" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Load recommendations"
+          }
+        }
+      }
+    },
+    "Tài khoản" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Account"
+          }
+        }
+      }
+    },
+    "Tải thêm bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Load more songs"
+          }
+        }
+      }
+    },
+    "Tải thêm kết quả" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Load more results"
+          }
+        }
+      }
+    },
+    "Tạm dừng" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pause"
+          }
+        }
+      }
+    },
+    "Tập luyện" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Workout"
+          }
+        }
+      }
+    },
+    "Tập trung" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Focus"
+          }
+        }
+      }
+    },
+    "Tất cả" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All"
+          }
+        }
+      }
+    },
+    "Tất cả bài hát" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "All songs"
+          }
+        }
+      }
+    },
+    "Tắt lặp lại" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn repeat off"
+          }
+        }
+      }
+    },
+    "Tắt xáo trộn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn shuffle off"
+          }
+        }
+      }
+    },
+    "Thêm vào hàng đợi" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to queue"
+          }
+        }
+      }
+    },
+    "Theo hệ thống" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow system"
+          }
+        }
+      }
+    },
+    "Theo ngôn ngữ máy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Follow device language"
+          }
+        }
+      }
+    },
+    "Theo tâm trạng và hoạt động" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Moods and activities"
+          }
+        }
+      }
+    },
+    "Thông tin" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About"
+          }
+        }
+      }
+    },
+    "Thông tin & Quyền riêng tư" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "About & Privacy"
+          }
+        }
+      }
+    },
+    "Thông tin về cách Oto xử lý dữ liệu sẽ được bổ sung khi chính sách quyền riêng tư được hoàn thiện." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Details about how Oto handles data will be added when the privacy policy is ready."
+          }
+        }
+      }
+    },
+    "Thử cách viết khác hoặc từ khóa ngắn hơn." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try another spelling or a shorter query."
+          }
+        }
+      }
+    },
+    "Thư giãn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chill"
+          }
+        }
+      }
+    },
+    "Thu gọn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show less"
+          }
+        }
+      }
+    },
+    "Thử lại" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Retry"
+          }
+        }
+      }
+    },
+    "Thử tắt khóa xoay hoặc mở Oto toàn màn hình rồi thử lại." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off Rotation Lock or open Oto full screen, then try again."
+          }
+        }
+      }
+    },
+    "Thu video" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Exit full-screen video"
+          }
+        }
+      }
+    },
+    "Thư viện" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Library"
+          }
+        }
+      }
+    },
+    "Thư viện của bạn" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your library"
+          }
+        }
+      }
+    },
+    "Tiến trình phát" : {
+
+    },
+    "Tiếng Việt" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vietnamese"
+          }
+        }
+      }
+    },
+    "Tiếp theo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Up next"
+          }
+        }
+      }
+    },
+    "Tìm bài hát tiếp theo" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search for your next song"
+          }
+        }
+      }
+    },
+    "Tìm bài hát, album, nghệ sĩ và playlist." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search songs, albums, artists, and playlists."
+          }
+        }
+      }
+    },
+    "Tìm kiếm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Search"
+          }
+        }
+      }
+    },
+    "Tìm kiếm gần đây" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Recent searches"
+          }
+        }
+      }
+    },
+    "Tối" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dark"
+          }
+        }
+      }
+    },
+    "Trang chủ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home"
+          }
+        }
+      }
+    },
+    "Trở về bố cục dọc" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return to portrait layout"
+          }
+        }
+      }
+    },
+    "Trộn bài" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shuffle"
+          }
+        }
+      }
+    },
+    "Trộn tắt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Shuffle off"
+          }
+        }
+      }
+    },
+    "Tùy chọn bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Song options"
+          }
+        }
+      }
+    },
+    "Ứng dụng" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "App"
+          }
+        }
+      }
+    },
+    "Về dòng hiện tại" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Return to current line"
+          }
+        }
+      }
+    },
+    "Video" : {
+
+    },
+    "Vuốt xuống để tải lại từ YouTube Music hoặc mở tab Tìm kiếm để chọn bài hát." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Pull down to reload YouTube Music, or search for a song."
+          }
+        }
+      }
+    },
+    "Xem tất cả bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "View all songs"
+          }
+        }
+      }
+    },
+    "Xem video" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Watch video"
+          }
+        }
+      }
+    },
+    "Xóa" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Delete"
+          }
+        }
+      }
+    },
+    "Xóa bộ nhớ đệm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear cache"
+          }
+        }
+      }
+    },
+    "Xóa lịch sử tìm kiếm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear search history"
+          }
+        }
+      }
+    },
+    "Xóa toàn bộ bộ nhớ đệm" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Clear all caches"
+          }
+        }
+      }
+    },
+    "Xong" : {
+
+    },
+    "YouTube Music" : {
+
+    }
+  },
+  "version" : "1.0"
+}

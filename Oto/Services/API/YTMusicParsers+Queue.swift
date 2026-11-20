@@ -137,3 +137,156 @@ extension YTMusicParsers {
         return []
     }
 }
+
+enum MusicSearchResult: Identifiable, Sendable {
+    case song(Song)
+    case video(Song)
+    case album(Playlist)
+    case artist(ArtistReference, artworkURL: URL?, subtitle: String)
+    case playlist(Playlist)
+
+    var id: String {
+        switch self {
+        case .song(let song), .video(let song): "song:" + song.id
+        case .album(let album): "album:" + album.id
+        case .artist(let artist, _, _): "artist:" + artist.id
+        case .playlist(let playlist): "playlist:" + playlist.id
+        }
+    }
+}
+
+struct MusicSearchPage: Sendable {
+    var topResult: MusicSearchResult?
+    var results: [MusicSearchResult] = []
+    var nextToken: String?
+    var isEmpty: Bool { topResult == nil && results.isEmpty }
+}
+
+extension YTMusicParsers {
+    static func parseMusicSearch(
+        from data: Data, scope: SearchScope, isContinuation: Bool = false
+    ) throws -> MusicSearchPage {
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw YTMusicError.invalidResponse
+        }
+        let sections: [[String: Any]]
+        let shelves: [[String: Any]]
+        if isContinuation {
+            let continuation = root["continuationContents"] as? [String: Any]
+            guard let shelf = continuation?["musicShelfContinuation"] as? [String: Any],
+                  shelf["contents"] is [[String: Any]] else { throw YTMusicError.parsingError }
+            sections = []
+            shelves = [shelf]
+        } else {
+            guard let contents = root["contents"] as? [String: Any] else { throw YTMusicError.parsingError }
+            sections = Self.extractSectionLists(from: contents)
+            guard !sections.isEmpty else { throw YTMusicError.parsingError }
+            shelves = Self.collectRenderers(named: "musicShelfRenderer", in: sections)
+        }
+
+        let rows = Self.collectRenderers(
+            named: "musicResponsiveListItemRenderer", in: scope == .all ? sections : shelves
+        )
+        var seen = Set<String>()
+        let results = rows.compactMap { Self.musicSearchResult(from: $0, scope: scope) }
+            .filter { seen.insert($0.id).inserted }
+        let card = scope == .all ? Self.collectRenderers(named: "musicCardShelfRenderer", in: sections).first : nil
+        let top = card.flatMap { Self.topMusicSearchResult(from: $0, results: results) }
+        let nextToken = scope == .all ? nil : Self.collectRenderers(named: "nextContinuationData", in: shelves)
+            .compactMap { $0["continuation"] as? String }.first { !$0.isEmpty }
+        return MusicSearchPage(topResult: top, results: results.filter { $0.id != top?.id }, nextToken: nextToken)
+    }
+
+    private static func topMusicSearchResult(
+        from card: [String: Any], results: [MusicSearchResult]
+    ) -> MusicSearchResult? {
+        let title = card["title"] as? [String: Any]
+        let titleRuns = title?["runs"] as? [[String: Any]]
+        guard let name = titleRuns?.first?["text"] as? String, !name.isEmpty else { return nil }
+        let navigation = (card["onTap"] as? [String: Any])
+            ?? (titleRuns?.first?["navigationEndpoint"] as? [String: Any])
+        let subtitle = card["subtitle"] as? [String: Any]
+        let artwork = Self.extractThumbnailURL(from: card["thumbnail"] as? [String: Any])
+        if let watch = navigation?["watchEndpoint"] as? [String: Any],
+           let id = watch["videoId"] as? String, !id.isEmpty {
+            if let result = results.first(where: { $0.id == "song:" + id }) { return result }
+            let artists = Self.extractArtists(from: subtitle)
+            let artist = artists.map(\.name).joined(separator: ", ")
+            let song = Song(id: id, title: name, artist: artist, artists: artists, artworkURL: artwork)
+            return Self.containsVideo(card, id: id) ? .video(song) : .song(song)
+        }
+        let browse = navigation?["browseEndpoint"] as? [String: Any]
+        guard let id = browse?["browseId"] as? String else { return nil }
+        let subtitleRuns = subtitle?["runs"] as? [[String: Any]]
+        let description = subtitleRuns?.compactMap { $0["text"] as? String }.joined() ?? ""
+        return Self.musicBrowseResult(id: id, title: name, subtitle: description, artwork: artwork, scope: .all)
+    }
+
+    private static func musicSearchResult(from row: [String: Any], scope: SearchScope) -> MusicSearchResult? {
+        let navigation = row["navigationEndpoint"] as? [String: Any]
+        let browse = navigation?["browseEndpoint"] as? [String: Any]
+        guard let id = browse?["browseId"] as? String else {
+            guard scope == .all || scope == .songs || scope == .videos,
+                  let song = Self.parseResponsiveListItem(row) else { return nil }
+            let isVideo = scope == .videos || (scope == .all && Self.containsVideo(row, id: song.id))
+            return isVideo ? .video(song) : .song(song)
+        }
+        let columns = Self.collectRenderers(
+            named: "musicResponsiveListItemFlexColumnRenderer", in: row["flexColumns"] ?? []
+        )
+        let texts = columns.map { column in
+            let text = column["text"] as? [String: Any]
+            let runs = text?["runs"] as? [[String: Any]]
+            return runs?.compactMap { $0["text"] as? String }.joined() ?? ""
+        }
+        guard let title = texts.first, !title.isEmpty else { return nil }
+        return Self.musicBrowseResult(
+            id: id, title: title, subtitle: texts.dropFirst().first ?? "",
+            artwork: Self.extractThumbnailURL(from: row["thumbnail"] as? [String: Any]), scope: scope
+        )
+    }
+
+    private static func musicBrowseResult(
+        id: String, title: String, subtitle: String, artwork: URL?, scope: SearchScope
+    ) -> MusicSearchResult? {
+        if id.hasPrefix("UC"), id.count > 2, scope == .all || scope == .artists {
+            return .artist(ArtistReference(browseId: id, name: title), artworkURL: artwork, subtitle: subtitle)
+        }
+        let album = id.hasPrefix("MPRE")
+        let playlist = id.hasPrefix("VL") && id.count > 2
+        guard (album && (scope == .all || scope == .albums))
+                || (playlist && (scope == .all || scope == .playlists)) else { return nil }
+        let item = Playlist(
+            id: album ? id : String(id.dropFirst(2)),
+            title: title,
+            subtitle: subtitle,
+            artworkURL: artwork
+        )
+        return album ? .album(item) : .playlist(item)
+    }
+}
+
+extension YTMusicParsers {
+    static func supportsVideo(in data: Data, id: String) -> Bool {
+        guard let root = try? JSONSerialization.jsonObject(with: data) else { return false }
+        return Self.containsVideo(root, id: id)
+    }
+
+    private static func containsVideo(_ node: Any, id: String) -> Bool {
+        if let item = node as? [String: Any] {
+            if let endpoint = item["watchEndpoint"] as? [String: Any],
+               endpoint["videoId"] as? String == id,
+               let configs = endpoint["watchEndpointMusicSupportedConfigs"] as? [String: Any],
+               let config = configs["watchEndpointMusicConfig"] as? [String: Any],
+               let type = config["musicVideoType"] as? String,
+               type == "MUSIC_VIDEO_TYPE_OMV" || type == "MUSIC_VIDEO_TYPE_UGC" {
+                return true
+            }
+            return item.values.contains { Self.containsVideo($0, id: id) }
+        }
+        if let items = node as? [Any] {
+            return items.contains { Self.containsVideo($0, id: id) }
+        }
+        return false
+    }
+}

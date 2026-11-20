@@ -84,7 +84,7 @@ public final class SessionStore {
         SingletonPlayerWebView.shared.resetForSignOut()
 
         // 3. Xóa bộ nhớ đệm lời bài hát trong RAM
-        await MultiSourceLyricsService.shared.clearCache()
+        await MultiSourceLyricsService.otoShared.clearCache()
 
         // 4. Kích hoạt toàn bộ reset handlers (HomeViewModel memory caches, v.v.)
         for handler in resetHandlers {

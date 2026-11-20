@@ -1,3 +1,4 @@
+import AVFoundation
 import Testing
 import Foundation
 @testable import Oto
@@ -59,12 +60,13 @@ struct PlayerViewModelTests {
 
     @Test("play song triggers backend loadVideo with generation 1 and shouldPlay true")
     @MainActor
-    func testPlaySongLoadsBackend() {
+    func testPlaySongLoadsBackend() async {
         let mock = MockPlaybackBackend()
-        let vm = PlayerViewModel(backend: mock)
+        let vm = PlayerViewModel(backend: mock, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
 
         vm.play(song: testSong)
 
+        await vm.waitForPendingAudioOperation()
         #expect(mock.loadCalls.count == 1)
         #expect(mock.loadCalls.first?.id == "test_track_1")
         #expect(mock.loadCalls.first?.generation == 1)
@@ -79,11 +81,12 @@ struct PlayerViewModelTests {
 
     @Test("crash recovery while playing mints generation 2 and requests play")
     @MainActor
-    func testCrashRecoveryWhilePlaying() {
+    func testCrashRecoveryWhilePlaying() async {
         let mock = MockPlaybackBackend()
-        let vm = PlayerViewModel(backend: mock)
+        let vm = PlayerViewModel(backend: mock, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
 
         vm.play(song: testSong)
+        await vm.waitForPendingAudioOperation()
         mock.onPlaybackStateChange?(1, 1, testSong.id)
         mock.onPositionUpdate?(45.0, 180.0, 1, testSong.id)
 
@@ -93,6 +96,7 @@ struct PlayerViewModelTests {
         // WebContent process terminates -> báo recovery required
         mock.onRecoveryRequired?()
 
+        await vm.waitForPendingAudioOperation()
         // Backend nhận lệnh nạp lại bài với generation 2 và vị trí 45s, shouldPlay true
         #expect(mock.loadCalls.count == 2)
         let recoveryCall = mock.loadCalls[1]
@@ -113,11 +117,12 @@ struct PlayerViewModelTests {
 
     @Test("crash recovery while paused mints generation 2 without auto-resume")
     @MainActor
-    func testCrashRecoveryWhilePaused() {
+    func testCrashRecoveryWhilePaused() async {
         let mock = MockPlaybackBackend()
-        let vm = PlayerViewModel(backend: mock)
+        let vm = PlayerViewModel(backend: mock, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
 
         vm.play(song: testSong)
+        await vm.waitForPendingAudioOperation()
         mock.onPlaybackStateChange?(1, 1, testSong.id)
         mock.onPositionUpdate?(60.0, 180.0, 1, testSong.id)
 
@@ -129,6 +134,7 @@ struct PlayerViewModelTests {
         // WebContent process crash khi đang paused
         mock.onRecoveryRequired?()
 
+        await vm.waitForPendingAudioOperation()
         #expect(mock.loadCalls.count == 2)
         let recoveryCall = mock.loadCalls[1]
         #expect(recoveryCall.id == "test_track_1")
@@ -139,15 +145,17 @@ struct PlayerViewModelTests {
 
     @Test("stale error callback from old generation is ignored")
     @MainActor
-    func testStaleErrorIgnored() {
+    func testStaleErrorIgnored() async {
         let mock = MockPlaybackBackend()
-        let vm = PlayerViewModel(backend: mock)
+        let vm = PlayerViewModel(backend: mock, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
 
         vm.play(song: testSong)
+        await vm.waitForPendingAudioOperation()
         #expect(mock.loadCalls.first?.generation == 1)
 
         let secondSong = Song(id: "test_track_2", title: "Second", artist: "Artist", duration: 200)
         vm.play(song: secondSong)
+        await vm.waitForPendingAudioOperation()
         #expect(mock.loadCalls.last?.generation == 2)
 
         // Lỗi từ generation 1 cũ (bài 1)
@@ -158,11 +166,12 @@ struct PlayerViewModelTests {
 
     @Test("callback cùng generation nhưng sai track identity bị bỏ qua")
     @MainActor
-    func testWrongTrackIdentityIgnored() {
+    func testWrongTrackIdentityIgnored() async {
         let mock = MockPlaybackBackend()
-        let vm = PlayerViewModel(backend: mock)
+        let vm = PlayerViewModel(backend: mock, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
 
         vm.play(song: testSong)
+        await vm.waitForPendingAudioOperation()
         #expect(vm.isBuffering == true)
 
         mock.onPlaybackStateChange?(1, 1, "old_track")
@@ -178,11 +187,12 @@ struct PlayerViewModelTests {
 
     @Test("togglePlayPause during buffering pauses immediately without requiring second tap")
     @MainActor
-    func testTogglePlayPauseDuringBuffering() {
+    func testTogglePlayPauseDuringBuffering() async {
         let mock = MockPlaybackBackend()
-        let vm = PlayerViewModel(backend: mock)
+        let vm = PlayerViewModel(backend: mock, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
 
         vm.play(song: testSong)
+        await vm.waitForPendingAudioOperation()
         #expect(vm.isBuffering == true)
         #expect(vm.isPlaying == false)
         #expect(vm.shouldShowPauseButton == true)
@@ -196,11 +206,12 @@ struct PlayerViewModelTests {
 
     @Test("seek cập nhật UI và gửi đúng vị trí cho backend ngay lập tức")
     @MainActor
-    func testSeekUpdatesImmediately() {
+    func testSeekUpdatesImmediately() async {
         let mock = MockPlaybackBackend()
-        let vm = PlayerViewModel(backend: mock)
+        let vm = PlayerViewModel(backend: mock, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
 
         vm.play(song: testSong)
+        await vm.waitForPendingAudioOperation()
         vm.seek(to: 72.5)
 
         #expect(vm.currentPosition == 72.5)
@@ -209,19 +220,22 @@ struct PlayerViewModelTests {
 
     @Test("Media Session command từ AirPods điều khiển đúng PlayerViewModel")
     @MainActor
-    func testMediaSessionRemoteCommands() {
+    func testMediaSessionRemoteCommands() async {
         let mock = MockPlaybackBackend()
-        let vm = PlayerViewModel(backend: mock)
+        let vm = PlayerViewModel(backend: mock, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
         let secondSong = Song(id: "test_track_2", title: "Second", artist: "Artist", duration: 200)
         vm.playQueue(songs: [testSong, secondSong])
 
+        await vm.waitForPendingAudioOperation()
         mock.onRemoteCommand?(.pause)
         #expect(mock.pauseCount == 1)
 
         mock.onRemoteCommand?(.play)
+        await vm.waitForPendingAudioOperation()
         #expect(mock.playCount == 1)
 
         mock.onRemoteCommand?(.next)
+        await vm.waitForPendingAudioOperation()
         #expect(vm.currentSong?.id == secondSong.id)
         #expect(mock.loadCalls.last?.id == secondSong.id)
 
@@ -296,7 +310,7 @@ struct YTMusicHomeParserTests {
     }
 
     @Test("upgradeThumbnailURL nâng cấp độ phân giải ảnh thumbnail chuẩn nét")
-    func testUpgradeThumbnailURL() {
+    func testUpgradeThumbnailURL() async {
         let lowRes = "https://lh3.googleusercontent.com/abc=w120-h120-l90-rj"
         let upgraded = YTMusicParsers.upgradeThumbnailURLString(lowRes)
         #expect(upgraded == "https://lh3.googleusercontent.com/abc=w800-h800-l90-rj")
@@ -376,5 +390,70 @@ struct YTMusicUpNextParserTests {
         #expect(songs.first?.artist == "Artist 1")
         #expect(songs.first?.album == "Album 1")
         #expect(songs.first?.duration == 225)
+    }
+}
+
+@MainActor
+struct LocalMusicRoutingTests {
+    @Test("Nhạc nhập phát theo ID local và không phụ thuộc file nguồn")
+    func importedFilePlaysFromPrivateCopy() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let source = directory.appendingPathComponent("Mẫu.wav")
+        try Self.writeTestAudio(to: source)
+
+        let id = try await LocalMusicStore.shared.importFile(source)
+        let copy = try #require(LocalMusicStore.file(for: id))
+        defer { try? FileManager.default.removeItem(at: copy.deletingLastPathComponent()) }
+        try FileManager.default.removeItem(at: source)
+        let imported = try await LocalMusicStore.shared.songs().first { $0.id == id }
+        #expect(imported?.title == "Mẫu")
+        #expect(imported?.artworkURL == nil)
+
+        let web = MockPlaybackBackend()
+        let router = LocalMusicPlaybackRouter(web: web)
+        var activatedID: String?
+        router.onTrackActivated = { id, _ in activatedID = id }
+        router.loadVideo(id: id, startSeconds: 0, generation: 1, shouldPlay: false)
+        #expect(activatedID == id)
+        #expect(web.loadCalls.isEmpty)
+        router.resetForSignOut()
+        #expect(LocalMusicStore.file(for: id) == copy)
+    }
+
+    private static func writeTestAudio(to url: URL) throws {
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 8_000, channels: 1))
+        let buffer = try #require(AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 800))
+        let samples = try #require(buffer.floatChannelData?[0])
+        buffer.frameLength = 800
+        for index in 0..<800 { samples[index] = 0.25 }
+        let audio = try AVAudioFile(forWriting: url, settings: format.settings)
+        try audio.write(from: buffer)
+    }
+
+    @Test("File local thiếu không được gửi sang WebKit")
+    func missingLocalFileStaysOnLocalRoute() {
+        let web = MockPlaybackBackend()
+        let router = LocalMusicPlaybackRouter(web: web)
+        let localID = Song.localIDPrefix + UUID().uuidString
+        var failedID: String?
+        var activatedID: String?
+        router.onError = { _, _, id in failedID = id }
+        router.onTrackActivated = { id, _ in activatedID = id }
+
+        router.loadVideo(id: "web-first", startSeconds: 9, generation: 1, shouldPlay: true)
+        #expect(web.loadCalls.first?.startSeconds == 9)
+        router.loadVideo(id: localID, startSeconds: 0, generation: 2, shouldPlay: true)
+        #expect(failedID == localID)
+        #expect(web.pauseCount == 1)
+        #expect(web.loadCalls.map(\.id) == ["web-first"])
+
+        web.onTrackActivated?("web-first", 1)
+        #expect(activatedID == nil)
+        router.loadVideo(id: "web-next", startSeconds: 0, generation: 3, shouldPlay: false)
+        web.onTrackActivated?("web-next", 3)
+        #expect(activatedID == "web-next")
+        #expect(web.loadCalls.last?.shouldPlay == false)
     }
 }

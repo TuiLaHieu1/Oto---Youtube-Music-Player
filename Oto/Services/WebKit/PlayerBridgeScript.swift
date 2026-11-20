@@ -29,7 +29,7 @@ private let bridgeJavaScript = """
       window.__otoUserPaused = true;
       window.__otoCurrentGeneration = 0;
       window.__otoCurrentVideoId = '';
-      function actualVideoId() {
+      function playerVideoId() {
         try {
           const mp = document.getElementById('movie_player');
           if (mp && typeof mp.getVideoData === 'function') {
@@ -41,6 +41,13 @@ private let bridgeJavaScript = """
             const data = player.playerApi.getVideoData();
             if (data && data.video_id) return String(data.video_id);
           }
+        } catch(e) {}
+        return '';
+      }
+      function actualVideoId() {
+        const active = playerVideoId();
+        if (active) return active;
+        try {
           const urlParam = new URL(window.location.href).searchParams.get('v');
           return urlParam || window.__otoCurrentVideoId || '';
         } catch(e) { return window.__otoCurrentVideoId || ''; }
@@ -298,6 +305,11 @@ private let bridgeJavaScript = """
           window.location.href = 'https://music.youtube.com/watch?v=' + encodeURIComponent(id);
         },
         adoptLoadedVideo: function(id, startSeconds, generation, shouldPlay) {
+          const active = playerVideoId();
+          if (active && active !== id) {
+            window.otoPlayer.loadVideo(id, startSeconds, generation, shouldPlay);
+            return;
+          }
           window.__otoCurrentGeneration = generation || 0;
           window.__otoCurrentVideoId = id;
           if (window.otoSchedulePlaybackDiagnostics) window.otoSchedulePlaybackDiagnostics(id, generation);
@@ -337,6 +349,13 @@ private let bridgeJavaScript = """
           tryAdopt(30);
         },
         adoptCurrentVideo: function(id, startSeconds, generation, shouldPlay) {
+          const active = playerVideoId();
+          const video = document.querySelector('video');
+          const restartsCompletedVideo = startSeconds === 0 && video && (video.ended || video.__otoTrackEndedFired);
+          if (restartsCompletedVideo || (active && active !== id)) {
+            window.otoPlayer.loadVideo(id, startSeconds, generation, shouldPlay);
+            return;
+          }
           window.__otoCurrentGeneration = generation || 0;
           window.__otoCurrentVideoId = id;
           if (window.otoSchedulePlaybackDiagnostics) window.otoSchedulePlaybackDiagnostics(id, generation);

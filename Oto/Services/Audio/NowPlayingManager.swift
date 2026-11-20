@@ -6,6 +6,20 @@ import UniformTypeIdentifiers
 import UIKit
 #endif
 import OtoCore
+#if DEBUG && os(iOS) && OTO_HAPTICS_PILOT
+import MediaAccessibility
+import os
+#endif
+
+#if DEBUG && os(iOS) && OTO_HAPTICS_PILOT
+enum MusicHapticsPilotSample {
+    static let videoID = "67ibXO8viXE"
+    static let isrc = "GBUM71308836"
+    static let song = Song(
+        id: Self.videoID, title: "I'm Not the Only One", artist: "Sam Smith", album: "In the Lonely Hour"
+    )
+}
+#endif
 
 /// Quản lý thông tin hiển thị tại Màn hình khóa (Lock Screen), Dynamic Island và Trung tâm điều khiển.
 public final class NowPlayingManager: @unchecked Sendable {
@@ -36,6 +50,10 @@ public final class NowPlayingManager: @unchecked Sendable {
     private var thumbnailTask: Task<Data?, Never>?
     private var retryArtworkTask: Task<Void, Never>?
     #endif
+    #if DEBUG && os(iOS) && OTO_HAPTICS_PILOT
+    @MainActor private var hapticsStatusToken: (any NSCopying)?
+    @MainActor private var didLogHapticsPilot = false
+    #endif
     private let retryArtworkDelayNanoseconds: UInt64
 
     init(
@@ -49,6 +67,26 @@ public final class NowPlayingManager: @unchecked Sendable {
         self.retryArtworkDelayNanoseconds = retryArtworkDelayNanoseconds
         if registerRemoteCommands { setupRemoteCommands() }
     }
+
+    #if DEBUG && os(iOS) && OTO_HAPTICS_PILOT
+    @available(iOS 18.0, *)
+    @MainActor
+    private func observeHapticsPilot() {
+        let manager = MAMusicHapticsManager.shared
+        let logger = Logger(subsystem: "com.oto.music", category: "MusicHapticsPilot")
+        let report: @Sendable (String, Bool) -> Void = { code, active in
+            logger.info("Haptics pilot status sample=\(code == MusicHapticsPilotSample.isrc) active=\(active)")
+        }
+        hapticsStatusToken = manager.addStatusObserver(report)
+        let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
+        let stored = info?[MPNowPlayingInfoPropertyInternationalStandardRecordingCode] as? String
+        let declared = Bundle.main.object(forInfoDictionaryKey: "MusicHapticsSupported") as? Bool == true
+        logger.info("""
+            Haptics pilot check systemActive=\(manager.isActive) registered=\(self.hapticsStatusToken != nil) \
+            localISRCMatches=\(stored == MusicHapticsPilotSample.isrc) declared=\(declared)
+            """)
+    }
+    #endif
 
     /// Cập nhật thông tin bài hát đang phát lên NowPlayingInfoCenter với hỗ trợ runtime duration.
     @MainActor
@@ -82,6 +120,12 @@ public final class NowPlayingManager: @unchecked Sendable {
             MPNowPlayingInfoPropertyIsLiveStream: false
         ]
 
+        #if DEBUG && OTO_HAPTICS_PILOT
+        if #available(iOS 18.0, *), song.id == MusicHapticsPilotSample.videoID {
+            info[MPNowPlayingInfoPropertyInternationalStandardRecordingCode] = MusicHapticsPilotSample.isrc
+        }
+        #endif
+
         if let album = song.album {
             info[MPMediaItemPropertyAlbumTitle] = album
         }
@@ -91,7 +135,7 @@ public final class NowPlayingManager: @unchecked Sendable {
             let key = ArtworkKey(songId: song.id, url: artworkURL)
             selectArtwork(key)
             if cachedArtworkKey == key, let image = cachedArtworkImage {
-                info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+                info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
             } else {
                 loadArtworkAsync(for: key)
             }
@@ -111,6 +155,12 @@ public final class NowPlayingManager: @unchecked Sendable {
         commandCenter.previousTrackCommand.isEnabled = true
 
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
+        #if DEBUG && OTO_HAPTICS_PILOT
+        if #available(iOS 18.0, *), song.id == MusicHapticsPilotSample.videoID, isPlaying, !didLogHapticsPilot {
+            didLogHapticsPilot = true
+            observeHapticsPilot()
+        }
+        #endif
         #endif
     }
 
@@ -184,7 +234,7 @@ public final class NowPlayingManager: @unchecked Sendable {
             self.cachedArtworkKey = key
             self.cachedArtworkImage = image
             guard var info = MPNowPlayingInfoCenter.default().nowPlayingInfo else { return }
-            info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { _ in image }
+            info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
             MPNowPlayingInfoCenter.default().nowPlayingInfo = info
         }
     }

@@ -31,11 +31,28 @@ public final class SpeedDialPinStore {
         }
         do {
             let items = try JSONDecoder().decode([SpeedDialItem].self, from: data)
-            return items.map {
-                var copy = $0
+            var hasCorrections = false
+            let corrected = items.map { item -> SpeedDialItem in
+                var copy = item
                 copy.isPinned = true
+                if copy.id.hasPrefix("MPRE") && copy.kind != .album {
+                    copy = SpeedDialItem(
+                        id: copy.id,
+                        title: copy.title,
+                        subtitle: copy.subtitle,
+                        artworkURL: copy.artworkURL,
+                        kind: .album,
+                        isPinned: true
+                    )
+                    hasCorrections = true
+                }
                 return copy
             }
+            if hasCorrections {
+                savePinnedItems(corrected)
+                logger.info("Đã tự động chuẩn hoá các mục ghim có tiền tố MPRE thành .album.")
+            }
+            return corrected
         } catch {
             logger.error("Không thể giải mã danh sách Speed dial đã ghim: \(error.localizedDescription)")
             return []

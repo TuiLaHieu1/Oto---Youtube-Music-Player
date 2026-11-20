@@ -6,6 +6,8 @@ public struct RootView: View {
     @Bindable var playerVM: PlayerViewModel
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedTab: TabItem? = .home
+    @State private var windowOrientation = PlayerWindowOrientation()
+    @AppStorage("app_language") private var selectedLanguage = AppLanguage.system.rawValue
 
     public enum TabItem: String, Hashable, CaseIterable {
         case home = "Trang chủ"
@@ -37,8 +39,10 @@ public struct RootView: View {
             mainContentView
         }
         .background(OtoTheme.background.ignoresSafeArea())
-        .fullScreenCover(isPresented: $playerVM.isExpanded) {
+        .background(PlayerWindowAnchor(orientation: windowOrientation).allowsHitTesting(false))
+        .fullScreenCover(isPresented: $playerVM.isExpanded, onDismiss: windowOrientation.restorePortrait) {
             FullscreenPlayerView(playerVM: playerVM)
+                .presentationBackground(OtoTheme.background)
         }
         .sheet(isPresented: $playerVM.showAuth) {
             AuthView {
@@ -47,6 +51,7 @@ public struct RootView: View {
                 }
             }
         }
+        .environment(\.locale, (AppLanguage(rawValue: selectedLanguage) ?? .system).locale)
     }
 
     @ViewBuilder
@@ -56,7 +61,7 @@ public struct RootView: View {
             NavigationSplitView {
                 List(selection: $selectedTab) {
                     ForEach(TabItem.allCases, id: \.self) { tab in
-                        Label(tab.rawValue, systemImage: tab.icon)
+                        Label(LocalizedStringKey(tab.rawValue), systemImage: tab.icon)
                             .tag(tab)
                     }
                 }
@@ -104,19 +109,19 @@ public struct RootView: View {
         )) {
             HomeFeedView(playerVM: playerVM)
                 .tabItem {
-                    Label(TabItem.home.rawValue, systemImage: TabItem.home.icon)
+                    Label(LocalizedStringKey(TabItem.home.rawValue), systemImage: TabItem.home.icon)
                 }
                 .tag(TabItem.home)
 
             SearchView(playerVM: playerVM)
                 .tabItem {
-                    Label(TabItem.search.rawValue, systemImage: TabItem.search.icon)
+                    Label(LocalizedStringKey(TabItem.search.rawValue), systemImage: TabItem.search.icon)
                 }
                 .tag(TabItem.search)
 
             LibraryView(playerVM: playerVM)
                 .tabItem {
-                    Label(TabItem.library.rawValue, systemImage: TabItem.library.icon)
+                    Label(LocalizedStringKey(TabItem.library.rawValue), systemImage: TabItem.library.icon)
                 }
                 .tag(TabItem.library)
         }

@@ -18,7 +18,7 @@ public struct OtoSectionHeader: View {
 
     public var body: some View {
         HStack {
-            Text(title)
+            Text(LocalizedStringKey(title))
                 .font(OtoTheme.sectionTitleFont)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)

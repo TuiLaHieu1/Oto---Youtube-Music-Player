@@ -30,13 +30,13 @@ public struct OtoEmptyState: View {
                 .accessibilityHidden(true)
 
             VStack(spacing: OtoTheme.spacing8) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(OtoTheme.sectionTitleFont)
                     .foregroundStyle(OtoTheme.primaryText)
                     .multilineTextAlignment(.center)
 
                 if let message = message {
-                    Text(message)
+                    Text(LocalizedStringKey(message))
                         .font(OtoTheme.subtitleFont)
                         .foregroundStyle(OtoTheme.secondaryText)
                         .multilineTextAlignment(.center)
@@ -46,7 +46,7 @@ public struct OtoEmptyState: View {
 
             if let actionTitle = actionTitle, let action = action {
                 Button(action: action) {
-                    Text(actionTitle)
+                    Text(LocalizedStringKey(actionTitle))
                         .font(OtoTheme.buttonFont)
                         .foregroundStyle(OtoTheme.onAccent)
                         .padding(.horizontal, OtoTheme.spacing24)

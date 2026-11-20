@@ -113,7 +113,8 @@ public struct LikedSongsView: View {
 
                 // Subtitle count
                 HStack {
-                    Text("\(libraryVM.likedSongs.count) BÀI HÁT")
+                    Text("\(libraryVM.likedSongs.count) bài hát")
+                        .textCase(.uppercase)
                         .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(OtoTheme.secondaryText)
                     Spacer()
@@ -149,7 +150,10 @@ public struct LikedSongsView: View {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
         #endif
         let index = libraryVM.likedSongs.firstIndex(of: song) ?? 0
-        playerVM.playQueue(songs: libraryVM.likedSongs, startIndex: index)
+        playerVM.playQueue(
+            songs: libraryVM.likedSongs, startIndex: index,
+            sourceTitle: String(localized: "Bài hát đã thích", locale: AppLanguage.current.locale)
+        )
     }
 
     private func playAll(shuffle: Bool) {
@@ -160,6 +164,9 @@ public struct LikedSongsView: View {
         if shuffle {
             songs.shuffle()
         }
-        playerVM.playQueue(songs: songs, startIndex: 0)
+        playerVM.playQueue(
+            songs: songs, startIndex: 0,
+            sourceTitle: String(localized: "Bài hát đã thích", locale: AppLanguage.current.locale)
+        )
     }
 }

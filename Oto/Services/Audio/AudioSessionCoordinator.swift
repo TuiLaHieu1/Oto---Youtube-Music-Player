@@ -20,23 +20,14 @@ public actor AudioSessionCoordinator {
     }
 
     /// Cấu hình và kích hoạt AudioSession cho phát nhạc nền (chỉ chạy ngoài main thread).
-    public func configureAndActivate(force: Bool = false) async throws {
+    public func configureForWebPlayback() async throws {
         #if os(iOS)
-        if isSessionActive && !force { return }
-
         let session = AVAudioSession.sharedInstance()
         try session.setCategory(.playback, mode: .default, policy: .default, options: [])
-
-        if #available(iOS 27.0, *) {
-            try await session.activate(options: [])
-            isSessionActive = true
-            logger.info("AVAudioSession đã được kích hoạt bất đồng bộ (iOS async API).")
-        } else {
-            // iOS 17 Fallback: Chạy an toàn trên cooperative background executor của actor
-            try session.setActive(true)
-            isSessionActive = true
-            logger.info("AVAudioSession đã được kích hoạt trên background actor executor (iOS 17 fallback).")
-        }
+        // WKWebView/WebContent tự kích hoạt audio session khi media bắt đầu phát.
+        // App chỉ đặt category để không kích hoạt session cạnh tranh trước lệnh Play.
+        isSessionActive = false
+        logger.info("Đã cấu hình playback category; WebKit sẽ tự kích hoạt audio session khi phát.")
         #endif
     }
 
@@ -64,7 +55,27 @@ public actor AudioSessionCoordinator {
 
     /// Đánh dấu phiên bị gián đoạn bởi hệ thống mà không gọi setActive đồng bộ.
     public func handleSystemInterruptionBegan() {
-        // Giữ trạng thái isSessionActive nếu hệ thống sẽ tự khôi phục phiên sau cuộc gọi
+        isSessionActive = false
         logger.info("AudioSessionCoordinator ghi nhận sự kiện ngắt từ hệ thống.")
+    }
+}
+
+/// Hợp đồng kích hoạt âm thanh có thể thay bằng fake trong unit test.
+public protocol PlaybackAudioSession: Sendable {
+    func prepareForPlayback() async throws
+    func invalidateForInterruption() async
+}
+
+extension PlaybackAudioSession {
+    public func invalidateForInterruption() async {}
+}
+
+extension AudioSessionCoordinator: PlaybackAudioSession {
+    public func invalidateForInterruption() async {
+        handleSystemInterruptionBegan()
+    }
+
+    public func prepareForPlayback() async throws {
+        try await configureForWebPlayback()
     }
 }

@@ -74,6 +74,32 @@ public final class YTMusicClient: Sendable {
         return try YTMusicParsers.parseSongs(from: data)
     }
 
+    func searchMusic(query: String, scope: SearchScope, continuation: String? = nil) async throws -> MusicSearchPage {
+        var components = URLComponents(string: "https://music.youtube.com/youtubei/v1/search?prettyPrint=false")
+        var body: [String: Any] = ["context": self.clientContext]
+        if let continuation {
+            components?.queryItems?.append(contentsOf: [
+                URLQueryItem(name: "ctoken", value: continuation),
+                URLQueryItem(name: "continuation", value: continuation)
+            ])
+        } else {
+            body["query"] = query
+            switch scope {
+            case .songs: body["params"] = "EgWKAQIIAWoMEA4QChADEAQQCRAF"
+            case .videos: body["params"] = "EgWKAQIQAWoMEA4QChADEAQQCRAF"
+            case .albums: body["params"] = "EgWKAQIYAWoMEA4QChADEAQQCRAF"
+            case .artists: body["params"] = "EgWKAQIgAWoMEA4QChADEAQQCRAF"
+            case .playlists: body["params"] = "EgWKAQIoAWoMEA4QChADEAQQCRAF"
+            case .all: break
+            }
+        }
+        guard let url = components?.url else { throw YTMusicError.invalidURL }
+        var request = self.makeBaseRequest(url: url)
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let data = try await self.perform(request, operation: "search")
+        return try YTMusicParsers.parseMusicSearch(from: data, scope: scope, isContinuation: continuation != nil)
+    }
+
     /// Nạp danh mục trang chủ (Home feed) từ YouTube Music.
     public func fetchHomeFeed() async throws -> YTMusicParsers.HomeFeedContent {
         guard let url = URL(string: "https://music.youtube.com/youtubei/v1/browse?prettyPrint=false") else {
@@ -185,18 +211,18 @@ public final class YTMusicClient: Sendable {
 
     // MARK: - Request Builder
 
-    private var clientContext: [String: Any] {
+    var clientContext: [String: Any] {
         [
             "client": [
                 "clientName": "WEB_REMIX",
                 "clientVersion": Self.webRemixClientVersion,
-                "hl": "vi",
+                "hl": AppLanguage.current.effectiveCode,
                 "gl": "VN"
             ]
         ]
     }
 
-    private func makeBaseRequest(url: URL) -> URLRequest {
+    func makeBaseRequest(url: URL) -> URLRequest {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.timeoutInterval = 10.0
@@ -250,7 +276,7 @@ public final class YTMusicClient: Sendable {
         }
     }
 
-    private func perform(_ request: URLRequest, operation: String) async throws -> Data {
+    func perform(_ request: URLRequest, operation: String) async throws -> Data {
         let generation = await sessionFence.snapshot()
         do {
             let (data, response) = try await session.data(for: request)

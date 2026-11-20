@@ -10,13 +10,21 @@ public struct MiniPlayerView: View {
     }
 
     public var body: some View {
+        let queue = playerVM.queueManager.snapshot()
+        let currentItemID = queue.currentIndex.flatMap { index in
+            queue.items.indices.contains(index) ? queue.items[index].id : nil
+        }
         OtoMiniPlayer(
             song: playerVM.currentSong,
+            queueItemID: currentItemID,
             isPlaying: playerVM.shouldShowPauseButton,
             currentPosition: playerVM.currentPosition,
             duration: playerVM.effectiveDuration,
             onTogglePlayPause: {
                 playerVM.togglePlayPause()
+            },
+            onPrevious: {
+                playerVM.swipeToPreviousTrack()
             },
             onNext: {
                 playerVM.next()

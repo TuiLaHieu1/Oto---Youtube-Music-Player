@@ -24,12 +24,12 @@ public struct OtoErrorState: View {
                 .accessibilityHidden(true)
 
             VStack(spacing: OtoTheme.spacing8) {
-                Text(title)
+                Text(LocalizedStringKey(title))
                     .font(OtoTheme.sectionTitleFont)
                     .foregroundStyle(OtoTheme.primaryText)
                     .multilineTextAlignment(.center)
 
-                Text(message)
+                Text(LocalizedStringKey(message))
                     .font(OtoTheme.subtitleFont)
                     .foregroundStyle(OtoTheme.secondaryText)
                     .multilineTextAlignment(.center)

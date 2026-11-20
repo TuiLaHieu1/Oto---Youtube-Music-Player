@@ -14,9 +14,12 @@ public final class PlayerViewModel {
     public var showQueue: Bool = false
     public var showAuth: Bool = false
     public var playbackErrorMessage: String?
+    var playbackSourceTitle: String?
+    var confirmedVideoSelectionID: String?
     private var loadingWatchdogTask: Task<Void, Never>?
     var isWatchdogActive: Bool { loadingWatchdogTask != nil && !(loadingWatchdogTask?.isCancelled ?? true) }
 
+    private var queueRevision = 0
     public let queueManager: QueueManager
     public let clock: InterpolatedClock
     let backend: any PlaybackBackend
@@ -27,6 +30,9 @@ public final class PlayerViewModel {
     var engineOperationRevision = 0
     var selectionRevision = 0
     var usesRadio = false
+    var waitsForArtistRadio = false
+    var artistRadioEndGeneration: Int?
+    var artistRadioAdvanceWasManual = false
     let catalog: any PlaybackCatalog
     let updatesSystemNowPlaying: Bool
     let logger = Logger(subsystem: "com.oto.music", category: "PlayerViewModel")
@@ -46,10 +52,17 @@ public final class PlayerViewModel {
     ) {
         self.queueManager = queueManager
         self.clock = clock
-        self.backend = backend ?? SingletonPlayerWebView.shared
+        self.backend = backend ?? LocalMusicPlaybackRouter(web: SingletonPlayerWebView.shared)
         self.audioSession = audioSession
         self.catalog = catalog
         self.updatesSystemNowPlaying = updatesSystemNowPlaying
+        let previousQueueObserver = queueManager.onQueueChanged
+        queueManager.onQueueChanged = { [weak self] in
+            previousQueueObserver?()
+            Task { @MainActor [weak self] in
+                self?.queueRevision &+= 1
+            }
+        }
         setupPlayerBridge()
         setupAudioSessionObserver()
         if updatesSystemNowPlaying { setupNowPlayingCommands() }
@@ -63,9 +76,15 @@ public final class PlayerViewModel {
     public var effectiveDuration: TimeInterval {
         runtimeDuration.flatMap { $0.isFinite && $0 > 0 ? $0 : nil } ?? currentSong?.duration ?? 0
     }
-    public var isShuffleEnabled: Bool { queueManager.isShuffleEnabled }
-    public var repeatMode: RepeatMode { queueManager.repeatMode }
-    public var queueItems: [QueueItem] { queueManager.items }
+    var queueSnapshot: QueueManager.Snapshot {
+        _ = queueRevision
+        return queueManager.snapshot()
+    }
+
+    public var isShuffleEnabled: Bool { queueSnapshot.isShuffleEnabled }
+    public var repeatMode: RepeatMode { queueSnapshot.repeatMode }
+    public var queueItems: [QueueItem] { queueSnapshot.items }
+    var canShuffle: Bool { queueItems.count > 1 }
 
     public static func shouldLoadRadioQueue(remainingCount: Int, repeatMode: RepeatMode, userInitiated: Bool) -> Bool {
         (repeatMode != .one || userInitiated) && remainingCount <= 2

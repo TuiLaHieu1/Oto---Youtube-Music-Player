@@ -4,6 +4,7 @@ import OtoCore
 /// Màn hình hiển thị lời bài hát đồng bộ thời gian thực chuẩn Atelier × Spectrum.
 public struct SyncedLyricsView: View {
     @Bindable var lyricsVM: LyricsViewModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var onSeek: (TimeInterval) -> Void
 
     public init(lyricsVM: LyricsViewModel, onSeek: @escaping (TimeInterval) -> Void) {
@@ -28,9 +29,17 @@ public struct SyncedLyricsView: View {
 
     @ViewBuilder
     private var syncedView: some View {
-        ScrollViewReader { proxy in
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                syncedScrollArea(proxy: proxy, edgeSpace: geometry.size.height * 0.5)
+            }
+        }
+    }
+
+    private func syncedScrollArea(proxy: ScrollViewProxy, edgeSpace: CGFloat) -> some View {
+        ZStack(alignment: .bottom) {
             ScrollView(.vertical, showsIndicators: false) {
-                LazyVStack(alignment: .leading, spacing: OtoTheme.spacing24) {
+                VStack(alignment: .leading, spacing: OtoTheme.spacing24) {
                     let indexedLines = Array(lyricsVM.currentDocument.lines.enumerated())
                     ForEach(indexedLines, id: \.element.id) { index, line in
                         syncedLine(line, at: index)
@@ -43,21 +52,50 @@ public struct SyncedLyricsView: View {
                         Spacer()
                     }
                     .padding(.top, OtoTheme.spacing32)
-                    .padding(.bottom, 120)
                 }
                 .padding(.horizontal, OtoTheme.spacing24)
-                .padding(.top, OtoTheme.spacing32)
+                .padding(.vertical, edgeSpace)
             }
             .simultaneousGesture(
-                DragGesture().onChanged { _ in
-                    lyricsVM.userDidScroll()
-                }
+                DragGesture()
+                    .onChanged { _ in lyricsVM.beginManualScroll() }
+                    .onEnded { _ in lyricsVM.finishManualScroll() }
             )
-            .onChange(of: lyricsVM.activeLineIndex) { _, newIndex in
-                guard let newIndex = newIndex, !lyricsVM.userIsScrolling else { return }
-                withAnimation(.easeInOut(duration: 0.4)) {
-                    proxy.scrollTo(newIndex, anchor: .center)
+
+            if lyricsVM.userIsScrolling, lyricsVM.activeLineIndex != nil {
+                Button {
+                    lyricsVM.resumeAutoScroll()
+                } label: {
+                    Label("Về dòng hiện tại", systemImage: "location.fill")
+                        .font(OtoTheme.buttonFont)
+                        .padding(.horizontal, OtoTheme.spacing16)
+                        .frame(minHeight: OtoTheme.minTouchTarget)
+                        .background(OtoTheme.surface, in: Capsule())
                 }
+                .buttonStyle(.plain)
+                .padding(.bottom, OtoTheme.spacing16)
+            }
+        }
+        .onAppear {
+            guard let index = lyricsVM.activeLineIndex, !lyricsVM.userIsScrolling else { return }
+            proxy.scrollTo(index, anchor: .center)
+        }
+        .onChange(of: lyricsVM.activeLineIndex) { _, newIndex in
+            guard let newIndex = newIndex, !lyricsVM.userIsScrolling else { return }
+            scroll(to: newIndex, using: proxy)
+        }
+        .onChange(of: lyricsVM.userIsScrolling) { wasScrolling, isScrolling in
+            guard wasScrolling, !isScrolling, let index = lyricsVM.activeLineIndex else { return }
+            scroll(to: index, using: proxy)
+        }
+    }
+
+    private func scroll(to index: Int, using proxy: ScrollViewProxy) {
+        if reduceMotion {
+            proxy.scrollTo(index, anchor: .center)
+        } else {
+            withAnimation(.easeInOut(duration: 0.32)) {
+                proxy.scrollTo(index, anchor: .center)
             }
         }
     }
@@ -99,31 +137,43 @@ public struct SyncedLyricsView: View {
     private var emptyView: some View {
         VStack(spacing: OtoTheme.spacing12) {
             Spacer()
-            Image(systemName: "quote.bubble")
-                .font(.system(size: 44))
-                .foregroundStyle(OtoTheme.tertiaryText)
-            Text("Chưa có lời cho bài hát này")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(OtoTheme.secondaryText)
+            if lyricsVM.isLoading {
+                ProgressView()
+                Text("Đang tải lời bài hát")
+                    .foregroundStyle(OtoTheme.secondaryText)
+            } else {
+                Image(systemName: "quote.bubble")
+                    .font(.system(size: 44))
+                    .foregroundStyle(OtoTheme.tertiaryText)
+                Text("Chưa có lời cho bài hát này")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(OtoTheme.secondaryText)
+            }
             Spacer()
         }
     }
 
     private func syncedLine(_ line: LyricsLine, at index: Int) -> some View {
         let isCurrent = lyricsVM.activeLineIndex == index
-        return Text(line.text)
-            .font(.system(size: isCurrent ? 28 : 22, weight: .bold, design: .rounded))
-            .foregroundStyle(isCurrent ? Color.primary : Color.primary.opacity(0.35))
-            .blur(radius: isCurrent ? 0 : 0.4)
-            .scaleEffect(isCurrent ? 1.05 : 1.0, anchor: .leading)
-            .animation(.spring(response: 0.35, dampingFraction: 0.75), value: isCurrent)
-            .id(index)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                #if os(iOS)
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                #endif
-                onSeek(line.startTime)
-            }
+        let isUpcoming = index > (lyricsVM.activeLineIndex ?? -1)
+        return Button {
+            #if os(iOS)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            #endif
+            onSeek(line.startTime)
+        } label: {
+            Text(line.text)
+                .font(.system(.title, design: .rounded, weight: .bold))
+                .foregroundStyle(
+                    isCurrent ? OtoTheme.primaryText : OtoTheme.secondaryText.opacity(isUpcoming ? 0.74 : 0.90)
+                )
+                .scaleEffect(isCurrent ? 1.06 : 1, anchor: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.22), value: isCurrent)
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(isCurrent ? .isSelected : [])
+        .id(index)
     }
 }

@@ -6,6 +6,16 @@ public struct FullscreenPlayerView: View {
     @Bindable var playerVM: PlayerViewModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var lyricsVM = LyricsViewModel()
+    @State private var selectedArtist: ArtistReference?
+    @State private var albumLookupSong: Song?
+    @State private var hidesWideLyrics = false
+    @State private var orientation = PlayerWindowOrientation()
+    @State private var rotationDenied = false
+    @State private var videoAvailableID: String?
+    @State private var selectedVideoID: String?
+    @State private var videoIsExpanded = false
+    @GestureState(resetTransaction: Transaction(animation: .easeOut(duration: 0.22)))
+    private var artworkDragOffset: CGFloat = 0
 
     public init(playerVM: PlayerViewModel) {
         self.playerVM = playerVM
@@ -13,22 +23,48 @@ public struct FullscreenPlayerView: View {
 
     public var body: some View {
         GeometryReader { geo in
-            ZStack {
-                AmbientBackgroundView(artworkURL: playerVM.currentSong?.artworkURL, size: geo.size)
-                if geo.size.width >= 760, geo.size.height >= 540 {
-                    widePlayerLayout(geo: geo)
-                } else {
-                    compactPlayerLayout(geo: geo)
+            if geo.size.width >= (geo.size.width > geo.size.height ? 690 : 760) {
+                widePlayerLayout(size: geo.size)
+            } else {
+                compactPlayerLayout(geo: geo).transition(layoutTransition)
+            }
+        }
+        .accessibilityHidden(videoIsExpanded)
+        .overlayPreferenceValue(PlayerVideoAnchor.self) { anchor in
+            if showsVideo, let anchor {
+                PlayerVideoOverlay(anchor: anchor, url: playerVM.currentSong?.artworkURL, expanded: videoIsExpanded) {
+                    withAnimation(reduceMotion ? nil : .smooth(duration: 0.34)) { videoIsExpanded.toggle() }
                 }
             }
         }
-        .onChange(of: playerVM.currentSong) { _, newSong in
-            if let song = newSong {
-                lyricsVM.loadLyrics(for: song)
+        .background(PlayerWindowAnchor(orientation: orientation).allowsHitTesting(false))
+        .alert("Không thể xoay màn hình", isPresented: $rotationDenied) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Thử tắt khóa xoay hoặc mở Oto toàn màn hình rồi thử lại.")
+        }
+        .background {
+            GeometryReader { backgroundGeometry in
+                AmbientBackgroundView(
+                    artworkURL: playerVM.currentSong?.artworkURL, size: backgroundGeometry.size
+                )
             }
+            .ignoresSafeArea()
+        }
+        .task(id: playerVM.currentSong?.id) {
+            selectedVideoID = nil
+            videoIsExpanded = false
+            let availableID = await PlayerVideoAvailability.availableID(for: playerVM.currentSong)
+            if !Task.isCancelled { videoAvailableID = availableID }
+        }
+        .onChange(of: playerVM.currentSong) { _, newSong in
+            if let newSong { lyricsVM.loadLyrics(for: newSong) }
         }
         .onChange(of: playerVM.currentPosition) { _, pos in
             lyricsVM.updatePosition(pos)
+        }
+        .onChange(of: lyricsVM.currentDocument) {
+            lyricsVM.updatePosition(playerVM.currentPosition)
         }
         .onAppear {
             if let song = playerVM.currentSong {
@@ -38,28 +74,45 @@ public struct FullscreenPlayerView: View {
         .sheet(isPresented: $playerVM.showQueue) {
             QueueView(playerVM: playerVM)
         }
+        .sheet(item: $albumLookupSong) { song in
+            NavigationStack {
+                PlayerAlbumLookup(song: song, playerVM: playerVM)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Đóng") { albumLookupSong = nil }
+                        }
+                    }
+            }
+        }
+        .sheet(item: $selectedArtist) { artist in
+            NavigationStack {
+                ArtistDetailView(browseId: artist.browseId, playerVM: playerVM)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Đóng") { selectedArtist = nil }
+                        }
+                    }
+            }
+        }
     }
 
     private func compactPlayerLayout(geo: GeometryProxy) -> some View {
         VStack(spacing: 0) {
-            FullscreenHeaderBar(
-                isExpanded: $playerVM.isExpanded,
-                playingFromTitle: playerVM.currentSong?.album ?? "Quick Picks"
-            )
+            playerHeader()
+                .contentShape(Rectangle())
+                .simultaneousGesture(playerSwipe)
 
             ZStack {
-                artworkView(geo: geo)
-                    .opacity(playerVM.showLyrics ? 0 : 1)
-                    .scaleEffect(reduceMotion ? 1 : (playerVM.showLyrics ? 0.88 : 1.0))
-                    .allowsHitTesting(!playerVM.showLyrics)
-
-                SyncedLyricsView(lyricsVM: lyricsVM) { seekTime in
-                    playerVM.seek(to: seekTime)
+                if playerVM.showLyrics {
+                    SyncedLyricsView(lyricsVM: lyricsVM, onSeek: playerVM.seek)
+                        .transition(layoutTransition)
+                } else {
+                    artworkView(geo: geo)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .simultaneousGesture(playerSwipe)
+                        .transition(layoutTransition)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .opacity(playerVM.showLyrics ? 1 : 0)
-                .scaleEffect(reduceMotion ? 1 : (playerVM.showLyrics ? 1.0 : 0.95))
-                .allowsHitTesting(playerVM.showLyrics)
             }
             .animation(reduceMotion ? nil : OtoTheme.smoothSpring, value: playerVM.showLyrics)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -68,88 +121,145 @@ public struct FullscreenPlayerView: View {
                 trackMetadataView
                 scrubberView
                 transportControls
-                bottomBar
+                bottomBar(isLandscape: geo.size.width > geo.size.height)
             }
             .padding(.bottom, OtoTheme.spacing16)
         }
     }
 
-    /// iPad và cửa sổ rộng giữ player bên trái, lời bên phải theo cùng geometry Light/Dark.
-    private func widePlayerLayout(geo: GeometryProxy) -> some View {
+    private func widePlayerLayout(size: CGSize) -> some View {
         VStack(spacing: 0) {
-            FullscreenHeaderBar(
-                isExpanded: $playerVM.isExpanded,
-                playingFromTitle: playerVM.currentSong?.album ?? "Quick Picks"
-            )
+            playerHeader(wide: true, isLandscape: size.width > size.height)
+                .contentShape(Rectangle())
+                .simultaneousGesture(playerSwipe)
 
-            HStack(alignment: .top, spacing: OtoTheme.spacing32) {
-                VStack(spacing: OtoTheme.spacing24) {
-                    artworkImage(size: min(geo.size.width * 0.34, geo.size.height * 0.46))
-                    trackMetadataView
-                    scrubberView
-                    transportControls
-                    bottomBar
+            let short = size.height < 540
+            HStack(alignment: .top, spacing: short ? 12 : OtoTheme.spacing32) {
+                Group {
+                    if showsVideo {
+                        ScrollView { wideControls(size: size, short: short) }
+                    } else {
+                        ViewThatFits(in: .vertical) {
+                            wideControls(size: size, short: short)
+                            ScrollView { wideControls(size: size, short: short) }
+                        }
+                    }
                 }
-                .frame(maxWidth: 480, maxHeight: .infinity)
+                .frame(width: min(size.width * (hidesWideLyrics ? 0.8 : 0.47), 520))
+                .frame(maxHeight: .infinity)
 
-                SyncedLyricsView(lyricsVM: lyricsVM) { seekTime in
-                    playerVM.seek(to: seekTime)
+                if !hidesWideLyrics {
+                    WideLyricsPanel(lyricsVM: lyricsVM, onSeek: playerVM.seek)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(
-                    RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                        .fill(OtoTheme.surface.opacity(0.78))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                                .stroke(OtoTheme.separator, lineWidth: 0.5)
-                        )
-                )
-                .clipShape(RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous))
             }
-            .padding(.horizontal, OtoTheme.spacing32)
-            .padding(.bottom, OtoTheme.spacing24)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, short ? 12 : OtoTheme.spacing32)
+            .padding(.bottom, short ? 8 : OtoTheme.spacing24)
+        }
+    }
+
+    private var playerSwipe: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .updating($artworkDragOffset) { value, offset, _ in
+                let movement = value.translation
+                if !reduceMotion, abs(movement.width) > abs(movement.height) * 1.5 {
+                    offset = min(100, max(-100, movement.width * 0.65))
+                }
+            }
+            .onEnded { value in
+                let movement = value.translation
+                switch MiniPlayerSwipePolicy.action(translation: movement) {
+                case .previous: playerVM.previous()
+                case .next: playerVM.next()
+                case nil:
+                    if movement.height >= 64, movement.height > abs(movement.width) * 1.5 {
+                        withAnimation(reduceMotion ? nil : OtoTheme.smoothSpring) { playerVM.isExpanded = false }
+                    }
+                }
+            }
+    }
+
+    private func wideControls(size: CGSize, short: Bool) -> some View {
+        let artworkHeight = size.height * (short ? (showsVideo ? 0.36 : 0.26) : 0.44)
+        return VStack(spacing: short ? 6 : OtoTheme.spacing16) {
+            artworkImage(size: min(size.width * (showsVideo ? 0.42 : 0.32), artworkHeight * (showsVideo ? 16 / 9 : 1)),
+                         allowsModeSwitch: true)
+                .contentShape(Rectangle())
+                .simultaneousGesture(playerSwipe)
+            trackMetadataView
+            scrubberView
+            playbackControls(size: short ? 44 : 64)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var layoutTransition: AnyTransition {
+        reduceMotion ? .identity : .opacity.combined(with: .scale(scale: 0.98))
+    }
+    private func playerHeader(wide: Bool = false, isLandscape: Bool = false) -> some View {
+        FullscreenHeaderBar(
+            isExpanded: $playerVM.isExpanded,
+            playingFromTitle: playerVM.playbackSourceTitle ?? ""
+        ) {
+            if !wide, canShowVideo { PlayerMediaModePicker(showsVideo: showsVideo, selectVideo: selectVideo) }
+        } controls: {
+            if wide {
+                landscapeLyricsButton(isLandscape: isLandscape)
+                wideLyricsToggle
+            }
+        } actions: {
+            if let song = playerVM.currentSong {
+                Button("Phát tiếp theo", systemImage: "text.line.first.and.arrowtriangle.forward") {
+                    playerVM.queueManager.insertNext(song: song)
+                }
+                Button("Thêm vào hàng đợi", systemImage: "text.badge.plus") {
+                    playerVM.queueManager.append(song: song)
+                }
+                Button("Hàng đợi", systemImage: "list.bullet") { playerVM.showQueue = true }
+                if !song.isLocal {
+                    if let url = URL(string: "https://music.youtube.com/watch?v=" + song.id) {
+                        ShareLink(item: url) { Label("Chia sẻ bài hát", systemImage: "square.and.arrow.up") }
+                    }
+                    if let album = song.album, !album.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Button("Đi tới album", systemImage: "opticaldisc") { albumLookupSong = song }
+                    }
+                    ForEach(PlayerArtistLinks.menuArtists(for: song)) { artist in
+                        Button(artist.name, systemImage: "music.mic") { selectedArtist = artist }
+                    }
+                }
+            }
         }
     }
 }
 
 private extension FullscreenPlayerView {
-
-    // MARK: - Artwork Component
-
-    @ViewBuilder
     private func artworkView(geo: GeometryProxy) -> some View {
-        Spacer()
-        let artSize = max(0, min(geo.size.width - 64, 340))
-        artworkImage(size: artSize)
-        Spacer()
+        artworkImage(size: max(0, min(geo.size.width - (showsVideo ? 24 : 64), showsVideo ? 600 : 340)))
     }
 
-    private func artworkImage(size: CGFloat) -> some View {
-        AsyncImage(url: playerVM.currentSong?.artworkURL) { image in
-            image.resizable().scaledToFill()
-        } placeholder: {
-            ZStack {
-                RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                    .fill(OtoTheme.secondaryText.opacity(0.12))
-                Image(systemName: "music.note")
-                    .font(.system(size: 72))
-                    .foregroundStyle(OtoTheme.secondaryText)
-            }
-        }
-        .id(playerVM.currentSong?.artworkURL)
-        .frame(width: size, height: size)
-        .clipShape(RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: OtoTheme.cardRadius, style: .continuous)
-                .stroke(OtoTheme.separator.opacity(0.4), lineWidth: 0.5)
+    private func artworkImage(size: CGFloat, allowsModeSwitch: Bool = false) -> some View {
+        PlayerMediaArtwork(
+            url: playerVM.currentSong?.artworkURL, size: size, showsVideo: showsVideo, isPlaying: playerVM.isPlaying,
+            onSwitchMode: allowsModeSwitch && canShowVideo ? { selectVideo(!showsVideo) } : nil
         )
-        .shadow(color: Color.black.opacity(playerVM.isPlaying ? 0.25 : 0.12), radius: 20, x: 0, y: 10)
-        .scaleEffect(reduceMotion ? 1 : (playerVM.isPlaying ? 1.0 : 0.90))
-        .animation(reduceMotion ? nil : OtoTheme.smoothSpring, value: playerVM.isPlaying)
-        .accessibilityLabel("Ảnh bìa \(playerVM.currentSong?.title ?? "bài hát")")
+        .offset(x: artworkDragOffset)
     }
 
-    // MARK: - Track Metadata
+    private var canShowVideo: Bool {
+        guard let id = playerVM.currentSong?.id else { return false }
+        return videoAvailableID == id || playerVM.confirmedVideoSelectionID == id
+    }
+
+    private func selectVideo(_ wantsVideo: Bool) {
+        withAnimation(reduceMotion ? nil : .smooth(duration: 0.28)) {
+            if wantsVideo { playerVM.showLyrics = false }
+            selectedVideoID = wantsVideo ? playerVM.currentSong?.id : nil
+        }
+    }
+
+    private var showsVideo: Bool {
+        selectedVideoID != nil && selectedVideoID == playerVM.currentSong?.id
+    }
 
     private var trackMetadataView: some View {
         HStack {
@@ -160,10 +270,9 @@ private extension FullscreenPlayerView {
                     .foregroundStyle(OtoTheme.primaryText)
 
                 HStack(spacing: 6) {
-                    Text(playerVM.currentSong?.artist ?? "Oto Music")
+                    artistLinks
                         .font(OtoTheme.subtitleFont)
                         .lineLimit(1)
-                        .foregroundStyle(OtoTheme.secondaryText)
 
                     if playerVM.isBuffering {
                         ProgressView()
@@ -177,7 +286,29 @@ private extension FullscreenPlayerView {
         .padding(.horizontal, OtoTheme.spacing32)
     }
 
-    // MARK: - Scrubber
+    @ViewBuilder
+    private var artistLinks: some View {
+        let song = playerVM.currentSong
+        let artists = song.map { PlayerArtistLinks.menuArtists(for: $0) } ?? []
+        if artists.isEmpty {
+            Text(PlayerArtistLinks.artistName(for: song) ?? "Oto Music")
+                .foregroundStyle(OtoTheme.secondaryText)
+        } else {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: OtoTheme.spacing8) {
+                    ForEach(artists) { artist in
+                        Button {
+                            selectedArtist = artist
+                        } label: {
+                            Text(artist.name).underline()
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(OtoTheme.secondaryText)
+                    }
+                }
+            }
+        }
+    }
 
     private var scrubberView: some View {
         OtoScrubber(
@@ -190,24 +321,26 @@ private extension FullscreenPlayerView {
         .padding(.horizontal, OtoTheme.spacing32)
     }
 
-    // MARK: - Controls
-
     private var transportControls: some View {
+        playbackControls(size: 64)
+            .padding(.vertical, 4)
+    }
+
+    private func playbackControls(size: CGFloat) -> some View {
         OtoPlaybackControls(
             isPlaying: playerVM.shouldShowPauseButton,
             isShuffleEnabled: playerVM.isShuffleEnabled,
-            repeatMode: playerVM.repeatMode,
-            playButtonSize: 64,
+            canShuffle: playerVM.canShuffle, repeatMode: playerVM.repeatMode,
+            playButtonSize: size,
             onShuffle: { playerVM.toggleShuffle() },
             onPrevious: { playerVM.previous() },
             onTogglePlayPause: { playerVM.togglePlayPause() },
             onNext: { playerVM.next() },
             onRepeat: { playerVM.toggleRepeat() }
         )
-        .padding(.vertical, 4)
     }
 
-    private var bottomBar: some View {
+    private func bottomBar(isLandscape: Bool) -> some View {
         HStack(spacing: OtoTheme.spacing8) {
             Button {
                 #if os(iOS)
@@ -240,101 +373,28 @@ private extension FullscreenPlayerView {
                     .clipShape(RoundedRectangle(cornerRadius: OtoTheme.buttonRadius, style: .continuous))
             }
             .buttonStyle(.plain)
+            landscapeLyricsButton(isLandscape: isLandscape)
         }
         .padding(.horizontal, OtoTheme.spacing32)
         .padding(.bottom, OtoTheme.spacing16)
     }
-}
 
-// MARK: - Helper Views
-
-private struct AmbientBackgroundView: View {
-    let artworkURL: URL?
-    let size: CGSize
-
-    var body: some View {
-        ZStack {
-            // Nền dự phòng bảo đảm khả năng đọc tuyệt đối theo theme
-            OtoTheme.background.ignoresSafeArea()
-
-            if let artworkURL {
-                AsyncImage(url: artworkURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: size.width, height: size.height)
-                            .clipped()
-                            .blur(radius: 50)
-                            .opacity(0.50)
-                            .transition(.opacity)
-                    default:
-                        Color.clear
-                    }
-                }
-                .id(artworkURL)
-                .animation(.easeInOut(duration: 0.35), value: artworkURL)
-                .ignoresSafeArea()
-            }
-
-            OtoTheme.atmosphere
-                .opacity(artworkURL == nil ? 0 : 0.35)
-                .frame(width: size.width, height: size.height)
-                .ignoresSafeArea()
+    private func landscapeLyricsButton(isLandscape: Bool) -> some View {
+        LyricsLayoutButton(
+            title: isLandscape ? "Trở về bố cục dọc" : "Lời bài hát ngang",
+            icon: isLandscape ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right"
+        ) {
+            if !isLandscape { hidesWideLyrics = false }
+            orientation.request(isLandscape ? .portrait : .landscape) { rotationDenied = true }
         }
     }
-}
 
-private struct FullscreenHeaderBar: View {
-    @Binding var isExpanded: Bool
-    var playingFromTitle: String = "Quick Picks"
-
-    var body: some View {
-        HStack {
-            Button {
-                #if os(iOS)
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                #endif
-                withAnimation(OtoTheme.smoothSpring) {
-                    isExpanded = false
-                }
-            } label: {
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(OtoTheme.secondaryText)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
-                    .contentShape(Rectangle())
-            }
-
-            Spacer()
-
-            VStack(spacing: 2) {
-                Text("PLAYING FROM")
-                    .font(.system(size: 10, weight: .bold))
-                    .tracking(1.0)
-                    .foregroundStyle(OtoTheme.secondaryText)
-                Text(playingFromTitle)
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(OtoTheme.primaryText)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            Button {
-                #if os(iOS)
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                #endif
-            } label: {
-                Image(systemName: "ellipsis")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(OtoTheme.secondaryText)
-                    .frame(minWidth: OtoTheme.minTouchTarget, minHeight: OtoTheme.minTouchTarget)
-                    .contentShape(Rectangle())
-            }
+    private var wideLyricsToggle: some View {
+        LyricsLayoutButton(
+            title: hidesWideLyrics ? "Hiện lời bài hát" : "Ẩn lời bài hát",
+            icon: hidesWideLyrics ? "sidebar.right" : "rectangle"
+        ) {
+            withAnimation(reduceMotion ? nil : OtoTheme.smoothSpring) { hidesWideLyrics.toggle() }
         }
-        .padding(.horizontal, OtoTheme.spacing16)
-        .padding(.top, OtoTheme.spacing8)
     }
 }

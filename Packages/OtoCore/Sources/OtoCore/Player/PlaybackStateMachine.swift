@@ -72,6 +72,9 @@ public struct PlaybackStateMachine: Sendable {
     public private(set) var currentPosition: TimeInterval = 0
     public private(set) var currentGeneration: Int = 0
     private var hasEndedForCurrentTrack: Bool = false
+    // Chỉ nhận ended sau khi engine đã thực sự phát cho generation hiện tại.
+    // Sự kiện ended trễ từ lần load trước không được kết thúc bài vừa nạp lại.
+    public private(set) var hasStartedForCurrentTrack: Bool = false
 
     public init() {}
 
@@ -85,6 +88,7 @@ public struct PlaybackStateMachine: Sendable {
         currentPosition = startSeconds
         currentGeneration += 1
         hasEndedForCurrentTrack = false
+        hasStartedForCurrentTrack = false
         engineState = .buffering
 
         var effects = PlaybackEffects()
@@ -191,6 +195,9 @@ public struct PlaybackStateMachine: Sendable {
         }
 
         engineState = newEngineState
+        if newEngineState == .playing {
+            hasStartedForCurrentTrack = true
+        }
 
         // WebKit KHÔNG ĐƯỢC tự ý đổi userIntent hoặc tự kích hoạt audio session!
         // Nếu WebKit tự ý phát khi người dùng đang ở trạng thái paused, cưỡng chế pause lại
@@ -215,6 +222,7 @@ public struct PlaybackStateMachine: Sendable {
     /// WebKit báo bài hát đã phát hết (ended).
     public mutating func engineTrackEnded(generation: Int) -> PlaybackEffects {
         guard generation == currentGeneration else { return PlaybackEffects() }
+        guard hasStartedForCurrentTrack else { return PlaybackEffects() }
         guard !hasEndedForCurrentTrack else { return PlaybackEffects() }
         hasEndedForCurrentTrack = true
 
@@ -239,6 +247,7 @@ public struct PlaybackStateMachine: Sendable {
 
         currentGeneration += 1
         hasEndedForCurrentTrack = false
+        hasStartedForCurrentTrack = false
         engineState = .buffering
 
         var effects = PlaybackEffects()

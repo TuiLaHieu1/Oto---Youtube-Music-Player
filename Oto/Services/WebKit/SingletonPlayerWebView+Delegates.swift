@@ -62,8 +62,16 @@ extension SingletonPlayerWebView: WKNavigationDelegate {
     }
 
     public func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        handleWebContentTermination()
+    }
+    func handleWebContentTermination() {
         logger.error("WebContent process bị terminate bởi iOS, kiểm tra phục hồi...")
         isBridgeReady = false
+        needsReloadOnPlay = true
+        logger.notice("""
+            Lifecycle webContentTerminated t=\(ProcessInfo.processInfo.systemUptime) \
+            retry=\(self.crashRetryCount) gen=\(self.currentGeneration)
+            """)
 
         guard crashRetryCount < maxCrashRetries else {
             logger.error("Đã vượt quá giới hạn thử lại sau crash (\(self.maxCrashRetries) lần).")

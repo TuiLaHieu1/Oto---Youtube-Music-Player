@@ -126,6 +126,11 @@ extension PlayerViewModel {
     }
     /// Khi app quay về foreground: nếu người dùng đang dừng thì bảo đảm engine cũng dừng, không tự phát.
     public func syncIntentAfterForeground() {
+        logger.notice("""
+            Lifecycle foreground t=\(ProcessInfo.processInfo.systemUptime) \
+            intent=\(String(describing: self.stateMachine.userIntent), privacy: .public) \
+            gen=\(self.stateMachine.currentGeneration)
+            """)
         guard stateMachine.userIntent == .paused, currentSong != nil else { return }
         backend.pause()
     }

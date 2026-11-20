@@ -33,6 +33,49 @@ struct BridgeDeliveryTests {
         #expect(player.pendingLoad == nil)
     }
 
+    @Test("Play sau khi WebContent bị tắt và hết lượt phục hồi vẫn nạp lại đúng bài và vị trí")
+    func playAfterWebContentTerminationReloads() {
+        let player = SingletonPlayerWebView(forTesting: true)
+        var calls: [[String: Any]] = []
+        player.commandExecutor = { _, arguments, completion in
+            calls.append(arguments)
+            completion(.success(true))
+        }
+        player.bridgeURLForTesting = SingletonPlayerWebView.watchURL(for: "first")
+        player.loadVideo(id: "first", generation: 1)
+        player.handleMessageBody([:], type: "ready")
+        player.handleMessageBody(["generation": 1, "videoId": "first"], type: "trackActivated")
+        player.handleMessageBody(
+            ["currentTime": 42.0, "duration": 200.0, "generation": 1, "videoId": "first"], type: "timeUpdate"
+        )
+        player.pause()
+        // iOS tắt WebContent nhiều lần lúc đang dừng cho đến khi hết lượt thử.
+        player.crashRetryCount = player.maxCrashRetries
+        player.handleWebContentTermination()
+        #expect(!player.isBridgeReady)
+        #expect(player.needsReloadOnPlay)
+
+        player.play()
+        #expect(!player.needsReloadOnPlay)
+        #expect(player.pendingLoad?.id == "first")
+        #expect(player.pendingLoad?.startSeconds == 42.0)
+        #expect(player.pendingLoad?.shouldPlay == true)
+        #expect(player.crashRetryCount == 0)
+    }
+
+    @Test("Play bình thường khi WebContent còn sống không nạp lại")
+    func playWithoutTerminationDoesNotReload() {
+        let player = SingletonPlayerWebView(forTesting: true)
+        player.commandExecutor = { _, _, completion in completion(.success(true)) }
+        player.bridgeURLForTesting = SingletonPlayerWebView.watchURL(for: "first")
+        player.loadVideo(id: "first", generation: 1)
+        player.handleMessageBody([:], type: "ready")
+        player.pause()
+        player.play()
+        #expect(!player.needsReloadOnPlay)
+        #expect(player.pendingLoad == nil)
+    }
+
     @Test("JS lỗi giữ pending và báo lỗi đúng bài để retry")
     func failedDeliveryKeepsPending() {
         let player = SingletonPlayerWebView(forTesting: true)

@@ -48,6 +48,8 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
 
     var crashRetryCount = 0
     let maxCrashRetries = 3
+    /// WebContent đã bị iOS tắt và chưa nạp lại; lệnh Play kế tiếp phải dựng lại player.
+    var needsReloadOnPlay = false
 
     public var onTrackActivated: ((_ trackId: String, _ generation: Int) -> Void)?
     public var onPlaybackStateChange: ((_ state: Int, _ generation: Int, _ trackId: String) -> Void)?
@@ -129,6 +131,7 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
         guard startSeconds.isFinite, startSeconds >= 0, generation >= 0,
               let url = Self.watchURL(for: id) else { return }
         if id != requestedVideoId { crashRetryCount = 0 }
+        needsReloadOnPlay = false
         currentGeneration = generation
         requestedVideoId = id
         deliveryToken = nil
@@ -148,6 +151,15 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
 
     public func play() {
         updatePlaybackIntent(shouldPlay: true)
+        // Người dùng bấm Play sau khi iOS đã tắt WebContent: nạp lại đúng bài và vị trí, không im lặng bỏ qua.
+        if needsReloadOnPlay, let descriptor = activeDescriptor {
+            crashRetryCount = 0
+            loadVideo(
+                id: descriptor.id, startSeconds: descriptor.position,
+                generation: descriptor.generation, shouldPlay: true
+            )
+            return
+        }
         guard isBridgeReady else { return }
         webView?.evaluateJavaScript("if (window.otoPlayer) window.otoPlayer.play();")
     }

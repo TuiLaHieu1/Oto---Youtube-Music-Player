@@ -94,9 +94,10 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
             forMainFrameOnly: true
         )
         contentController.addUserScript(userScript)
-        contentController.addUserScript(WKUserScript(
-            source: PlayerIntentScript.source, injectionTime: .atDocumentEnd, forMainFrameOnly: true
-        ))
+        for source in [PlayerIntentScript.source, PlayerPlayabilityScript.source] {
+            contentController.addUserScript(
+                WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
+        }
 
         let config = WebKitManager.shared.makePlayerConfiguration()
         config.userContentController = contentController
@@ -151,7 +152,6 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
 
     public func play() {
         updatePlaybackIntent(shouldPlay: true)
-        // Người dùng bấm Play sau khi iOS đã tắt WebContent: nạp lại đúng bài và vị trí, không im lặng bỏ qua.
         if needsReloadOnPlay, let descriptor = activeDescriptor {
             crashRetryCount = 0
             loadVideo(

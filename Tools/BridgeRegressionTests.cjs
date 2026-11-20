@@ -265,6 +265,41 @@ console.log('PASS: hồi quy bridge, gồm ba lượt Restart trên video đã k
   assert.equal(window.__otoPauseGuard, false, 'Nạp có phát thì tắt chặn');
   console.log('PASS: PlayerIntentScript giữ ý định dừng và không chặn lệnh phát');
 }
+{
+  // PlayerPlayabilityScript: báo mã lỗi của player và màn hình lỗi, mỗi lỗi một lần cho mỗi bài.
+  const script = fs.readFileSync(
+    path.join(__dirname, '../Oto/Services/WebKit/PlayerPlayabilityScript.swift'), 'utf8'
+  ).split('"""')[1];
+  const posted = [], ticks = [];
+  let errorHandler = null, errorText = '';
+  const player = {
+    addEventListener(name, handler) { if (name === 'onError') errorHandler = handler; },
+    querySelector: () => errorText ? { textContent: errorText } : null,
+  };
+  const window = {
+    __otoCurrentGeneration: 3, __otoCurrentVideoId: 'VEVO1',
+    webkit: { messageHandlers: { otoPlayback: { postMessage: value => posted.push(value) } } },
+  };
+  vm.runInNewContext(script, {
+    window, document: { getElementById: id => id === 'movie_player' ? player : null },
+    setInterval: callback => { ticks.push(callback); }, WeakSet, Number, Math, String,
+  });
+  ticks[0]();
+  assert.equal(posted.length, 0, 'Không lỗi thì không báo');
+  errorHandler({ data: 150 });
+  errorHandler({ data: 150 });
+  assert.deepEqual(JSON.parse(JSON.stringify(posted)),
+    [{ type: 'error', code: 150, generation: 3, videoId: 'VEVO1' }], 'Cùng lỗi chỉ báo một lần');
+  errorText = 'Video unavailable';
+  ticks[0]();
+  assert.equal(posted.at(-1).code, 150);
+  window.__otoCurrentVideoId = 'NEXT';
+  errorText = '';
+  errorHandler({ data: 101 });
+  assert.equal(posted.at(-1).code, 101);
+  assert.equal(posted.at(-1).videoId, 'NEXT', 'Lỗi gắn đúng bài hiện tại');
+  console.log('PASS: PlayerPlayabilityScript báo lỗi player một lần cho mỗi bài');
+}
 async function testVideoPresentation() {
   const swift = fs.readFileSync(path.join(__dirname, '../Oto/Services/WebKit/PlayerWebViewContainer.swift'), 'utf8');
   const source = swift.split('"""')[1];

@@ -295,11 +295,29 @@ def video_endpoint_types(document, video_id):
     return dict(types)
 
 
+def playability_summary(document, requested_id):
+    """Tóm tắt khả năng phát công khai của một video; không lưu tiêu đề, URL luồng hay dữ liệu cá nhân."""
+    status = document.get("playabilityStatus") if isinstance(document.get("playabilityStatus"), dict) else {}
+    details = document.get("videoDetails") if isinstance(document.get("videoDetails"), dict) else {}
+    micro = (document.get("microformat") or {}).get("microformatDataRenderer") or {}
+    renderer = (document.get("microformat") or {}).get("playerMicroformatRenderer") or {}
+    return {
+        "status": status.get("status"),
+        "reason": status.get("reason"),
+        "playable_in_embed": renderer.get("embed") is not None or micro.get("embed") is not None,
+        "has_streaming_data": isinstance(document.get("streamingData"), dict),
+        "music_video_type": details.get("musicVideoType"),
+        "response_video_id_matches_request": details.get("videoId") == requested_id,
+        "available_countries": len(renderer.get("availableCountries") or []),
+        "error_screen_keys": sorted((status.get("errorScreen") or {}).keys()),
+    }
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--client-version")
     parser.add_argument("--library-shape-input", type=Path)
-    parser.add_argument("--operation", choices=["home", "home-continuation", "search", "artist", "artist-runs", "library-albums", "library-artists", "lyrics-next", "lyrics-browse", "recording-code-player", "recording-code-release"], default="home")
+    parser.add_argument("--operation", choices=["home", "home-continuation", "search", "artist", "artist-runs", "library-albums", "library-artists", "lyrics-next", "lyrics-browse", "recording-code-player", "recording-code-release", "playability"], default="home")
     parser.add_argument("--video-types", action="store_true")
     parser.add_argument("--album-artist-shape", action="store_true")
     parser.add_argument("--artist-radio", action="store_true")
@@ -339,7 +357,7 @@ def main():
         if not re.fullmatch(r"OLAK5uy_[A-Za-z0-9_-]+", playlist):
             parser.error("--release-playlist-id cần mã playlist phát hành công khai")
         payload["browseId"] = "VL" + playlist
-    elif args.operation == "recording-code-player":
+    elif args.operation in ("recording-code-player", "playability"):
         if not args.video_id or len(args.video_id) != 11 or not args.video_id.replace("-", "").replace("_", "").isalnum():
             parser.error("--video-id phải là YouTube video ID hợp lệ")
         operation = "player"
@@ -368,7 +386,9 @@ def main():
     with urlopen(request, timeout=15) as response:
         document = json.load(response)
     counts = {}
-    if args.operation == "recording-code-player":
+    if args.operation == "playability":
+        counts = playability_summary(document, args.video_id)
+    elif args.operation == "recording-code-player":
         collect(document.get("microformat"), counts)
         collect(document.get("videoDetails"), counts)
         counts["has_video_details"] = isinstance(document.get("videoDetails"), dict)

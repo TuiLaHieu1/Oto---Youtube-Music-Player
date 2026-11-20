@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import WebKit
 import os
 
@@ -301,11 +302,26 @@ extension SingletonPlayerWebView {
             handleTrackEnded(body)
         case "remoteCommand":
             handleRemoteCommand(body)
+        case "remotePlayTrace":
+            logRemotePlayTrace(body)
         case "error":
             handleError(body)
         default:
             break
         }
+    }
+
+    private func logRemotePlayTrace(_ body: [String: Any]) {
+        guard let identity = validatedIdentity(from: body),
+              let paused = body["paused"] as? Bool,
+              let visible = body["visible"] as? Bool,
+              let focused = body["focused"] as? Bool,
+              let blocked = body["blocked"] as? Bool else { return }
+        let appState = UIApplication.shared.applicationState.rawValue
+        logger.notice("""
+            Playback remote trace t=\(ProcessInfo.processInfo.systemUptime) gen=\(identity.generation) \
+            pauseGuard=\(paused) visible=\(visible) focused=\(focused) blocked=\(blocked) appState=\(appState)
+            """)
     }
 
     private func validatedIdentity(from body: [String: Any]) -> (generation: Int, trackId: String)? {

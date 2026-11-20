@@ -67,9 +67,16 @@ private let bridgeJavaScript = """
             if (command === 'pause') window.__otoUserPaused = true;
             // Khi trang đã lấy lại focus, bỏ Play được giao muộn lúc mở app.
             // Chỉ lệnh play đã qua native mới được gỡ cờ pause.
-            if (command === 'play' && window.__otoUserPaused === true &&
-                document.visibilityState === 'visible' && document.hasFocus()) return;
-            post('remoteCommand', Object.assign({ command: command }, messageIdentity()));
+            const body = Object.assign({ command: command }, messageIdentity());
+            if (command === 'play') {
+              const paused = window.__otoUserPaused === true;
+              const visible = document.visibilityState === 'visible';
+              const focused = visible && document.hasFocus();
+              const blocked = paused && focused;
+              post('remotePlayTrace', Object.assign(body, { paused, visible, focused, blocked }));
+              if (blocked) return;
+            }
+            post('remoteCommand', body);
           };
         };
         const next = transport('next');

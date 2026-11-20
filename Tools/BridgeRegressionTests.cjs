@@ -190,6 +190,9 @@ function fixture() {
   f.document.visibilityState = 'hidden';
   f.mediaActions.play();
   assert.deepEqual(commands(), ['pause', 'play', 'play']);
+  const traces = f.messages.filter(message => message.type === 'remotePlayTrace')
+    .map(({ paused, visible, focused, blocked }) => [paused, visible, focused, blocked]);
+  assert.deepEqual(traces, [[true, true, true, true], [true, true, false, false], [true, false, false, false]]);
   assert.equal(f.window.__otoUserPaused, true, 'Chờ native xác nhận Play trước khi mở khóa pause');
   f.window.otoPlayer.play();
   assert.equal(f.window.__otoUserPaused, false);

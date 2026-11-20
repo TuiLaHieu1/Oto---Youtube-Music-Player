@@ -131,9 +131,13 @@ extension QueueManager {
             return song
         }
 
+        // Người dùng chủ động sang bài khác thì Repeat One không còn khóa bài.
+        let leavesRepeatOne = userInitiated && repeatModeStorage == .one
+
         guard let cur = currentIndexStorage else {
             currentIndexStorage = 0
             let song = itemsStorage[0].song
+            if leavesRepeatOne { repeatModeStorage = .off }
             if shuffleEnabledStorage { hasNavigatedInShuffle = true }
             lock.unlock()
             notifyQueueChanged()
@@ -143,6 +147,7 @@ extension QueueManager {
         if cur + 1 < itemsStorage.count {
             currentIndexStorage = cur + 1
             let song = itemsStorage[cur + 1].song
+            if leavesRepeatOne { repeatModeStorage = .off }
             if shuffleEnabledStorage { hasNavigatedInShuffle = true }
             lock.unlock()
             notifyQueueChanged()
@@ -174,6 +179,7 @@ extension QueueManager {
         guard let cur = currentIndexStorage else {
             currentIndexStorage = 0
             let song = itemsStorage[0].song
+            if repeatModeStorage == .one { repeatModeStorage = .off }
             if shuffleEnabledStorage { hasNavigatedInShuffle = true }
             lock.unlock()
             notifyQueueChanged()
@@ -183,6 +189,7 @@ extension QueueManager {
         if cur > 0 {
             currentIndexStorage = cur - 1
             let song = itemsStorage[cur - 1].song
+            if repeatModeStorage == .one { repeatModeStorage = .off }
             if shuffleEnabledStorage { hasNavigatedInShuffle = true }
             lock.unlock()
             notifyQueueChanged()
@@ -215,10 +222,23 @@ extension QueueManager {
         }
         currentIndexStorage = index
         let song = itemsStorage[index].song
+        if repeatModeStorage == .one { repeatModeStorage = .off }
         if shuffleEnabledStorage { hasNavigatedInShuffle = true }
         lock.unlock()
         notifyQueueChanged()
         return song
+    }
+
+    /// Đưa Repeat One về Off khi người dùng chọn bài mới; Repeat All giữ nguyên.
+    public func exitRepeatOne() {
+        lock.lock()
+        guard repeatModeStorage == .one else {
+            lock.unlock()
+            return
+        }
+        repeatModeStorage = .off
+        lock.unlock()
+        notifyQueueChanged()
     }
 }
 

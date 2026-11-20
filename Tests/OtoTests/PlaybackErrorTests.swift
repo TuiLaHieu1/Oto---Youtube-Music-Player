@@ -72,6 +72,11 @@ struct PlaybackErrorTests {
         await waitForAudioSessionOperation(player)
         #expect(player.currentSong?.id == second.id)
         #expect(backend.loadCalls.last?.id == second.id)
+        // Sang bài khác bằng tay thì Repeat One tự tắt; bật lại để kiểm tra tự lặp.
+        #expect(player.repeatMode == .off)
+        player.toggleRepeat()
+        player.toggleRepeat()
+        #expect(player.repeatMode == .one)
 
         backend.onTrackEnded?(2, second.id)
         await waitForAudioSessionOperation(player)

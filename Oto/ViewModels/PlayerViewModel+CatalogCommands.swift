@@ -11,6 +11,7 @@ extension PlayerViewModel {
         cancelCatalogSelection()
         usesRadio = false
         waitsForArtistRadio = false
+        queueManager.exitRepeatOne()
         queueManager.setQueue(songs: [song])
         applyEffects(stateMachine.userPlay(song: song))
     }
@@ -100,6 +101,7 @@ extension PlayerViewModel {
         cancelCatalogSelection()
         usesRadio = continuesWithRadio
         waitsForArtistRadio = continuesWithRadio
+        queueManager.exitRepeatOne()
         queueManager.setQueue(songs: songs, startIndex: startIndex)
         if let targetSong = queueManager.currentSong {
             applyEffects(stateMachine.userPlay(song: targetSong))

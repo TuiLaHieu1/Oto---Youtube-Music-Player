@@ -4,17 +4,70 @@ import Foundation
 
 @Suite("Player Queue and Clock Tests")
 struct PlayerTests {
-    @Test("Repeat One không chặn nút Previous hoặc Next thủ công")
-    func manualTransportWithRepeatOne() {
+    @Test("Người dùng sang bài khác thì Repeat One tự về Off")
+    func userTransportLeavesRepeatOne() {
+        let first = Song(id: "first", title: "First", artist: "Artist")
+        let second = Song(id: "second", title: "Second", artist: "Artist")
+        let third = Song(id: "third", title: "Third", artist: "Artist")
+
+        // Next thủ công
+        let nextQueue = QueueManager()
+        nextQueue.setQueue(songs: [first, second, third])
+        nextQueue.toggleRepeat()
+        nextQueue.toggleRepeat()
+        #expect(nextQueue.repeatMode == .one)
+        #expect(nextQueue.next(userInitiated: true)?.id == second.id)
+        #expect(nextQueue.repeatMode == .off)
+        #expect(nextQueue.next()?.id == third.id)
+
+        // Previous thực sự đổi bài
+        let previousQueue = QueueManager()
+        previousQueue.setQueue(songs: [first, second], startIndex: 1)
+        previousQueue.toggleRepeat()
+        previousQueue.toggleRepeat()
+        #expect(previousQueue.previous()?.id == first.id)
+        #expect(previousQueue.repeatMode == .off)
+
+        // Chọn bài trong hàng đợi
+        let skipQueue = QueueManager()
+        skipQueue.setQueue(songs: [first, second, third])
+        skipQueue.toggleRepeat()
+        skipQueue.toggleRepeat()
+        #expect(skipQueue.skipToIndex(2)?.id == third.id)
+        #expect(skipQueue.repeatMode == .off)
+    }
+
+    @Test("Hết bài tự nhiên dưới Repeat One vẫn lặp, Repeat All không bị tắt")
+    func repeatOneKeepsAutomaticReplayAndRepeatAllUntouched() {
         let first = Song(id: "first", title: "First", artist: "Artist")
         let second = Song(id: "second", title: "Second", artist: "Artist")
         let queue = QueueManager()
-        queue.setQueue(songs: [first, second], startIndex: 1)
+        queue.setQueue(songs: [first, second])
+        queue.toggleRepeat()
+        queue.toggleRepeat()
+        #expect(queue.next()?.id == first.id)
+        #expect(queue.next()?.id == first.id)
+        #expect(queue.repeatMode == .one)
+
+        let allQueue = QueueManager()
+        allQueue.setQueue(songs: [first, second])
+        allQueue.toggleRepeat()
+        #expect(allQueue.repeatMode == .all)
+        _ = allQueue.next(userInitiated: true)
+        _ = allQueue.previous()
+        #expect(allQueue.repeatMode == .all)
+    }
+
+    @Test("Previous ở đầu hàng đợi không đổi bài thì giữ Repeat One")
+    func previousAtQueueStartKeepsRepeatOne() {
+        let first = Song(id: "first", title: "First", artist: "Artist")
+        let second = Song(id: "second", title: "Second", artist: "Artist")
+        let queue = QueueManager()
+        queue.setQueue(songs: [first, second])
         queue.toggleRepeat()
         queue.toggleRepeat()
         #expect(queue.previous()?.id == first.id)
-        #expect(queue.next()?.id == first.id)
-        #expect(queue.next(userInitiated: true)?.id == second.id)
+        #expect(queue.repeatMode == .one)
     }
 
     @Test("Ended trùng chỉ chuyển bài một lần cho mỗi generation")

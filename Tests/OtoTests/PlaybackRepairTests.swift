@@ -163,7 +163,7 @@ struct PlaybackRepairTests {
         player.clearForSignOut()
     }
 
-    @Test("Repeat One tự phát lại đúng bài, Next thủ công vẫn sang bài kế")
+    @Test("Repeat One tự phát lại đúng bài, Next thủ công sang bài kế và tắt Repeat One")
     func repeatOneReplaysSameTrackOnlyOnce() async {
         let backend = MockPlaybackBackend()
         let player = PlayerViewModel(backend: backend, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
@@ -195,6 +195,7 @@ struct PlaybackRepairTests {
         await player.waitForPendingAudioOperation()
         #expect(player.currentSong?.id == second.id)
         #expect(backend.loadCalls.last?.id == second.id)
+        #expect(player.repeatMode == .off)
         player.clearForSignOut()
     }
 
@@ -267,16 +268,10 @@ struct PlaybackRepairTests {
         player.resume()
         await player.waitForPendingAudioOperation()
         #expect(backend.playCount == 1)
-        player.toggleRepeat()
-        player.toggleRepeat()
         player.next()
         await player.waitForPendingAudioOperation()
         #expect(player.currentSong?.id == second.id)
         backend.onPlaybackStateChange?(1, 2, second.id)
-        backend.onTrackEnded?(2, second.id)
-        await player.waitForPendingAudioOperation()
-        #expect(backend.loadCalls.last?.id == second.id)
-        #expect(backend.loadCalls.last?.generation == 3)
         player.previous()
         await player.waitForPendingAudioOperation()
         #expect(player.currentSong?.id == first.id)

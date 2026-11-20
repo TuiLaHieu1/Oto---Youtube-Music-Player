@@ -42,7 +42,7 @@ private actor ArtworkFetchGate {
     }
 }
 
-@Suite("Ảnh Lock Screen")
+@Suite("Ảnh Lock Screen", .serialized)
 @MainActor
 struct NowPlayingArtworkTests {
     @Test("Cập nhật tiến độ không tải lại ảnh đang chờ")
@@ -113,7 +113,12 @@ struct NowPlayingArtworkTests {
         }
         #expect(await gate.cancelledCount == 1)
         await gate.finishRequest(with: redData)
-        for _ in 0..<10 { await Task.yield() }
+        for _ in 0..<1_000 {
+            let current = MPNowPlayingInfoCenter.default().nowPlayingInfo
+            let hasTitle = current?[MPMediaItemPropertyTitle] as? String == "A"
+            if hasTitle, current?[MPMediaItemPropertyArtwork] != nil { break }
+            await Task.yield()
+        }
         let info = MPNowPlayingInfoCenter.default().nowPlayingInfo
         #expect(info?[MPMediaItemPropertyTitle] as? String == "A")
         let artwork = info?[MPMediaItemPropertyArtwork] as? MPMediaItemArtwork

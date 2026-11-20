@@ -39,7 +39,8 @@ actor HomeLoadCounter {
     }
 }
 
-@Suite("Home chỉ nạp mạng khi cần")
+extension SharedSessionStateTests {
+@Suite("Home chỉ nạp mạng khi cần", .serialized)
 @MainActor
 struct HomeFeedLoadTests {
     private func makeSource(_ counter: HomeLoadCounter) -> HomeFeedSource {
@@ -229,6 +230,7 @@ struct HomeFeedLoadTests {
     }
 }
 
+}
 extension HomeLoadCounter {
     func recordContinuation() {
         continuationFetches += 1

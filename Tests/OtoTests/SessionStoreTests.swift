@@ -3,6 +3,11 @@ import Foundation
 @testable import Oto
 @testable import OtoCore
 
+/// SessionStore.shared.signOut() xóa mọi HomeViewModel đang sống; các suite dùng nó phải chạy tuần tự.
+@Suite("Trạng thái phiên dùng chung", .serialized)
+struct SharedSessionStateTests {}
+
+extension SharedSessionStateTests {
 @Suite("SessionStore Lifecycle & Cache Cleaning Tests", .serialized)
 struct SessionStoreTests {
     @Test("registerResetHandler executes registered handlers on signOut")
@@ -46,4 +51,5 @@ struct SessionStoreTests {
         #expect(homeVM.listenAgain.isEmpty)
         #expect(homeVM.recentlyPlayed.isEmpty)
     }
+}
 }

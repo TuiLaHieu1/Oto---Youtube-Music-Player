@@ -56,6 +56,9 @@ public struct SettingsView: View {
                     hapticsProbeSection
                 }
                 #endif
+                #if DEBUG && OTO_STREAM_PROBE
+                StreamProbeSection(playerVM: self.playerVM)
+                #endif
             }
             .scrollContentBackground(.hidden)
             .background(OtoTheme.background.ignoresSafeArea())

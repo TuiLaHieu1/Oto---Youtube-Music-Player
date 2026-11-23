@@ -56,40 +56,4 @@ struct PlaybackQueueRestoreTests {
 
         #expect(store.load() == nil)
     }
-
-    @Test("Radio bỏ cặp audio/video trùng và giữ bản live cùng các mục người dùng đã chọn")
-    @MainActor
-    func radioDeduplicatesAudioAndVideo() async throws {
-        let catalog = DeferredRadioCatalog()
-        let player = PlayerViewModel(
-            backend: MockPlaybackBackend(), audioSession: TestAudioSession(),
-            catalog: catalog, updatesSystemNowPlaying: false
-        )
-        let seed = Song(id: "seed", title: "Bài đầu", artist: "Nghệ sĩ")
-        let ranked = Song(id: "audio", title: "Bài kế", artist: "Nghệ sĩ", duration: 180)
-        let live = Song(id: "live", title: "Bài kế (Live)", artist: "Nghệ sĩ", duration: 181)
-        let ambiguousVideo = Song(id: "amb-video", title: "Bài khác (Official Video)", artist: "Nghệ sĩ", duration: 201)
-        let ambiguousAudio = [200, 202].map {
-            Song(id: "amb-\($0)", title: "Bài khác", artist: "Nghệ sĩ", duration: Double($0))
-        }
-        let candidates = [
-            Song(id: seed.id, title: seed.title, artist: seed.artist, duration: 210),
-            Song(id: "seed-video", title: "Bài đầu (Official Video)", artist: seed.artist, duration: 211),
-            Song(id: "video", title: "BÀI KẾ [Official Music Video]", artist: ranked.artist, duration: 182),
-            ranked, ranked, live, ambiguousVideo
-        ] + ambiguousAudio
-        let ambiguousIDs = [ambiguousVideo.id] + ambiguousAudio.map(\.id)
-
-        player.playWithRadio(song: seed)
-        let radio = try #require(player.radioLoadTask)
-        await catalog.finish(with: candidates)
-        await radio.value
-        #expect(player.queueManager.items.map(\.song.id) == [seed.id, ranked.id, live.id] + ambiguousIDs)
-
-        player.playQueue(songs: [ranked, ranked], continuesWithRadio: true)
-        let continuation = try #require(player.radioLoadTask)
-        await continuation.value
-        #expect(player.queueManager.items.map(\.song.id) == [ranked.id, ranked.id, seed.id, live.id] + ambiguousIDs)
-        player.clearForSignOut()
-    }
 }

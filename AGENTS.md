@@ -53,6 +53,13 @@ The repository currently contains planning documents, not a working app or verif
 - Treat WKWebView as a candidate backend until device evidence supports it. Audio-session flags and a passing macOS implementation do not establish iOS background compatibility.
 - Activate the audio session when playback requires it, and handle interruption/route changes according to user intent. Do not interrupt other audio at app launch.
 
+## Ngoại lệ khảo sát stream YouTube Music (chỉ nhánh `spike/ytm-avplayer-hls`)
+- Chủ dự án đã đọc Điều khoản YouTube và Chính sách API, hiểu rủi ro (vi phạm điều khoản dịch vụ, tài khoản có thể bị gắn cờ) và chọn khảo sát việc phát HLS của YouTube Music bằng AVPlayer cho mục đích cá nhân. Xem `docs/adr/0002-khao-sat-avplayer-hls-ytm.md`.
+- Ngoại lệ chỉ áp dụng cho nhánh khảo sát, sau cờ biên dịch `OTO_STREAM_PROBE` trong bản Debug. Không merge vào `main`, không push, không phát tán bản build. Làm bản thật cần một quyết định riêng của chủ dự án.
+- Vẫn cấm: vượt DRM (Widevine/FairPlay), tự tạo PO token hoặc giả lập BotGuard ngoài trang chính chủ, tự viết lại phần giải mã chữ ký hoặc tham số `n`, private API, phát im lặng, chặn quảng cáo. Nếu HLS cần một trong các việc này thì dừng và báo lại.
+- Log chỉ ghi enum, số đếm và cờ. Không ghi URL stream, token, cookie, ID bài hay phản hồi gốc. Không lưu phản hồi `player` ra file.
+- Request `player` dùng phiên đăng nhập sẵn có của Oto, chỉ đọc, do chủ dự án bấm kích hoạt; không tự gửi lặp hay gửi hàng loạt.
+
 ## API and lyrics work
 
 - Prefer verified API requests for catalog data; WebKit is limited to the selected session/playback integration. Innertube is undocumented: isolate its adapter and expose errors clearly.

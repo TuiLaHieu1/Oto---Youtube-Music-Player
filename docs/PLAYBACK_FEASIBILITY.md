@@ -74,3 +74,11 @@ Follow-up:
 - Nếu không đạt background auto-next hoặc phiên đăng nhập phù hợp, báo chủ dự án để đổi hướng. Không dùng silent track/private API hoặc thay nguồn nhạc mà không thống nhất.
 
 Qua hai máy chỉ xác nhận hai cấu hình. Hỗ trợ rộng iOS/iPadOS 17+ cần build/deployment validation, kiểm tra API availability và runtime trên OS cũ khi có thiết bị; kết quả chưa có vẫn ghi NT.
+
+## Khảo sát AVPlayer với HLS YouTube Music (nhánh khảo sát)
+Chỉ chạy trên `spike/ytm-avplayer-hls` với cờ `OTO_STREAM_PROBE`. Quyết định và điều khoản: `adr/0002-khao-sat-avplayer-hls-ytm.md`.
+- **M1:** đọc player response trong trang đã đăng nhập, chỉ ghi cờ, số đếm và tên client.
+- **M2:** request native `player` qua `YTMusicClient` với hai biến thể user-agent (iPhone hiện tại, Safari Mac như WebView). Ghi loại kết quả, số định dạng, có SABR không, số giây còn hạn.
+- **Một bài:** AVPlayer tối giản, xin URL lúc foreground, WebKit dừng hẳn. Ghi `systemUptime` của scene phase, lệnh native Play/Pause, vị trí media và `timeControlStatus`. Đạt khi vị trí tăng trước foreground và có tiếng.
+- **Ma trận:** chỉ chạy khi phép thử một bài đạt. Ghi thêm dữ liệu di động tiêu tốn cho mỗi bài.
+Kết quả M1/M2/một bài không thay thế các ca A1–P14 ở trên cho backend WebKit.

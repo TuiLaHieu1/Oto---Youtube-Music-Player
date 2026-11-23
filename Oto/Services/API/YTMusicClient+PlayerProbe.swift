@@ -1,4 +1,4 @@
-#if OTO_STREAM_PROBE
+#if DEBUG && OTO_STREAM_PROBE
 import Foundation
 import OSLog
 

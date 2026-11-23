@@ -1,4 +1,4 @@
-#if OTO_STREAM_PROBE
+#if DEBUG && OTO_STREAM_PROBE
 import Foundation
 import Testing
 @testable import Oto
@@ -7,8 +7,9 @@ import Testing
 struct PlayerStreamProbeScriptTests {
     private func body(_ overrides: [String: Any] = [:]) -> [String: Any] {
         var base: [String: Any] = [
-            "type": "streamProbe", "generation": 4, "hasAPI": true, "hasResponse": true, "status": "OK",
-            "hasStreamingData": true, "hasHLS": true, "hasSABR": false,
+            "type": "streamProbe", "generation": 4, "attempts": 1, "hasAPI": true, "apiError": false,
+            "hasResponse": true, "matchesTrack": true, "errorWithoutDetails": false, "status": "OK",
+            "streamingDataKind": "ok", "hlsKind": "ok", "hasSABR": false,
             "formatCount": 1, "adaptiveFormatCount": 3, "clientName": "WEB_REMIX"
         ]
         for (key, value) in overrides { base[key] = value }
@@ -22,7 +23,7 @@ struct PlayerStreamProbeScriptTests {
         #expect(summary.adaptiveFormatCount == 3)
         #expect(client == "WEB_REMIX")
         let noHLS = try #require(PlayerStreamProbeScript.summary(
-            from: self.body(["hasHLS": false, "hasSABR": true]), currentGeneration: 4
+            from: self.body(["hlsKind": "missing", "hasSABR": true]), currentGeneration: 4
         ))
         #expect(noHLS.0.outcome == .validNoHLS)
         #expect(noHLS.0.hasSABR)
@@ -31,7 +32,7 @@ struct PlayerStreamProbeScriptTests {
     @Test("Generation cũ hoặc message sai kiểu bị bỏ qua")
     func staleOrMalformed() {
         #expect(PlayerStreamProbeScript.summary(from: self.body(), currentGeneration: 5) == nil)
-        #expect(PlayerStreamProbeScript.summary(from: self.body(["hasHLS": "yes"]), currentGeneration: 4) == nil)
+        #expect(PlayerStreamProbeScript.summary(from: self.body(["hlsKind": 1]), currentGeneration: 4) == nil)
         #expect(PlayerStreamProbeScript.summary(from: [:], currentGeneration: 4) == nil)
     }
 
@@ -40,7 +41,16 @@ struct PlayerStreamProbeScriptTests {
         let noAPI = try #require(PlayerStreamProbeScript.summary(
             from: self.body(["hasAPI": false, "hasResponse": false, "status": "none"]), currentGeneration: 4
         ))
-        #expect(noAPI.0.outcome == .schemaMismatch)
+        #expect(noAPI.0.outcome == .notObserved)
+        let otherTrack = try #require(PlayerStreamProbeScript.summary(
+            from: self.body(["matchesTrack": false]), currentGeneration: 4
+        ))
+        #expect(otherTrack.0.outcome == .notObserved)
+        let errorPage = try #require(PlayerStreamProbeScript.summary(
+            from: self.body(["matchesTrack": false, "errorWithoutDetails": true, "status": "LOGIN_REQUIRED"]),
+            currentGeneration: 4
+        ))
+        #expect(errorPage.0.outcome == .unplayable(.loginRequired))
         let blocked = try #require(PlayerStreamProbeScript.summary(
             from: self.body(["status": "UNPLAYABLE", "clientName": "<script>"]), currentGeneration: 4
         ))
@@ -50,6 +60,16 @@ struct PlayerStreamProbeScriptTests {
             from: self.body(["formatCount": -1]), currentGeneration: 4
         ))
         #expect(badCount.0.outcome == .schemaMismatch)
+        let missingStreaming = try #require(PlayerStreamProbeScript.summary(
+            from: self.body(["streamingDataKind": "missing", "hlsKind": "missing"]), currentGeneration: 4
+        ))
+        #expect(missingStreaming.0.outcome == .validNoHLS)
+        for overrides in [["streamingDataKind": "other"], ["hlsKind": "other"]] {
+            let broken = try #require(PlayerStreamProbeScript.summary(
+                from: self.body(overrides), currentGeneration: 4
+            ))
+            #expect(broken.0.outcome == .schemaMismatch, "Căn với cách M2 phân loại")
+        }
     }
 }
 #endif

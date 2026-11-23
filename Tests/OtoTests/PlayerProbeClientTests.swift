@@ -1,4 +1,4 @@
-#if OTO_STREAM_PROBE
+#if DEBUG && OTO_STREAM_PROBE
 import Foundation
 import os
 import Testing
@@ -116,6 +116,8 @@ struct PlayerProbeClientTests {
             (.init(status: 403, body: Data(), failure: nil), .forbidden),
             (.init(status: 429, body: Data(), failure: nil), .rateLimited),
             (.init(status: 503, body: Data(), failure: nil), .server),
+            (.init(status: 400, body: Data(), failure: nil), .httpOther),
+            (.init(status: 404, body: Data(), failure: nil), .httpOther),
             (.init(status: 200, body: Data(), failure: .notConnectedToInternet), .transport)
         ]
         for (stub, expected) in cases {
@@ -130,7 +132,7 @@ struct PlayerProbeClientTests {
     func invalidVideoIDSkipsNetwork() async {
         let client = self.makeClient(.init(status: 200, body: Data(), failure: nil))
         let result = await client.probePlayer(videoId: "bad id", variant: .iphone)
-        #expect(result.summary.outcome == .requestError(.other))
+        #expect(result.summary.outcome == .requestError(.invalidInput))
         #expect(PlayerProbeURLProtocol.captured.withLock { $0 } == nil)
     }
 

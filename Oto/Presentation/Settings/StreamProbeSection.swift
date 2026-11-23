@@ -8,6 +8,7 @@ struct StreamProbeSection: View {
     let client: YTMusicClient
     @State private var lines: [String] = []
     @State private var isRunning = false
+    @State private var probeTask: Task<Void, Never>?
 
     init(playerVM: PlayerViewModel, client: YTMusicClient = .shared) {
         self.playerVM = playerVM
@@ -31,6 +32,11 @@ struct StreamProbeSection: View {
                     .textSelection(.enabled)
             }
         }
+        .onDisappear {
+            self.probeTask?.cancel()
+            self.probeTask = nil
+            self.isRunning = false
+        }
     }
 
     private var currentVideoID: String? {
@@ -42,12 +48,15 @@ struct StreamProbeSection: View {
         guard let videoID = self.currentVideoID else { return }
         self.isRunning = true
         self.lines = []
-        Task { @MainActor in
+        self.probeTask = Task { @MainActor in
             for variant in [StreamProbeVariant.iphone, .safariMac] {
+                guard !Task.isCancelled else { break }
                 let result = await self.client.probePlayer(videoId: videoID, variant: variant)
+                guard !Task.isCancelled else { break }
                 self.lines.append(result.summary.logLine(variant: variant))
             }
             self.isRunning = false
+            self.probeTask = nil
         }
     }
 }

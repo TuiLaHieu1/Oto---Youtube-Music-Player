@@ -1,4 +1,4 @@
-#if OTO_STREAM_PROBE
+#if DEBUG && OTO_STREAM_PROBE
 import Foundation
 import Testing
 @testable import Oto
@@ -65,6 +65,33 @@ struct StreamProbeParserTests {
         let result = try YTMusicParsers.parseStreamProbe(from: data(body), now: now)
         #expect(result.summary.outcome == .hasHLS)
         #expect(result.summary.secondsUntilExpiry == nil)
+    }
+
+    @Test("expire vô cực, tràn số hoặc số thực không làm crash và không có hạn")
+    func hostileExpiry() throws {
+        for value in ["inf", "1e400", "1e300", "nan", "-5", "99999999999999999999", "1800000600.5"] {
+            let body: [String: Any] = [
+                "playabilityStatus": ["status": "OK"],
+                "streamingData": ["hlsManifestUrl": "https://manifest.example.invalid/index.m3u8?expire=\(value)"]
+            ]
+            let result = try YTMusicParsers.parseStreamProbe(from: data(body), now: now)
+            #expect(result.summary.outcome == .hasHLS)
+            #expect(result.summary.secondsUntilExpiry == nil)
+        }
+    }
+
+    @Test("streamingData null là thiếu; URL HLS không phải https hợp lệ là sai cấu trúc")
+    func nullAndInvalidHLS() throws {
+        let null = try YTMusicParsers.parseStreamProbe(
+            from: data(["playabilityStatus": ["status": "OK"], "streamingData": NSNull()]), now: now
+        )
+        #expect(null.summary.outcome == .validNoHLS)
+        for bad in ["not a url", "http://manifest.example.invalid/x.m3u8", "file:///tmp/x.m3u8"] {
+            let body: [String: Any] = ["playabilityStatus": ["status": "OK"], "streamingData": ["hlsManifestUrl": bad]]
+            let result = try YTMusicParsers.parseStreamProbe(from: data(body), now: now)
+            #expect(result.summary.outcome == .schemaMismatch)
+            #expect(result.hlsURL == nil)
+        }
     }
 
     @Test("Chỉ có SABR: hợp lệ nhưng không có HLS")
@@ -143,6 +170,8 @@ struct StreamProbeParserTests {
         #expect(StreamProbeRequestError(YTMusicError.rateLimited(retryAfter: 3)) == .rateLimited)
         #expect(StreamProbeRequestError(YTMusicError.transport("x")) == .transport)
         #expect(StreamProbeRequestError(YTMusicError.serverError(statusCode: 503)) == .server)
+        #expect(StreamProbeRequestError(YTMusicError.invalidResponse) == .httpOther)
+        #expect(StreamProbeRequestError(YTMusicError.invalidURL) == .invalidInput)
         #expect(StreamProbeRequestError(URLError(.timedOut)) == .transport)
         #expect(StreamProbeRequestError(CancellationError()) == .cancelled)
     }

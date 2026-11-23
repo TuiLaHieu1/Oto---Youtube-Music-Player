@@ -1,4 +1,4 @@
-#if OTO_STREAM_PROBE
+#if DEBUG && OTO_STREAM_PROBE
 import Foundation
 
 /// Trạng thái playability đã lọc qua danh sách cho phép; không giữ chuỗi `reason` của YouTube.
@@ -13,8 +13,10 @@ enum StreamProbePlayability: String, Sendable, Equatable {
 }
 
 /// Lỗi request được tách riêng từng loại để không gộp 401/403/429 thành một.
+/// Mã HTTP khác 401/403/429/5xx gộp vào `httpOther`;
+/// mã cụ thể nằm trong log `operation=player-probe` của YTMusicClient.
 enum StreamProbeRequestError: String, Sendable, Equatable {
-    case unauthorized, forbidden, rateLimited, server, transport, cancelled, other
+    case unauthorized, forbidden, rateLimited, server, httpOther, transport, invalidInput, cancelled, other
 
     init(_ error: any Error) {
         switch error {
@@ -27,7 +29,9 @@ enum StreamProbeRequestError: String, Sendable, Equatable {
             case .rateLimited: self = .rateLimited
             case .serverError: self = .server
             case .transport: self = .transport
-            default: self = .other
+            case .invalidResponse: self = .httpOther
+            case .invalidURL: self = .invalidInput
+            case .parsingError: self = .other
             }
         default: self = .other
         }
@@ -39,6 +43,8 @@ enum StreamProbeOutcome: Sendable, Equatable {
     case validNoHLS
     case unplayable(StreamProbePlayability)
     case schemaMismatch
+    /// Chỉ dùng cho M1: trang chưa có player API, API lỗi, hoặc response không thuộc bài đang yêu cầu.
+    case notObserved
     case requestError(StreamProbeRequestError)
 
     var label: String {
@@ -47,6 +53,7 @@ enum StreamProbeOutcome: Sendable, Equatable {
         case .validNoHLS: return "validNoHLS"
         case .unplayable(let status): return "unplayable(\(status.rawValue))"
         case .schemaMismatch: return "schemaMismatch"
+        case .notObserved: return "notObserved"
         case .requestError(let kind): return "requestError(\(kind.rawValue))"
         }
     }
@@ -103,7 +110,7 @@ extension YTMusicParsers {
             let kind = StreamProbePlayability(rawValue: status) ?? .other
             return StreamProbeResult(summary: .failure(.unplayable(kind)), hlsURL: nil)
         }
-        let rawStreaming = json["streamingData"]
+        let rawStreaming = json["streamingData"].flatMap { $0 is NSNull ? nil : $0 }
         guard rawStreaming != nil else {
             return StreamProbeResult(summary: .failure(.validNoHLS), hlsURL: nil)
         }
@@ -112,11 +119,16 @@ extension YTMusicParsers {
               let adaptive = Self.optionalArray(streaming["adaptiveFormats"]) else {
             return StreamProbeResult(summary: .failure(.schemaMismatch), hlsURL: nil)
         }
-        let rawHLS = streaming["hlsManifestUrl"]
-        if rawHLS != nil, !(rawHLS is String) {
-            return StreamProbeResult(summary: .failure(.schemaMismatch), hlsURL: nil)
+        let rawHLS = streaming["hlsManifestUrl"].flatMap { $0 is NSNull ? nil : $0 }
+        var hlsURL: URL?
+        if let rawHLS {
+            // Có trường HLS nhưng không phải URL https hợp lệ là sai cấu trúc, không phải "không có HLS".
+            guard let text = rawHLS as? String, let url = URL(string: text),
+                  url.scheme == "https", url.host != nil else {
+                return StreamProbeResult(summary: .failure(.schemaMismatch), hlsURL: nil)
+            }
+            hlsURL = url
         }
-        let hlsURL = (rawHLS as? String).flatMap(URL.init(string:)).flatMap { $0.scheme == "https" ? $0 : nil }
         let expiresIn = (streaming["expiresInSeconds"] as? String).flatMap(Int.init)
         let expiry = hlsURL.flatMap { Self.secondsUntilExpiry(of: $0, now: now) } ?? (hlsURL != nil ? expiresIn : nil)
         let summary = StreamProbeSummary(
@@ -145,8 +157,9 @@ extension YTMusicParsers {
                 raw = parts[index + 1]
             }
         }
-        guard let raw, let epoch = TimeInterval(raw), epoch > 0 else { return nil }
-        return Int(epoch - now.timeIntervalSince1970)
+        // Chỉ nhận số nguyên trong khoảng hợp lý để không tràn số với giá trị lạ như "inf" hay "1e400".
+        guard let raw, let epoch = Int(raw), epoch > 0, epoch < 32_503_680_000 else { return nil }
+        return epoch - Int(now.timeIntervalSince1970)
     }
 }
 #endif

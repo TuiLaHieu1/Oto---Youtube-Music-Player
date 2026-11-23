@@ -303,13 +303,13 @@ console.log('PASS: hồi quy bridge, gồm ba lượt Restart trên video đã k
   console.log('PASS: PlayerPlayabilityScript báo lỗi player một lần cho mỗi bài');
 }
 {
-  // PlayerStreamProbeScript (khảo sát M1): một mẫu mỗi generation, payload không có URL hay ID.
+  // PlayerStreamProbeScript (khảo sát M1): chờ tối đa 5 lượt, báo cả response lỗi, không gửi URL hay ID.
   const script = fs.readFileSync(
     path.join(__dirname, '../Oto/Services/WebKit/PlayerStreamProbeScript.swift'), 'utf8'
   ).split('"""')[1];
   const posted = [], ticks = [];
+  let api = null;
   let response = null;
-  const api = { getPlayerResponse: () => response };
   const window = {
     __otoCurrentGeneration: 7, __otoCurrentVideoId: 'VID00000001',
     ytcfg: { get: key => key === 'INNERTUBE_CLIENT_NAME' ? 'WEB_REMIX' : null },
@@ -319,29 +319,50 @@ console.log('PASS: hồi quy bridge, gồm ba lượt Restart trên video đã k
     window, document: { getElementById: id => id === 'movie_player' ? api : null, querySelector: () => null },
     setInterval: callback => { ticks.push(callback); },
   });
-  ticks[0]();
-  assert.equal(posted.length, 0, 'Chưa có response của đúng bài thì chưa báo');
+  const tick = () => ticks[0]();
+  tick();
+  assert.equal(posted.length, 0, 'API chưa sẵn ở lượt đầu thì chưa khóa generation');
+  api = { getPlayerResponse: () => response };
   response = { videoDetails: { videoId: 'OTHER000001' }, playabilityStatus: { status: 'OK' } };
-  ticks[0]();
-  assert.equal(posted.length, 0, 'Response của bài khác bị bỏ qua');
+  tick();
+  assert.equal(posted.length, 0, 'Response của bài khác chưa được báo ngay');
   response = {
     videoDetails: { videoId: 'VID00000001' }, playabilityStatus: { status: 'OK' },
     streamingData: { hlsManifestUrl: 'https://secret.example/hls.m3u8', adaptiveFormats: [{}, {}] },
   };
-  ticks[0]();
-  ticks[0]();
+  tick();
+  tick();
   assert.equal(posted.length, 1, 'Mỗi generation chỉ một mẫu');
   const sent = JSON.stringify(posted[0]);
   assert.ok(!sent.includes('secret.example') && !sent.includes('VID00000001'), 'Không gửi URL hay ID');
-  assert.equal(posted[0].hasHLS, true);
+  assert.equal(posted[0].hlsKind, 'ok');
+  assert.equal(posted[0].matchesTrack, true);
   assert.equal(posted[0].adaptiveFormatCount, 2);
-  assert.equal(posted[0].clientName, 'WEB_REMIX');
+  assert.equal(posted[0].attempts, 3);
+  // Response lỗi không có videoDetails vẫn được báo ngay.
   window.__otoCurrentGeneration = 8;
-  response.videoDetails.videoId = 'VID00000001';
-  response.playabilityStatus.status = 'WEIRD';
-  ticks[0]();
-  assert.equal(posted[1].status, 'OTHER', 'Trạng thái lạ không đi qua nguyên văn');
-  console.log('PASS: PlayerStreamProbeScript chỉ gửi cờ và số đếm, một mẫu mỗi generation');
+  response = { playabilityStatus: { status: 'LOGIN_REQUIRED', reason: 'secret reason' } };
+  tick();
+  assert.equal(posted.length, 2);
+  assert.equal(posted[1].status, 'LOGIN_REQUIRED');
+  assert.equal(posted[1].errorWithoutDetails, true);
+  assert.ok(!JSON.stringify(posted[1]).includes('secret'), 'Không gửi reason');
+  // Lệch bài: sau 5 lượt báo với matchesTrack=false; trạng thái lạ không đi qua nguyên văn.
+  window.__otoCurrentGeneration = 9;
+  response = { videoDetails: { videoId: 'OTHER000001' }, playabilityStatus: { status: 'WEIRD' } };
+  for (let i = 0; i < 5; i += 1) tick();
+  assert.equal(posted.length, 3);
+  assert.equal(posted[2].matchesTrack, false);
+  assert.equal(posted[2].attempts, 5);
+  assert.equal(posted[2].status, 'OTHER');
+  // API ném lỗi được tách khỏi không có API.
+  window.__otoCurrentGeneration = 10;
+  api = { getPlayerResponse: () => { throw new Error('boom'); } };
+  for (let i = 0; i < 5; i += 1) tick();
+  assert.equal(posted[3].hasAPI, true);
+  assert.equal(posted[3].apiError, true);
+  assert.equal(posted[3].hasResponse, false);
+  console.log('PASS: PlayerStreamProbeScript chờ API, báo response lỗi, tách lệch bài và API lỗi');
 }
 async function testVideoPresentation() {
   const swift = fs.readFileSync(path.join(__dirname, '../Oto/Services/WebKit/PlayerWebViewContainer.swift'), 'utf8');

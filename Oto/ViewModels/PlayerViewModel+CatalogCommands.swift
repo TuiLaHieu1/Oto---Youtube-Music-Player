@@ -50,10 +50,7 @@ extension PlayerViewModel {
                 let radioSongs = try await self.catalog.fetchUpNextQueue(videoId: videoId)
                 guard !Task.isCancelled, revision == self.selectionRevision, self.usesRadio,
                       self.currentSong?.id == videoId else { return }
-                var queuedIDs = Set(self.queueManager.items.map { $0.song.id })
-                let remaining = self.waitsForArtistRadio
-                    ? radioSongs.filter { queuedIDs.insert($0.id).inserted }
-                    : radioSongs.filter { $0.id != videoId }
+                let remaining = Self.uniqueRadioSongs(radioSongs, queued: self.queueManager.items.map(\.song))
                 if !remaining.isEmpty {
                     self.queueManager.appendQueue(songs: remaining)
                     self.logger.info("Đã nạp \(remaining.count) bài hát Radio Up Next cho video \(videoId)")
@@ -61,6 +58,68 @@ extension PlayerViewModel {
             } catch {
                 self.logger.warning("Không thể nạp Radio Up Next cho video \(videoId): \(error.localizedDescription)")
             }
+        }
+    }
+
+    private static func uniqueRadioSongs(_ candidates: [Song], queued: [Song]) -> [Song] {
+        let queuedIDs = Set(queued.map(\.id))
+        var recordings: [String: RadioRecording] = [:]
+        // Nếu bài gốc thiếu thời lượng, dùng thông tin từ mục Up Next có cùng ID.
+        for song in queued + candidates where recordings[song.id] == nil {
+            recordings[song.id] = RadioRecording(song)
+        }
+        let audio = recordings.filter { !$0.value.hasVideoLabel }
+        var seenIDs = queuedIDs
+        for (id, video) in recordings where video.hasVideoLabel {
+            let matches = audio.filter { video.matches($0.value) }
+            guard matches.count == 1, let counterpartID = matches.first?.key else { continue }
+            // Giữ lựa chọn đã có trong hàng chờ. Với đề xuất mới, ưu tiên audio.
+            seenIDs.insert(queuedIDs.contains(id) ? counterpartID : id)
+        }
+        return candidates.filter { seenIDs.insert($0.id).inserted }
+    }
+
+    private struct RadioRecording {
+        let title: String
+        let artist: String
+        let artistID: String?
+        let album: String
+        let duration: TimeInterval
+        let hasVideoLabel: Bool
+
+        init?(_ song: Song) {
+            guard !song.isLocal, song.duration.isFinite, song.duration > 0 else { return nil }
+            // Chỉ bỏ nhãn định dạng ở cuối tiêu đề. Giữ nguyên Live, Remix và các tên phiên bản khác.
+            let originalTitle = Self.normalized(song.title)
+            let videoTitle = originalTitle.replacingOccurrences(
+                of: #"\s*[(\[]((official )?music video|official video)[)\]]$"#,
+                with: "",
+                options: .regularExpression
+            )
+            let title = videoTitle.replacingOccurrences(
+                of: #"\s*(\(official audio\)|\[official audio\])$"#,
+                with: "",
+                options: .regularExpression
+            )
+            let artist = Self.normalized(song.artist)
+            guard !title.isEmpty, !artist.isEmpty, artist != "nhiều nghệ sĩ" else { return nil }
+            self.title = title
+            self.artist = artist
+            self.artistID = song.artists.first?.browseId
+            self.album = Self.normalized(song.album ?? "")
+            self.duration = song.duration
+            self.hasVideoLabel = videoTitle != originalTitle
+        }
+
+        func matches(_ other: Self) -> Bool {
+            self.title == other.title && self.artist == other.artist
+                && (self.artistID == nil || other.artistID == nil || self.artistID == other.artistID)
+                && (self.album.isEmpty || other.album.isEmpty || self.album == other.album)
+                && abs(self.duration - other.duration) <= 3
+        }
+
+        private static func normalized(_ value: String) -> String {
+            value.split(whereSeparator: \.isWhitespace).joined(separator: " ").lowercased()
         }
     }
 

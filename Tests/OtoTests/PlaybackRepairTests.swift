@@ -306,7 +306,7 @@ struct PlaybackRepairTests {
     }
 }
 
-private actor DeferredRadioCatalog: PlaybackCatalog {
+actor DeferredRadioCatalog: PlaybackCatalog {
     private var request: CheckedContinuation<[Song], Never>?
     private var result: [Song]?
 

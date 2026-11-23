@@ -310,6 +310,22 @@ def playability_summary(document, requested_id):
         "response_video_id_matches_request": details.get("videoId") == requested_id,
         "available_countries": len(renderer.get("availableCountries") or []),
         "error_screen_keys": sorted((status.get("errorScreen") or {}).keys()),
+        **stream_shape(document),
+    }
+
+
+def stream_shape(document):
+    """Chỉ đếm hình dạng streamingData; không in URL, chữ ký hay thời điểm hết hạn tuyệt đối."""
+    streaming = document.get("streamingData")
+    if not isinstance(streaming, dict):
+        return {"has_hls": False, "format_count": 0, "adaptive_format_count": 0, "has_sabr": False}
+    formats = streaming.get("formats")
+    adaptive = streaming.get("adaptiveFormats")
+    return {
+        "has_hls": isinstance(streaming.get("hlsManifestUrl"), str),
+        "format_count": len(formats) if isinstance(formats, list) else -1,
+        "adaptive_format_count": len(adaptive) if isinstance(adaptive, list) else -1,
+        "has_sabr": isinstance(streaming.get("serverAbrStreamingUrl"), str),
     }
 
 

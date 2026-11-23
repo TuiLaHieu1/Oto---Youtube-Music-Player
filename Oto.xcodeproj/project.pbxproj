@@ -35,6 +35,7 @@
 		A10100312CE0000100000001 /* Oto/ViewModels/LibraryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200312CE0000100000001 /* Oto/ViewModels/LibraryViewModel.swift */; };
 		A10100322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift */; };
 		A10100332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */; };
+		5350524F4245000100000001 /* Oto/Services/API/YTMusicParsers+StreamProbe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5350524F4245000100000002 /* Oto/Services/API/YTMusicParsers+StreamProbe.swift */; };
 		A10100332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift */; };
 		C40200012CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift in Sources */ = {isa = PBXBuildFile; fileRef = C40200022CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift */; };
 		A10100342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */; };
@@ -66,6 +67,7 @@
 		F3C0A2220000000000000001 /* Tests/OtoTests/RepeatOneSelectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C0A2220000000000000002 /* Tests/OtoTests/RepeatOneSelectionTests.swift */; };
 		F3C0A4440000000000000001 /* Tests/OtoTests/PlaybackIntentSyncTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C0A4440000000000000002 /* Tests/OtoTests/PlaybackIntentSyncTests.swift */; };
 		F3C0A8880000000000000001 /* Tests/OtoTests/PlaybackUnavailableTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C0A8880000000000000002 /* Tests/OtoTests/PlaybackUnavailableTests.swift */; };
+		5350524F4245000200000001 /* Tests/OtoTests/StreamProbeParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5350524F4245000200000002 /* Tests/OtoTests/StreamProbeParserTests.swift */; };
 		F3C0A5770000000000000001 /* Tests/OtoTests/YTMusicLyricsProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C0A5770000000000000002 /* Tests/OtoTests/YTMusicLyricsProviderTests.swift */; };
 		F3C0A5660000000000000001 /* Tests/OtoTests/CatalogIdentityRepairTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C0A5660000000000000002 /* Tests/OtoTests/CatalogIdentityRepairTests.swift */; };
 		F3C0A5550000000000000001 /* Tests/OtoTests/BridgeDeliveryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3C0A5550000000000000002 /* Tests/OtoTests/BridgeDeliveryTests.swift */; };
@@ -135,6 +137,7 @@
 		A10200312CE0000100000001 /* Oto/ViewModels/LibraryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/ViewModels/LibraryViewModel.swift; sourceTree = SOURCE_ROOT; };
 		A10200322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Library/LikedSongsView.swift; sourceTree = SOURCE_ROOT; };
 		A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/API/YTMusicParsers.swift; sourceTree = SOURCE_ROOT; };
+		5350524F4245000100000002 /* Oto/Services/API/YTMusicParsers+StreamProbe.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicParsers+StreamProbe.swift"; sourceTree = SOURCE_ROOT; };
 		A10200332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicParsers+Queue.swift"; sourceTree = SOURCE_ROOT; };
 		C40200022CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicParsers+HomeContinuation.swift"; sourceTree = SOURCE_ROOT; };
 		A10200342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/WebKit/PlayerWebViewContainer.swift; sourceTree = SOURCE_ROOT; };
@@ -166,6 +169,7 @@
 		F3C0A2220000000000000002 /* Tests/OtoTests/RepeatOneSelectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/RepeatOneSelectionTests.swift; sourceTree = SOURCE_ROOT; };
 		F3C0A4440000000000000002 /* Tests/OtoTests/PlaybackIntentSyncTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/PlaybackIntentSyncTests.swift; sourceTree = SOURCE_ROOT; };
 		F3C0A8880000000000000002 /* Tests/OtoTests/PlaybackUnavailableTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/PlaybackUnavailableTests.swift; sourceTree = SOURCE_ROOT; };
+		5350524F4245000200000002 /* Tests/OtoTests/StreamProbeParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/StreamProbeParserTests.swift; sourceTree = SOURCE_ROOT; };
 		F3C0A5770000000000000002 /* Tests/OtoTests/YTMusicLyricsProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/YTMusicLyricsProviderTests.swift; sourceTree = SOURCE_ROOT; };
 		F3C0A5660000000000000002 /* Tests/OtoTests/CatalogIdentityRepairTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/CatalogIdentityRepairTests.swift; sourceTree = SOURCE_ROOT; };
 		F3C0A5550000000000000002 /* Tests/OtoTests/BridgeDeliveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tests/OtoTests/BridgeDeliveryTests.swift; sourceTree = SOURCE_ROOT; };
@@ -334,6 +338,7 @@
 				A10200382CE0000100000001 /* Oto/Services/Audio/AudioSessionObserver.swift */,
 				A102000D2CE0000100000001 /* Oto/Services/Audio/NowPlayingManager.swift */,
 				A10200332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift */,
+				5350524F4245000100000002 /* Oto/Services/API/YTMusicParsers+StreamProbe.swift */,
 				A10200332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift */,
 				C40200022CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift */,
 				A10200552CE0000100000001 /* Oto/Services/API/YTMusicParsers+SpeedDial.swift */,
@@ -368,6 +373,7 @@
 				F3C0A2220000000000000002 /* Tests/OtoTests/RepeatOneSelectionTests.swift */,
 				F3C0A4440000000000000002 /* Tests/OtoTests/PlaybackIntentSyncTests.swift */,
 				F3C0A8880000000000000002 /* Tests/OtoTests/PlaybackUnavailableTests.swift */,
+				5350524F4245000200000002 /* Tests/OtoTests/StreamProbeParserTests.swift */,
 				F3C0A5770000000000000002 /* Tests/OtoTests/YTMusicLyricsProviderTests.swift */,
 				F3C0A5660000000000000002 /* Tests/OtoTests/CatalogIdentityRepairTests.swift */,
 				F3C0A5550000000000000002 /* Tests/OtoTests/BridgeDeliveryTests.swift */,
@@ -517,6 +523,7 @@
 				A10100322CE0000100000001 /* Oto/Presentation/Library/LikedSongsView.swift in Sources */,
 				A10100572CE0000100000001 /* Oto/Presentation/Library/PlaylistDetailView.swift in Sources */,
 				A10100332CE0000100000001 /* Oto/Services/API/YTMusicParsers.swift in Sources */,
+				5350524F4245000100000001 /* Oto/Services/API/YTMusicParsers+StreamProbe.swift in Sources */,
 				A10100332CE0000100000002 /* Oto/Services/API/YTMusicParsers+Queue.swift in Sources */,
 				C40200012CE0000100000001 /* Oto/Services/API/YTMusicParsers+HomeContinuation.swift in Sources */,
 				A10100342CE0000100000001 /* Oto/Services/WebKit/PlayerWebViewContainer.swift in Sources */,
@@ -557,6 +564,7 @@
 				F3C0A2220000000000000001 /* Tests/OtoTests/RepeatOneSelectionTests.swift in Sources */,
 				F3C0A4440000000000000001 /* Tests/OtoTests/PlaybackIntentSyncTests.swift in Sources */,
 				F3C0A8880000000000000001 /* Tests/OtoTests/PlaybackUnavailableTests.swift in Sources */,
+				5350524F4245000200000001 /* Tests/OtoTests/StreamProbeParserTests.swift in Sources */,
 				F3C0A5770000000000000001 /* Tests/OtoTests/YTMusicLyricsProviderTests.swift in Sources */,
 				F3C0A5660000000000000001 /* Tests/OtoTests/CatalogIdentityRepairTests.swift in Sources */,
 				F3C0A5550000000000000001 /* Tests/OtoTests/BridgeDeliveryTests.swift in Sources */,

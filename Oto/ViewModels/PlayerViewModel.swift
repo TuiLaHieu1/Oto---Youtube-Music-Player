@@ -38,7 +38,6 @@ public final class PlayerViewModel {
     let updatesSystemNowPlaying: Bool
     let logger = Logger(subsystem: "com.oto.music", category: "PlayerViewModel")
     var stateMachine = PlaybackStateMachine()
-    private var positionTimerTask: Task<Void, Never>?
     var radioLoadTask: Task<Void, Never>?
     var playlistLoadTask: Task<Void, Never>?
     var albumLoadTask: Task<Void, Never>?
@@ -116,7 +115,6 @@ public final class PlayerViewModel {
         cancelLoadingWatchdog()
         playbackErrorMessage = nil
         cancelCatalogSelection()
-        positionTimerTask?.cancel()
         clock.pause(at: 0)
         currentPosition = 0
         runtimeDuration = nil
@@ -146,12 +144,11 @@ extension PlayerViewModel {
             scheduleEngineOperation()
         }
         if effects.shouldPauseEngine {
-            clock.pause()
+            clock.pause(at: stateMachine.currentPosition)
             backend.pause()
-            stopPositionTracking()
         }
         if let seekTime = effects.shouldSeekEngine {
-            clock.seek(to: seekTime)
+            clock.pause(at: seekTime)
             backend.seek(to: seekTime)
             currentPosition = seekTime
         }
@@ -245,13 +242,11 @@ extension PlayerViewModel {
         let engineState: EnginePlaybackState = (stateCode == 1) ? .playing : ((stateCode == 2) ? .paused : .buffering)
         applyEffects(stateMachine.engineStateChanged(engineState, generation: generation))
 
-        if engineState == .playing {
+        if engineState == .playing, stateMachine.userIntent == .playing {
             cancelLoadingWatchdog()
             playbackErrorMessage = nil
-            if !clock.isPlaying { clock.play(from: currentPosition, rate: 1.0) }
-            startPositionTracking()
         } else if engineState == .paused || engineState == .buffering {
-            clock.pause()
+            clock.pause(at: stateMachine.currentPosition)
             if stateMachine.userIntent == .playing, stateMachine.interruptionState == .active {
                 if !isWatchdogActive { startLoadingWatchdog(for: generation) }
             } else { cancelLoadingWatchdog() }
@@ -265,14 +260,13 @@ extension PlayerViewModel {
         guard current.isFinite, current >= 0 else { return }
 
         if duration.isFinite, duration > 0 { runtimeDuration = duration }
-        let displayedPosition = Self.stableDisplayedPosition(
-            previous: currentPosition, candidate: current
-        )
-        stateMachine.engineTimeUpdated(currentTime: displayedPosition, generation: generation)
-        if abs(clock.currentPosition() - current) > 0.5 { clock.seek(to: current) }
-        currentPosition = displayedPosition
+        // UI lấy vị trí từ media để không chạy đồng hồ khi engine báo playing nhưng đang đứng.
+        let mediaPosition = Self.stableDisplayedPosition(previous: stateMachine.currentPosition, candidate: current)
+        stateMachine.engineTimeUpdated(currentTime: mediaPosition, generation: generation)
+        clock.pause(at: mediaPosition)
+        currentPosition = mediaPosition
         if updatesSystemNowPlaying { NowPlayingManager.shared.updateNowPlaying(
-            song: currentSong, isPlaying: isPlaying, currentTime: displayedPosition, duration: effectiveDuration
+            song: currentSong, isPlaying: isPlaying, currentTime: mediaPosition, duration: effectiveDuration
         ) }
     }
 
@@ -318,25 +312,6 @@ extension PlayerViewModel {
         mgr.onNextCommand = { [weak self] in Task { @MainActor in self?.next() } }
         mgr.onPreviousCommand = { [weak self] in Task { @MainActor in self?.previous() } }
         mgr.onSeekCommand = { [weak self] pos in Task { @MainActor in self?.seek(to: pos) } }
-    }
-    func startPositionTracking() {
-        positionTimerTask?.cancel()
-        positionTimerTask = Task { [weak self] in
-            while !Task.isCancelled {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                guard let self, self.stateMachine.userIntent == .playing else { break }
-                if self.isPlaying {
-                    self.currentPosition = Self.stableDisplayedPosition(
-                        previous: self.currentPosition,
-                        candidate: self.clock.currentPosition()
-                    )
-                }
-            }
-        }
-    }
-    private func stopPositionTracking() {
-        positionTimerTask?.cancel()
-        positionTimerTask = nil
     }
 }
 

@@ -13,7 +13,6 @@ extension PlayerViewModel {
         audioSessionActivationPending = false
         audioSessionActivationGeneration = nil
         queueStore.clear()
-        stopPositionTracking()
         isExpanded = false
         showLyrics = false
         showQueue = false

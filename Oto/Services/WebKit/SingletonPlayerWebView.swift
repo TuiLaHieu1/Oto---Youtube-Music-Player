@@ -95,7 +95,12 @@ public final class SingletonPlayerWebView: NSObject, PlaybackBackend {
             forMainFrameOnly: true
         )
         contentController.addUserScript(userScript)
-        for source in [PlayerIntentScript.source, PlayerPlayabilityScript.source] {
+        #if OTO_STREAM_PROBE
+        let extraScripts = [PlayerIntentScript.source, PlayerPlayabilityScript.source, PlayerStreamProbeScript.source]
+        #else
+        let extraScripts = [PlayerIntentScript.source, PlayerPlayabilityScript.source]
+        #endif
+        for source in extraScripts {
             contentController.addUserScript(
                 WKUserScript(source: source, injectionTime: .atDocumentEnd, forMainFrameOnly: true))
         }
@@ -309,6 +314,10 @@ extension SingletonPlayerWebView {
             handleRemoteCommand(body)
         case "remotePlayTrace":
             logRemotePlayTrace(body)
+        #if OTO_STREAM_PROBE
+        case "streamProbe":
+            logStreamProbe(body)
+        #endif
         case "error":
             handleError(body)
         default:

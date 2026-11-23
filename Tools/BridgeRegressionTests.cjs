@@ -302,6 +302,47 @@ console.log('PASS: hồi quy bridge, gồm ba lượt Restart trên video đã k
   assert.equal(posted.at(-1).videoId, 'NEXT', 'Lỗi gắn đúng bài hiện tại');
   console.log('PASS: PlayerPlayabilityScript báo lỗi player một lần cho mỗi bài');
 }
+{
+  // PlayerStreamProbeScript (khảo sát M1): một mẫu mỗi generation, payload không có URL hay ID.
+  const script = fs.readFileSync(
+    path.join(__dirname, '../Oto/Services/WebKit/PlayerStreamProbeScript.swift'), 'utf8'
+  ).split('"""')[1];
+  const posted = [], ticks = [];
+  let response = null;
+  const api = { getPlayerResponse: () => response };
+  const window = {
+    __otoCurrentGeneration: 7, __otoCurrentVideoId: 'VID00000001',
+    ytcfg: { get: key => key === 'INNERTUBE_CLIENT_NAME' ? 'WEB_REMIX' : null },
+    webkit: { messageHandlers: { otoPlayback: { postMessage: value => posted.push(value) } } },
+  };
+  vm.runInNewContext(script, {
+    window, document: { getElementById: id => id === 'movie_player' ? api : null, querySelector: () => null },
+    setInterval: callback => { ticks.push(callback); },
+  });
+  ticks[0]();
+  assert.equal(posted.length, 0, 'Chưa có response của đúng bài thì chưa báo');
+  response = { videoDetails: { videoId: 'OTHER000001' }, playabilityStatus: { status: 'OK' } };
+  ticks[0]();
+  assert.equal(posted.length, 0, 'Response của bài khác bị bỏ qua');
+  response = {
+    videoDetails: { videoId: 'VID00000001' }, playabilityStatus: { status: 'OK' },
+    streamingData: { hlsManifestUrl: 'https://secret.example/hls.m3u8', adaptiveFormats: [{}, {}] },
+  };
+  ticks[0]();
+  ticks[0]();
+  assert.equal(posted.length, 1, 'Mỗi generation chỉ một mẫu');
+  const sent = JSON.stringify(posted[0]);
+  assert.ok(!sent.includes('secret.example') && !sent.includes('VID00000001'), 'Không gửi URL hay ID');
+  assert.equal(posted[0].hasHLS, true);
+  assert.equal(posted[0].adaptiveFormatCount, 2);
+  assert.equal(posted[0].clientName, 'WEB_REMIX');
+  window.__otoCurrentGeneration = 8;
+  response.videoDetails.videoId = 'VID00000001';
+  response.playabilityStatus.status = 'WEIRD';
+  ticks[0]();
+  assert.equal(posted[1].status, 'OTHER', 'Trạng thái lạ không đi qua nguyên văn');
+  console.log('PASS: PlayerStreamProbeScript chỉ gửi cờ và số đếm, một mẫu mỗi generation');
+}
 async function testVideoPresentation() {
   const swift = fs.readFileSync(path.join(__dirname, '../Oto/Services/WebKit/PlayerWebViewContainer.swift'), 'utf8');
   const source = swift.split('"""')[1];

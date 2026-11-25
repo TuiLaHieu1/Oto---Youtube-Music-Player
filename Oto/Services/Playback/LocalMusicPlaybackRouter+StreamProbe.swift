@@ -19,11 +19,11 @@ extension LocalMusicPlaybackRouter {
         self.lastState = nil
         self.leaveVideoMode()
         if !wasLocal { self.web.pause() }
-        if let url = self.streamCache.freshURL(for: id) {
+        if let entry = self.streamCache.freshEntry(for: id) {
             let prepared = self.takePreloaded(id)
             self.probeTrace("load cached=1 preloaded=\(prepared != nil ? 1 : 0)")
-            self.startItem(url: url, id: id, generation: generation, startSeconds: startSeconds,
-                           shouldPlay: shouldPlay, prepared: prepared)
+            self.startItem(url: entry.url, id: id, generation: generation, startSeconds: startSeconds,
+                           shouldPlay: shouldPlay, prepared: prepared, sourceDuration: entry.mediaDuration)
             return
         }
         self.probeTrace("load cached=0")
@@ -55,10 +55,11 @@ extension LocalMusicPlaybackRouter {
             self.resolveTimeoutTask?.cancel()
             self.resolveTimeoutTask = nil
             switch resolution {
-            case .url(let url):
+            case .url(let url, let mediaDuration):
                 self.leaveVideoMode(keepsRequest: true)
                 self.startItem(url: url, id: id, generation: generation,
-                               startSeconds: self.pendingStartSeconds, shouldPlay: self.wantsPlayback)
+                               startSeconds: self.pendingStartSeconds, shouldPlay: self.wantsPlayback,
+                               sourceDuration: mediaDuration)
                 // Người dùng đã bật Video trong lúc chờ URL: áp lại sau khi bài chạy.
                 if self.wantsVideoItem { self.setVideoMode(true) }
             case .failed(let unavailable):
@@ -80,13 +81,13 @@ extension LocalMusicPlaybackRouter {
     /// AVPlayer báo lỗi (URL bị từ chối hoặc hết hạn): lấy URL mới một lần tại vị trí cuối, rồi mới báo lỗi.
     /// Item lỗi thường trả currentTime 0, nên dùng vị trí cuối đã ghi nhận.
     func recoverFailedItem(id: String, generation: Int) {
-        if self.isVideoItem, let audio = self.streamCache.freshURL(for: id) {
+        if self.isVideoItem, let audio = self.streamCache.freshEntry(for: id) {
             // Luồng video lỗi: quay về audio còn hạn, báo lỗi Video, không tính vào lượt thử lại của audio.
             self.probeTrace("video failed")
             self.leaveVideoMode()
             self.videoOutput.failed = true
-            self.startItem(url: audio, id: id, generation: generation, startSeconds: self.lastKnownPosition,
-                           shouldPlay: self.wantsPlayback, activates: false)
+            self.startItem(url: audio.url, id: id, generation: generation, startSeconds: self.lastKnownPosition,
+                           shouldPlay: self.wantsPlayback, activates: false, sourceDuration: audio.mediaDuration)
             return
         }
         self.streamCache.invalidate(id)
@@ -162,8 +163,31 @@ extension LocalMusicPlaybackRouter {
         return handoff.item
     }
 
+    func probePlaybackDuration(for item: AVPlayerItem, sourceDuration: TimeInterval?) -> TimeInterval {
+        if item.forwardPlaybackEndTime.isNumeric { return item.forwardPlaybackEndTime.seconds }
+        let itemDuration = item.duration.seconds
+        guard let end = Self.probeAudioEndTime(itemDuration: itemDuration, sourceDuration: sourceDuration) else {
+            return itemDuration
+        }
+        item.forwardPlaybackEndTime = CMTime(seconds: end, preferredTimescale: 600)
+        self.probeTrace("correctedAudioEnd")
+        return end
+    }
+
+    /// Luồng audio khảo sát có thể báo timeline gần gấp đôi thời lượng nguồn.
+    static func probeAudioEndTime(itemDuration: TimeInterval, sourceDuration: TimeInterval?) -> TimeInterval? {
+        guard let sourceDuration, sourceDuration.isFinite, sourceDuration > 0,
+              itemDuration.isFinite, (1.95...2.05).contains(itemDuration / sourceDuration) else { return nil }
+        return sourceDuration
+    }
+
     func observeProbeProgress(position: Double, duration: Double) {
         guard self.isProbeStream, position.isFinite else { return }
+        if duration.isFinite, duration > 0,
+           abs(duration - (self.lastReportedProbeDuration ?? 0)) >= 1 {
+            self.lastReportedProbeDuration = duration
+            self.probeTrace("itemDuration")
+        }
         if position > 0 { self.lastKnownPosition = position }
         if Int(position) != self.lastProbeSecond, Int(position) % 10 == 0 {
             self.probeTrace("tick")
@@ -180,11 +204,12 @@ extension LocalMusicPlaybackRouter {
     func probeTrace(_ event: String) {
         guard self.isProbeStream else { return }
         let position = self.localPlayer.currentTime().seconds
-        let line = String(
-            format: "StreamProbe avplayer event=%@ t=%.3f appState=%d position=%.2f control=%d wants=%d",
-            event, ProcessInfo.processInfo.systemUptime, UIApplication.shared.applicationState.rawValue,
-            position.isFinite ? position : -1, self.localPlayer.timeControlStatus.rawValue, self.wantsPlayback ? 1 : 0
-        )
+        let duration = self.localPlayer.currentItem?.duration.seconds ?? .nan
+        let line = "StreamProbe avplayer event=\(event) t=\(ProcessInfo.processInfo.systemUptime)"
+            + " appState=\(UIApplication.shared.applicationState.rawValue)"
+            + " position=\(position.isFinite ? position : -1) itemDuration=\(duration.isFinite ? duration : -1)"
+            + " control=\(self.localPlayer.timeControlStatus.rawValue)"
+            + " wants=\(self.wantsPlayback ? 1 : 0) video=\(self.isVideoItem ? 1 : 0)"
         StreamProbeLog.write(line)
     }
 }

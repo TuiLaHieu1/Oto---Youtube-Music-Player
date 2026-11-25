@@ -393,3 +393,22 @@ func queueControlsNotifyObservation() async {
     vm.toggleRepeat()
     #expect(vm.repeatMode == .off)
 }
+
+#if DEBUG && OTO_STREAM_PROBE
+struct ProbeAudioDurationTests {
+    @Test("Dừng tại thời lượng nguồn khi timeline audio gần gấp đôi")
+    @MainActor
+    func doubledTimeline() {
+        #expect(LocalMusicPlaybackRouter.probeAudioEndTime(itemDuration: 442.35, sourceDuration: 221) == 221)
+    }
+
+    @Test("Giữ timeline bình thường hoặc khi thiếu thời lượng nguồn")
+    @MainActor
+    func unchangedTimeline() {
+        #expect(LocalMusicPlaybackRouter.probeAudioEndTime(itemDuration: 221.35, sourceDuration: 221) == nil)
+        #expect(LocalMusicPlaybackRouter.probeAudioEndTime(itemDuration: 260, sourceDuration: 221) == nil)
+        #expect(LocalMusicPlaybackRouter.probeAudioEndTime(itemDuration: 442.35, sourceDuration: nil) == nil)
+        #expect(LocalMusicPlaybackRouter.probeAudioEndTime(itemDuration: .nan, sourceDuration: 221) == nil)
+    }
+}
+#endif

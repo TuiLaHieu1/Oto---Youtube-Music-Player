@@ -16,15 +16,17 @@ struct YtdlpResolveResult: Sendable {
     var profile: String?
     /// Manifest HLS có hình cho chế độ Video; chỉ giữ trong bộ nhớ.
     var hlsURL: URL?
+    var mediaDuration: Double?
 
     var logLine: String {
         let abr = self.averageBitrate.map { String(Int($0.rounded())) } ?? "nil"
         let expiry = self.secondsUntilExpiry.map(String.init) ?? "nil"
         let took = self.seconds.map { String(format: "%.1f", $0) } ?? "nil"
         let outcome = self.url != nil ? "ok" : "error(\(self.errorKind ?? "unknown"))"
+        let duration = self.mediaDuration.map { String(format: "%.2f", $0) } ?? "nil"
         return "YtdlpProbe outcome=\(outcome) format=\(self.formatID ?? "nil") abr=\(abr) "
             + "expiresIn=\(expiry) hasN=\(self.hasNParameter) seconds=\(took) profile=\(self.profile ?? "nil") "
-            + "hasHLS=\(self.hlsURL != nil)"
+            + "hasHLS=\(self.hlsURL != nil) mediaDuration=\(duration)"
     }
 
     static func failure(_ kind: String, label: String? = nil) -> YtdlpResolveResult {
@@ -241,6 +243,9 @@ enum PythonStreamResolver {
         result.profile = ["fast", "default"].contains(profile ?? "") ? profile : nil
         result.hlsURL = (object["hls"] as? String).flatMap(URL.init(string:))
             .flatMap { $0.scheme == "https" ? $0 : nil }
+        if let duration = object["duration"] as? Double, duration.isFinite, duration > 0 {
+            result.mediaDuration = duration
+        }
         return result
     }
 }

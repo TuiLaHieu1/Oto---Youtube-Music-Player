@@ -143,6 +143,7 @@ def resolve(video_id: str, cache_dir: str | None = None) -> dict:
         'ext': info.get('ext'),
         'acodec': info.get('acodec'),
         'abr': info.get('abr'),
+        'duration': info.get('duration'),
         'expire': int(match.group(1)) if match else None,
         'seconds': round(time.monotonic() - started, 2),
         'profile': profile_used,

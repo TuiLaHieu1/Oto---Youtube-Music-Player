@@ -7,7 +7,7 @@ import UIKit
 
 /// Kết quả lấy URL cho một bài.
 enum YTStreamResolution: Sendable {
-    case url(URL)
+    case url(URL, mediaDuration: TimeInterval?)
     /// `unavailable`: lỗi do chính bài (bị chặn, không có định dạng phát được), nên bỏ qua bài.
     case failed(unavailable: Bool)
 }
@@ -20,6 +20,7 @@ final class YTStreamURLCache {
         let url: URL
         /// Manifest HLS có hình (cùng lần lấy, cùng hạn dùng); nil nếu bài không có.
         let hlsURL: URL?
+        let mediaDuration: TimeInterval?
         let expiresAt: Date
     }
 
@@ -33,10 +34,14 @@ final class YTStreamURLCache {
     private var inFlight: [String: Task<YTStreamResolution, Never>] = [:]
 
     func freshURL(for videoID: String, now: Date = Date()) -> URL? {
+        self.freshEntry(for: videoID, now: now)?.url
+    }
+
+    func freshEntry(for videoID: String, now: Date = Date()) -> Entry? {
         guard let entry = self.entries[videoID], entry.expiresAt.timeIntervalSince(now) > Self.refreshMargin else {
             return nil
         }
-        return entry.url
+        return entry
     }
 
     /// Manifest HLS còn hạn của bài, nếu lần lấy URL có trả về.
@@ -61,7 +66,9 @@ final class YTStreamURLCache {
     /// Trả URL còn hạn nếu có; nếu không thì chạy yt-dlp (gộp yêu cầu trùng).
     /// `bypassCache`: chạy lại dù URL còn hạn; mục cũ vẫn dùng được cho tới khi có kết quả mới.
     func resolve(_ videoID: String, reason: String, bypassCache: Bool = false) async -> YTStreamResolution {
-        if !bypassCache, let url = self.freshURL(for: videoID) { return .url(url) }
+        if !bypassCache, let entry = self.freshEntry(for: videoID) {
+            return .url(entry.url, mediaDuration: entry.mediaDuration)
+        }
         if let task = self.inFlight[videoID] { return await task.value }
         let task = Task { @MainActor [weak self] () -> YTStreamResolution in
             // Xin thêm thời gian chạy khi app ở nền (ví dụ Next từ Lock Screen sau khi Pause lâu).
@@ -76,8 +83,12 @@ final class YTStreamURLCache {
             )
             guard let url = result.url else { return .failed(unavailable: result.isTrackUnavailable) }
             let lifetime = TimeInterval(result.secondsUntilExpiry ?? 0)
-            self?.store(url, hlsURL: result.hlsURL, for: videoID, expiresAt: Date().addingTimeInterval(lifetime))
-            return .url(url)
+            self?.store(
+                Entry(url: url, hlsURL: result.hlsURL, mediaDuration: result.mediaDuration,
+                      expiresAt: Date().addingTimeInterval(lifetime)),
+                for: videoID
+            )
+            return .url(url, mediaDuration: result.mediaDuration)
         }
         self.inFlight[videoID] = task
         let result = await task.value
@@ -99,8 +110,8 @@ final class YTStreamURLCache {
         }
     }
 
-    private func store(_ url: URL, hlsURL: URL?, for videoID: String, expiresAt: Date) {
-        self.entries[videoID] = Entry(url: url, hlsURL: hlsURL, expiresAt: expiresAt)
+    private func store(_ entry: Entry, for videoID: String) {
+        self.entries[videoID] = entry
         self.order.removeAll { $0 == videoID }
         self.order.append(videoID)
         while self.order.count > Self.capacity {

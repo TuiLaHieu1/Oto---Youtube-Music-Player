@@ -36,6 +36,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     var isResolving = false
     var pendingStartSeconds: TimeInterval = 0
     var lastProbeSecond = -1
+    var lastReportedProbeDuration: TimeInterval?
     var didPrefetchNearEnd = false
     var didRetryFailedItem = false
     let preloader = ProbePreloader()
@@ -116,9 +117,12 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
 
     func startItem(
         url: URL, id: String, generation: Int, startSeconds: TimeInterval, shouldPlay: Bool,
-        prepared: AVPlayerItem? = nil, activates: Bool = true
+        prepared: AVPlayerItem? = nil, activates: Bool = true, sourceDuration: TimeInterval? = nil
     ) {
         let item = prepared ?? AVPlayerItem(url: url)
+        #if DEBUG && OTO_STREAM_PROBE
+        self.lastReportedProbeDuration = nil
+        #endif
         if localPlayer.currentItem !== item { localPlayer.replaceCurrentItem(with: item) }
         wantsPlayback = shouldPlay
         didEnd = false
@@ -134,6 +138,9 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
                       let currentItem = self.localPlayer.currentItem,
                       ObjectIdentifier(currentItem) == itemIdentity, !self.didEnd else { return }
                 self.didEnd = true
+                #if DEBUG && OTO_STREAM_PROBE
+                self.probeTrace("itemEnded")
+                #endif
                 self.onTrackEnded?(generation, id)
             }
         }
@@ -143,7 +150,9 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         monitor = Task { [weak self] in
             while !Task.isCancelled {
                 guard let self, self.localID == id, self.localGeneration == generation else { return }
-                if !self.publishLocalProgress(item, id: id, generation: generation) { return }
+                if !self.publishLocalProgress(item, id: id, generation: generation, sourceDuration: sourceDuration) {
+                    return
+                }
                 do { try await Task.sleep(for: .milliseconds(200)) } catch { return }
             }
         }
@@ -218,7 +227,9 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         #endif
     }
 
-    private func publishLocalProgress(_ item: AVPlayerItem, id: String, generation: Int) -> Bool {
+    private func publishLocalProgress(
+        _ item: AVPlayerItem, id: String, generation: Int, sourceDuration: TimeInterval?
+    ) -> Bool {
         if item.status == .failed {
             #if DEBUG && OTO_STREAM_PROBE
             if self.isProbeStream {
@@ -230,9 +241,11 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
             return false
         }
         let position = localPlayer.currentTime().seconds
-        let duration = item.duration.seconds
         #if DEBUG && OTO_STREAM_PROBE
+        let duration = self.probePlaybackDuration(for: item, sourceDuration: sourceDuration)
         self.observeProbeProgress(position: position, duration: duration)
+        #else
+        let duration = item.duration.seconds
         #endif
         if position.isFinite && duration.isFinite && duration > 0 {
             onPositionUpdate?(position, duration, generation, id)

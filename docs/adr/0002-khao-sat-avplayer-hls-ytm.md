@@ -1,6 +1,6 @@
 # ADR-0002: Khảo sát phát HLS YouTube Music bằng AVPlayer
 Ngày: 2026-11-23
-Trạng thái: **Đề xuất (khảo sát)**. Chỉ trên nhánh `spike/ytm-avplayer-hls`, sau cờ `OTO_STREAM_PROBE`. Chưa có số đo.
+Trạng thái: **Đề xuất (khảo sát)**. Chỉ trên nhánh `spike/ytm-avplayer-hls`, sau cờ `OTO_STREAM_PROBE`. Cổng 1 (lấy trực tiếp) không đạt với một bài; xem "Kết quả đo".
 
 ## Bối cảnh
 - Với backend WKWebView, Play từ Control Center hoặc AirPods sau khi Pause vài giây ở nền chỉ có hiệu lực khi mở Oto. Xem `docs/handoffs/OTO_YTM_REMOTE_RESUME_2026-11-20.md`.
@@ -23,3 +23,20 @@ Chủ dự án đã đọc các điều khoản trên, hiểu rủi ro và chọ
 ## Hệ quả
 - Nếu một cổng không đạt: ghi số đo, chuyển trạng thái thành **Từ chối**, giữ WebKit.
 - Nếu đạt cả ba: chỉ ghi kết quả. Làm bản thật cần kế hoạch và quyết định riêng; WebKit vẫn là đường dự phòng.
+
+## Kết quả đo
+### 2026-11-25 · iPhone 13 Pro Max · bản `e9d80fc` có cờ · tài khoản Premium · một bài thường
+| Nguồn | outcome | sabr | mp4Direct | mp4Cipher | webmDirect | webmCipher |
+| --- | --- | --- | --- | --- | --- | --- |
+| M1 trang (`WEB_REMIX`) | validNoHLS | true | 0 | 1 | 0 | 3 |
+| M2 native, user-agent iPhone | validNoHLS | true | 0 | 2 | 0 | 4 |
+| M2 native, user-agent Safari Mac | validNoHLS | true | 0 | 2 | 0 | 4 |
+
+- Cả ba đường đều không có HLS và không có M4A với `url` trực tiếp. Audio chỉ có `signatureCipher`, phần còn lại là SABR.
+- Kết luận: với client `WEB_REMIX` và phiên Premium, Oto không lấy được nguồn AVPlayer phát được mà không giải mã chữ ký. Giải mã đang bị cấm trong `AGENTS.md`, nên hướng "lấy trực tiếp trong app" dừng ở cổng 1. Đây là `ACCOUNT VERIFIED` cho một bài; chưa đo Vevo và bài chỉ dành cho Premium, nhưng hành vi này thuộc về client nên khó khác theo bài.
+- Không có request nào làm đổi dữ liệu tài khoản. Log chỉ có số đếm.
+
+### Lựa chọn còn lại (chờ chủ dự án)
+1. **Server dùng yt-dlp** (như source tham khảo `vibe-music`): yt-dlp giải mã và chọn client; Oto phát URL của server bằng AVPlayer. Cần server chạy khi nghe.
+2. **Đổi quy tắc, cho phép giải mã trong app** (chạy JS player của YouTube bằng JavaScriptCore như plugin `yt-dlp-apple-webkit-jsi`): không cần server, nhưng tự bảo trì khi YouTube đổi.
+3. **Giữ WebKit**, ghi giới hạn "Pause lâu phải mở Oto", có thể thêm nút mở app rồi phát.

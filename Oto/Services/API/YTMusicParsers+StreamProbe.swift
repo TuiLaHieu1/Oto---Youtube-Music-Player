@@ -66,6 +66,28 @@ enum StreamProbeVariant: String, Sendable, CaseIterable {
     case page
 }
 
+/// Đếm định dạng audio theo container và cách giao URL. Chỉ số đếm, không có URL.
+/// `direct`: có trường `url`; `cipher`: chỉ có `signatureCipher`/`cipher` (cần giải mã, đang bị cấm).
+/// `directWithN`: URL trực tiếp có tham số `n` (YouTube có thể bóp tốc độ nếu không biến đổi; không biến đổi ở đây).
+struct StreamProbeAudioCounts: Sendable, Equatable {
+    var mp4Direct = 0
+    var mp4Cipher = 0
+    var webmDirect = 0
+    var webmCipher = 0
+    var otherAudio = 0
+    var directWithN = 0
+    var secondsUntilExpiry: Int?
+
+    static let empty = StreamProbeAudioCounts()
+
+    var description: String {
+        let expiry = self.secondsUntilExpiry.map(String.init) ?? "nil"
+        return "mp4Direct=\(self.mp4Direct) mp4Cipher=\(self.mp4Cipher) webmDirect=\(self.webmDirect) "
+            + "webmCipher=\(self.webmCipher) otherAudio=\(self.otherAudio) directWithN=\(self.directWithN) "
+            + "audioExpiresIn=\(expiry)"
+    }
+}
+
 /// Chỉ gồm enum, số đếm và cờ; an toàn để ghi log.
 struct StreamProbeSummary: Sendable, Equatable, CustomStringConvertible {
     let outcome: StreamProbeOutcome
@@ -73,6 +95,7 @@ struct StreamProbeSummary: Sendable, Equatable, CustomStringConvertible {
     let adaptiveFormatCount: Int
     let hasSABR: Bool
     let secondsUntilExpiry: Int?
+    var audio = StreamProbeAudioCounts.empty
 
     static func failure(_ outcome: StreamProbeOutcome) -> StreamProbeSummary {
         StreamProbeSummary(
@@ -83,7 +106,7 @@ struct StreamProbeSummary: Sendable, Equatable, CustomStringConvertible {
     var description: String {
         let expiry = self.secondsUntilExpiry.map(String.init) ?? "nil"
         return "outcome=\(self.outcome.label) formats=\(self.formatCount) adaptive=\(self.adaptiveFormatCount) "
-            + "sabr=\(self.hasSABR) expiresIn=\(expiry)"
+            + "sabr=\(self.hasSABR) expiresIn=\(expiry) \(self.audio.description)"
     }
 
     func logLine(variant: StreamProbeVariant) -> String {
@@ -91,12 +114,16 @@ struct StreamProbeSummary: Sendable, Equatable, CustomStringConvertible {
     }
 }
 
-/// URL HLS chỉ giữ trong bộ nhớ cho phép thử phát; mô tả không bao giờ in URL.
+/// URL chỉ giữ trong bộ nhớ cho phép thử phát; mô tả không bao giờ in URL.
+/// `audioURL` là định dạng `audio/mp4` có `url` trực tiếp với bitrate cao nhất.
 struct StreamProbeResult: Sendable, CustomStringConvertible {
     let summary: StreamProbeSummary
     let hlsURL: URL?
+    var audioURL: URL?
 
-    var description: String { "StreamProbeResult(\(self.summary), hasURL=\(self.hlsURL != nil))" }
+    var description: String {
+        "StreamProbeResult(\(self.summary), hasURL=\(self.hlsURL != nil), hasAudioURL=\(self.audioURL != nil))"
+    }
 }
 
 extension YTMusicParsers {
@@ -129,16 +156,49 @@ extension YTMusicParsers {
             }
             hlsURL = url
         }
+        guard let (audio, audioURL) = Self.audioCounts(in: formats + adaptive, now: now) else {
+            return StreamProbeResult(summary: .failure(.schemaMismatch), hlsURL: nil)
+        }
         let expiresIn = (streaming["expiresInSeconds"] as? String).flatMap(Int.init)
         let expiry = hlsURL.flatMap { Self.secondsUntilExpiry(of: $0, now: now) } ?? (hlsURL != nil ? expiresIn : nil)
-        let summary = StreamProbeSummary(
+        var summary = StreamProbeSummary(
             outcome: hlsURL != nil ? .hasHLS : .validNoHLS,
             formatCount: formats.count,
             adaptiveFormatCount: adaptive.count,
             hasSABR: streaming["serverAbrStreamingUrl"] is String,
             secondsUntilExpiry: expiry
         )
-        return StreamProbeResult(summary: summary, hlsURL: hlsURL)
+        summary.audio = audio
+        return StreamProbeResult(summary: summary, hlsURL: hlsURL, audioURL: audioURL)
+    }
+
+    /// Phần tử định dạng không phải object là sai cấu trúc (trả nil). Định dạng thiếu `mimeType` bị bỏ qua.
+    private static func audioCounts(in entries: [Any], now: Date) -> (StreamProbeAudioCounts, URL?)? {
+        var counts = StreamProbeAudioCounts()
+        var best: (bitrate: Int, url: URL)?
+        for entry in entries {
+            guard let format = entry as? [String: Any] else { return nil }
+            guard let mime = format["mimeType"] as? String, mime.hasPrefix("audio/") else { continue }
+            let directURL = (format["url"] as? String).flatMap(URL.init(string:))
+                .flatMap { $0.scheme == "https" && $0.host != nil ? $0 : nil }
+            let isCipher = directURL == nil && (format["signatureCipher"] is String || format["cipher"] is String)
+            switch (mime.hasPrefix("audio/mp4"), mime.hasPrefix("audio/webm"), directURL != nil, isCipher) {
+            case (true, _, true, _): counts.mp4Direct += 1
+            case (true, _, false, true): counts.mp4Cipher += 1
+            case (_, true, true, _): counts.webmDirect += 1
+            case (_, true, false, true): counts.webmCipher += 1
+            default: counts.otherAudio += 1
+            }
+            guard let directURL else { continue }
+            let query = URLComponents(url: directURL, resolvingAgainstBaseURL: false)?.queryItems ?? []
+            if query.contains(where: { $0.name == "n" }) { counts.directWithN += 1 }
+            if mime.hasPrefix("audio/mp4") {
+                let bitrate = format["bitrate"] as? Int ?? 0
+                if best == nil || bitrate > (best?.bitrate ?? 0) { best = (bitrate, directURL) }
+            }
+        }
+        counts.secondsUntilExpiry = best.flatMap { Self.secondsUntilExpiry(of: $0.url, now: now) }
+        return (counts, best?.url)
     }
 
     /// Trường thiếu là mảng rỗng; có mặt mà không phải mảng là sai cấu trúc (trả nil).

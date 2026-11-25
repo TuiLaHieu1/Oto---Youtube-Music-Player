@@ -149,6 +149,67 @@ struct StreamProbeParserTests {
         #expect(notJSON.summary.outcome == .schemaMismatch)
     }
 
+    @Test("Đếm audio theo container và cách giao URL, chọn M4A trực tiếp bitrate cao nhất")
+    func audioCounts() throws {
+        let low = "https://audio.example.invalid/videoplayback?expire=1800003600&itag=139&n=abc"
+        let high = "https://audio.example.invalid/videoplayback?expire=1800007200&itag=140"
+        let body: [String: Any] = [
+            "playabilityStatus": ["status": "OK"],
+            "streamingData": [
+                "formats": [
+                    ["itag": 18, "mimeType": "video/mp4; codecs=\"avc1\"", "url": "https://v.example.invalid/x"]
+                ],
+                "adaptiveFormats": [
+                    ["itag": 139, "mimeType": "audio/mp4; codecs=\"mp4a.40.5\"", "bitrate": 48_000, "url": low],
+                    ["itag": 140, "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"", "bitrate": 130_000, "url": high],
+                    ["itag": 141, "mimeType": "audio/mp4; codecs=\"mp4a.40.2\"", "signatureCipher": "s=x&url=y"],
+                    [
+                        "itag": 251, "mimeType": "audio/webm; codecs=\"opus\"",
+                        "url": "https://audio.example.invalid/w?n=q"
+                    ],
+                    ["itag": 250, "mimeType": "audio/webm; codecs=\"opus\"", "cipher": "s=x"],
+                    ["itag": 600, "mimeType": "audio/ogg"],
+                    ["itag": 137, "mimeType": "video/mp4"],
+                    ["itag": 1]
+                ]
+            ]
+        ]
+        let result = try YTMusicParsers.parseStreamProbe(from: data(body), now: now)
+        let audio = result.summary.audio
+        #expect(result.summary.outcome == .validNoHLS)
+        #expect(audio.mp4Direct == 2)
+        #expect(audio.mp4Cipher == 1)
+        #expect(audio.webmDirect == 1)
+        #expect(audio.webmCipher == 1)
+        #expect(audio.otherAudio == 1)
+        #expect(audio.directWithN == 2)
+        #expect(result.audioURL?.absoluteString == high)
+        #expect(audio.secondsUntilExpiry == 7_200)
+        for text in [result.summary.description, String(describing: result)] {
+            #expect(!text.contains("example.invalid"))
+            #expect(!text.contains("s=x"))
+        }
+    }
+
+    @Test("Không có audio M4A trực tiếp thì không có audioURL; phần tử định dạng sai kiểu là sai cấu trúc")
+    func audioWithoutDirectMP4() throws {
+        let cipherOnly: [String: Any] = [
+            "playabilityStatus": ["status": "OK"],
+            "streamingData": ["adaptiveFormats": [
+                ["itag": 140, "mimeType": "audio/mp4", "signatureCipher": "s=x"],
+                ["itag": 140, "mimeType": "audio/mp4", "url": "http://insecure.example.invalid/x"]
+            ]]
+        ]
+        let result = try YTMusicParsers.parseStreamProbe(from: data(cipherOnly), now: now)
+        #expect(result.audioURL == nil)
+        #expect(result.summary.audio.mp4Cipher == 1)
+        #expect(result.summary.audio.otherAudio == 1)
+        let broken: [String: Any] = [
+            "playabilityStatus": ["status": "OK"], "streamingData": ["adaptiveFormats": ["bad"]]
+        ]
+        #expect(try YTMusicParsers.parseStreamProbe(from: data(broken), now: now).summary.outcome == .schemaMismatch)
+    }
+
     @Test("Mô tả và log của kết quả không chứa URL")
     func descriptionHasNoURL() throws {
         let body: [String: Any] = [

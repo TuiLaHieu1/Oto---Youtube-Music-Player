@@ -29,6 +29,19 @@ struct PlayerStreamProbeScriptTests {
         #expect(noHLS.0.hasSABR)
     }
 
+    @Test("Đếm audio từ trang được đọc an toàn")
+    func audioCountsFromPage() throws {
+        let audio: [String: Any] = ["mp4Direct": 2, "mp4Cipher": 1, "webmDirect": 1, "directWithN": -3, "evil": "x"]
+        let (summary, _) = try #require(PlayerStreamProbeScript.summary(
+            from: self.body(["audio": audio]), currentGeneration: 4
+        ))
+        #expect(summary.audio.mp4Direct == 2)
+        #expect(summary.audio.mp4Cipher == 1)
+        #expect(summary.audio.webmDirect == 1)
+        #expect(summary.audio.directWithN == 0)
+        #expect(PlayerStreamProbeScript.audioCounts(from: "bad") == .empty)
+    }
+
     @Test("Generation cũ hoặc message sai kiểu bị bỏ qua")
     func staleOrMalformed() {
         #expect(PlayerStreamProbeScript.summary(from: self.body(), currentGeneration: 5) == nil)

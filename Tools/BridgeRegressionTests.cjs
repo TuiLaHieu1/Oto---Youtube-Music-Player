@@ -317,7 +317,7 @@ console.log('PASS: hồi quy bridge, gồm ba lượt Restart trên video đã k
   };
   vm.runInNewContext(script, {
     window, document: { getElementById: id => id === 'movie_player' ? api : null, querySelector: () => null },
-    setInterval: callback => { ticks.push(callback); },
+    setInterval: callback => { ticks.push(callback); }, URL,
   });
   const tick = () => ticks[0]();
   tick();
@@ -328,16 +328,27 @@ console.log('PASS: hồi quy bridge, gồm ba lượt Restart trên video đã k
   assert.equal(posted.length, 0, 'Response của bài khác chưa được báo ngay');
   response = {
     videoDetails: { videoId: 'VID00000001' }, playabilityStatus: { status: 'OK' },
-    streamingData: { hlsManifestUrl: 'https://secret.example/hls.m3u8', adaptiveFormats: [{}, {}] },
+    streamingData: {
+      hlsManifestUrl: 'https://secret.example/hls.m3u8',
+      adaptiveFormats: [
+        { mimeType: 'audio/mp4; codecs="mp4a.40.2"', url: 'https://secret.example/a?n=abc' },
+        { mimeType: 'audio/mp4', signatureCipher: 's=secret' },
+        { mimeType: 'audio/webm; codecs="opus"', url: 'https://secret.example/w' },
+        { mimeType: 'video/mp4', url: 'https://secret.example/v' },
+      ],
+    },
   };
   tick();
   tick();
   assert.equal(posted.length, 1, 'Mỗi generation chỉ một mẫu');
   const sent = JSON.stringify(posted[0]);
-  assert.ok(!sent.includes('secret.example') && !sent.includes('VID00000001'), 'Không gửi URL hay ID');
+  assert.ok(!sent.includes('secret') && !sent.includes('VID00000001'), 'Không gửi URL, chữ ký hay ID');
   assert.equal(posted[0].hlsKind, 'ok');
   assert.equal(posted[0].matchesTrack, true);
-  assert.equal(posted[0].adaptiveFormatCount, 2);
+  assert.equal(posted[0].adaptiveFormatCount, 4);
+  assert.deepEqual(JSON.parse(JSON.stringify(posted[0].audio)),
+    { mp4Direct: 1, mp4Cipher: 1, webmDirect: 1, webmCipher: 0, otherAudio: 0, directWithN: 1 },
+    'Đếm audio theo container và cách giao URL');
   assert.equal(posted[0].attempts, 3);
   // Response lỗi không có videoDetails vẫn được báo ngay.
   window.__otoCurrentGeneration = 8;

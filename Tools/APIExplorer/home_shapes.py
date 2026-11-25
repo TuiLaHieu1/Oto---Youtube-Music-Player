@@ -318,15 +318,42 @@ def stream_shape(document):
     """Chỉ đếm hình dạng streamingData; không in URL, chữ ký hay thời điểm hết hạn tuyệt đối."""
     streaming = document.get("streamingData")
     if not isinstance(streaming, dict):
-        return {"has_hls": False, "format_count": 0, "adaptive_format_count": 0, "has_sabr": False}
-    formats = streaming.get("formats")
-    adaptive = streaming.get("adaptiveFormats")
+        return {"has_hls": False, "format_count": 0, "adaptive_format_count": 0, "has_sabr": False,
+                "audio": audio_shape([])}
+    formats = streaming.get("formats") if isinstance(streaming.get("formats"), list) else None
+    adaptive = streaming.get("adaptiveFormats") if isinstance(streaming.get("adaptiveFormats"), list) else None
     return {
         "has_hls": isinstance(streaming.get("hlsManifestUrl"), str),
         "format_count": len(formats) if isinstance(formats, list) else -1,
         "adaptive_format_count": len(adaptive) if isinstance(adaptive, list) else -1,
         "has_sabr": isinstance(streaming.get("serverAbrStreamingUrl"), str),
+        "audio": audio_shape([*(formats or []), *(adaptive or [])]),
     }
+
+
+def audio_shape(entries):
+    """Đếm audio theo container và cách giao URL (url trực tiếp hay signatureCipher); không in URL."""
+    counts = {"mp4_direct": 0, "mp4_cipher": 0, "webm_direct": 0, "webm_cipher": 0, "other_audio": 0,
+              "direct_with_n": 0}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        mime = entry.get("mimeType") if isinstance(entry.get("mimeType"), str) else ""
+        if not mime.startswith("audio/"):
+            continue
+        url = entry.get("url") if isinstance(entry.get("url"), str) else ""
+        direct = url.startswith("https://")
+        cipher = not direct and (isinstance(entry.get("signatureCipher"), str) or isinstance(entry.get("cipher"), str))
+        kind = "mp4" if mime.startswith("audio/mp4") else ("webm" if mime.startswith("audio/webm") else None)
+        if kind and direct:
+            counts[kind + "_direct"] += 1
+        elif kind and cipher:
+            counts[kind + "_cipher"] += 1
+        else:
+            counts["other_audio"] += 1
+        if direct and ("&n=" in url or "?n=" in url):
+            counts["direct_with_n"] += 1
+    return counts
 
 
 def main():

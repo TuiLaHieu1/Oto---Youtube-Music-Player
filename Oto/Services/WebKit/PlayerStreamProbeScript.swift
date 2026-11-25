@@ -47,6 +47,36 @@ enum PlayerStreamProbeScript {
         return typeof value === type ? 'ok' : 'other';
       }
       function count(value) { return Array.isArray(value) ? value.length : (value == null ? 0 : -1); }
+      function audioCounts(streaming) {
+        const result = { mp4Direct: 0, mp4Cipher: 0, webmDirect: 0, webmCipher: 0, otherAudio: 0, directWithN: 0 };
+        const lists = [streaming.formats, streaming.adaptiveFormats].filter(Array.isArray);
+        lists.forEach(function(list) {
+          list.forEach(function(format) {
+            if (!format || typeof format !== 'object') return;
+            const mime = typeof format.mimeType === 'string' ? format.mimeType : '';
+            if (mime.indexOf('audio/') !== 0) return;
+            let direct = false;
+            let hasN = false;
+            if (typeof format.url === 'string') {
+              try {
+                const url = new URL(format.url);
+                direct = url.protocol === 'https:' && !!url.host;
+                hasN = direct && url.searchParams.has('n');
+              } catch (e) {}
+            }
+            const cipher = !direct && (typeof format.signatureCipher === 'string' || typeof format.cipher === 'string');
+            const mp4 = mime.indexOf('audio/mp4') === 0;
+            const webm = mime.indexOf('audio/webm') === 0;
+            if (mp4 && direct) result.mp4Direct += 1;
+            else if (mp4 && cipher) result.mp4Cipher += 1;
+            else if (webm && direct) result.webmDirect += 1;
+            else if (webm && cipher) result.webmCipher += 1;
+            else result.otherAudio += 1;
+            if (hasN) result.directWithN += 1;
+          });
+        });
+        return result;
+      }
       setInterval(function() {
         const generation = window.__otoCurrentGeneration || 0;
         const expected = window.__otoCurrentVideoId || '';
@@ -75,6 +105,7 @@ enum PlayerStreamProbeScript {
           hasSABR: streamingKind === 'ok' && typeof streaming.serverAbrStreamingUrl === 'string',
           formatCount: streamingKind === 'ok' ? count(streaming.formats) : 0,
           adaptiveFormatCount: streamingKind === 'ok' ? count(streaming.adaptiveFormats) : 0,
+          audio: streamingKind === 'ok' ? audioCounts(streaming) : null,
           clientName: clientName()
         };
         const handler = window.webkit && window.webkit.messageHandlers
@@ -111,11 +142,26 @@ enum PlayerStreamProbeScript {
         } else {
             outcome = hlsKind == "ok" ? .hasHLS : .validNoHLS
         }
-        let summary = StreamProbeSummary(
+        var summary = StreamProbeSummary(
             outcome: outcome, formatCount: max(0, formats), adaptiveFormatCount: max(0, adaptive),
             hasSABR: hasSABR, secondsUntilExpiry: nil
         )
+        summary.audio = Self.audioCounts(from: body["audio"])
         return (summary, clients.contains(client) ? client : "other")
+    }
+
+    /// Chỉ nhận số nguyên không âm cho từng khóa đã biết; thiếu hoặc sai kiểu thì tính là 0.
+    static func audioCounts(from value: Any?) -> StreamProbeAudioCounts {
+        guard let dict = value as? [String: Any] else { return .empty }
+        func read(_ key: String) -> Int { max(0, dict[key] as? Int ?? 0) }
+        var counts = StreamProbeAudioCounts()
+        counts.mp4Direct = read("mp4Direct")
+        counts.mp4Cipher = read("mp4Cipher")
+        counts.webmDirect = read("webmDirect")
+        counts.webmCipher = read("webmCipher")
+        counts.otherAudio = read("otherAudio")
+        counts.directWithN = read("directWithN")
+        return counts
     }
 }
 

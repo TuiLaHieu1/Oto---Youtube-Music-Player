@@ -48,6 +48,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     /// Vị trí phát cuối đã ghi nhận; item lỗi thường báo currentTime 0.
     var lastKnownPosition: TimeInterval = 0
     var resolveTimeoutTask: Task<Void, Never>?
+    var resolveRequestID: UUID?
     /// Tắt Video mà vẫn phát HLS thì giới hạn ở biến thể nhỏ nhất (144p) để đỡ tốn mạng.
     static let hiddenVideoSize = CGSize(width: 256, height: 144)
     var videoSwitchToken = 0
@@ -124,11 +125,14 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         lastState = nil
         if activates { onTrackActivated?(id, generation) }
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+        let itemIdentity = ObjectIdentifier(item)
         endObserver = NotificationCenter.default.addObserver(
             forName: AVPlayerItem.didPlayToEndTimeNotification, object: item, queue: nil
         ) { @Sendable [weak self] _ in
             Task { @MainActor in
-                guard let self, self.localID == id, self.localGeneration == generation, !self.didEnd else { return }
+                guard let self, self.localID == id, self.localGeneration == generation,
+                      let currentItem = self.localPlayer.currentItem,
+                      ObjectIdentifier(currentItem) == itemIdentity, !self.didEnd else { return }
                 self.didEnd = true
                 self.onTrackEnded?(generation, id)
             }
@@ -208,6 +212,9 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         pendingSeek = nil
         #if DEBUG && OTO_STREAM_PROBE
         self.isResolving = false
+        self.resolveRequestID = nil
+        self.resolveTimeoutTask?.cancel()
+        self.resolveTimeoutTask = nil
         #endif
     }
 

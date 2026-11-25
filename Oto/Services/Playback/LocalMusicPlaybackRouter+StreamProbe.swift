@@ -31,6 +31,8 @@ extension LocalMusicPlaybackRouter {
     }
 
     private func resolveAndStart(id: String, generation: Int, startSeconds: TimeInterval, reason: String) {
+        let requestID = UUID()
+        self.resolveRequestID = requestID
         self.isResolving = true
         self.pendingStartSeconds = startSeconds
         self.onPlaybackStateChange?(self.wantsPlayback ? 3 : 2, generation, id)
@@ -38,16 +40,20 @@ extension LocalMusicPlaybackRouter {
         self.resolveTimeoutTask?.cancel()
         self.resolveTimeoutTask = Task { @MainActor [weak self] in
             do { try await Task.sleep(for: Self.resolveTimeout) } catch { return }
-            guard let self, self.localID == id, self.localGeneration == generation, self.isResolving else { return }
+            guard let self, self.resolveRequestID == requestID else { return }
+            self.resolveRequestID = nil
+            self.resolveTimeoutTask = nil
             self.isResolving = false
             self.probeTrace("error reason=timeout")
             self.onError?(-1001, generation, id)
         }
         Task { @MainActor [weak self] in
             guard let resolution = await self?.streamCache.resolve(id, reason: reason) else { return }
-            guard let self, self.localID == id, self.localGeneration == generation, self.isResolving else { return }
+            guard let self, self.resolveRequestID == requestID else { return }
+            self.resolveRequestID = nil
             self.isResolving = false
             self.resolveTimeoutTask?.cancel()
+            self.resolveTimeoutTask = nil
             switch resolution {
             case .url(let url):
                 self.leaveVideoMode(keepsRequest: true)
@@ -143,8 +149,9 @@ extension LocalMusicPlaybackRouter {
     // MARK: - Lấy trước và nạp sẵn bài kế
 
     func prefetchUpcoming() {
-        self.preloader.prefetch(self.upcomingTrackIDs?() ?? [], cache: self.streamCache) { [weak self] in
-            self?.localID
+        self.preloader.prefetch(self.upcomingTrackIDs?() ?? [], cache: self.streamCache) { [weak self] id in
+            guard let self, self.isProbeStream, let currentID = self.localID else { return false }
+            return id != currentID && id == self.upcomingTrackIDs?().first
         }
     }
 

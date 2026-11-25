@@ -10,12 +10,10 @@ final class ProbePreloader {
     private var preloaded: (id: String, item: AVPlayerItem)?
     private var statusObserver: NSKeyValueObservation?
 
-    var preloadedID: String? { self.preloaded?.id }
-
     /// Lấy trước URL của các bài kế; bài ngay sau được nạp sẵn bộ đệm khi đã có URL.
-    func prefetch(_ upcoming: [String], cache: YTStreamURLCache, currentID: @escaping @MainActor () -> String?) {
+    func prefetch(_ upcoming: [String], cache: YTStreamURLCache, isStillNext: @escaping @MainActor (String) -> Bool) {
         cache.prefetch(upcoming) { [weak self, weak cache] videoID in
-            guard let self, videoID == upcoming.first, videoID != currentID(),
+            guard let self, videoID == upcoming.first, isStillNext(videoID),
                   let url = cache?.freshURL(for: videoID) else { return }
             self.preload(videoID, url: url)
         }

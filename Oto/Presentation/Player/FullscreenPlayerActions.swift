@@ -269,6 +269,7 @@ enum PlayerArtistLinks {
 extension View {
     /// Bản khảo sát: đổi luồng AVPlayer theo chế độ Bài hát/Video và cấp player cho mặt video.
     /// Đóng trình phát toàn màn hình thì gỡ hình; tiếng vẫn phát liền mạch.
+    /// Phải gắn ngoài `overlayPreferenceValue`, vì mặt video nằm trong overlay đó và cần đọc player từ environment.
     @ViewBuilder
     func probeVideoMode(_ playerVM: PlayerViewModel, showsVideo: Bool) -> some View {
         #if DEBUG && OTO_STREAM_PROBE

@@ -16,7 +16,6 @@ public struct FullscreenPlayerView: View {
     @State private var videoIsExpanded = false
     @GestureState(resetTransaction: Transaction(animation: .easeOut(duration: 0.22)))
     private var artworkDragOffset: CGFloat = 0
-
     public init(playerVM: PlayerViewModel) {
         self.playerVM = playerVM
     }
@@ -29,7 +28,7 @@ public struct FullscreenPlayerView: View {
                 compactPlayerLayout(geo: geo).transition(layoutTransition)
             }
         }
-        .accessibilityHidden(videoIsExpanded).probeVideoMode(playerVM, showsVideo: showsVideo)
+        .accessibilityHidden(videoIsExpanded)
         .overlayPreferenceValue(PlayerVideoAnchor.self) { anchor in
             if showsVideo, let anchor {
                 PlayerVideoOverlay(anchor: anchor, url: playerVM.currentSong?.artworkURL, expanded: videoIsExpanded) {
@@ -37,6 +36,7 @@ public struct FullscreenPlayerView: View {
                 }
             }
         }
+        .probeVideoMode(playerVM, showsVideo: showsVideo)
         .background(PlayerWindowAnchor(orientation: orientation).allowsHitTesting(false))
         .alert("Không thể xoay màn hình", isPresented: $rotationDenied) {
             Button("OK", role: .cancel) {}

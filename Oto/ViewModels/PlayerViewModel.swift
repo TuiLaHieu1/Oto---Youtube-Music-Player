@@ -175,6 +175,9 @@ extension PlayerViewModel {
     private func setupAudioSessionObserver() {
         let obs = AudioSessionObserver.shared
         obs.onInterruptionBegan = { [weak self] in
+            #if DEBUG && OTO_STREAM_PROBE
+            StreamProbeLog.write("StreamProbe vm onInterruptionBegan t=\(ProcessInfo.processInfo.systemUptime)")
+            #endif
             if let self {
                 self.invalidateAudioSessionForInterruption()
                 self.applyEffects(self.stateMachine.interruptionBegan())
@@ -184,6 +187,9 @@ extension PlayerViewModel {
             if let self { self.applyEffects(self.stateMachine.interruptionEnded(shouldResume: shouldResume)) }
         }
         obs.onHeadphonesUnplugged = { [weak self] in
+            #if DEBUG && OTO_STREAM_PROBE
+            StreamProbeLog.write("StreamProbe vm onHeadphonesUnplugged t=\(ProcessInfo.processInfo.systemUptime)")
+            #endif
             if let self { self.applyEffects(self.stateMachine.routeUnplugged()) }
         }
     }
@@ -225,7 +231,12 @@ extension PlayerViewModel {
     func startLoadingWatchdog(for generation: Int) {
         loadingWatchdogTask?.cancel()
         loadingWatchdogTask = Task { [weak self] in
+            #if DEBUG && OTO_STREAM_PROBE
+            // Khảo sát: lần đầu chạy yt-dlp có thể mất 10–20 giây; WebKit dự phòng cũng cần thời gian nạp.
+            try? await Task.sleep(nanoseconds: 45_000_000_000)
+            #else
             try? await Task.sleep(nanoseconds: 12_000_000_000)
+            #endif
             guard let self, !Task.isCancelled else { return }
             guard self.stateMachine.currentGeneration == generation,
                   self.stateMachine.playbackState.isBuffering,

@@ -67,29 +67,24 @@ enum PythonStreamResolver {
         return unsafeBitCast(pointer, to: type)
     }
 
+    /// Đo mạng của Python trong app (DNS, TCP, HTTPS). Chỉ ghi số đo và nhãn lỗi.
+    static func netcheck() async {
+        let source = """
+        import json as __oto_json
+        try:
+            from oto_resolve import netcheck as __oto_netcheck
+            __oto_result = __oto_json.dumps(__oto_netcheck())
+        except Exception as __oto_e:
+            __oto_result = __oto_json.dumps({'error': type(__oto_e).__name__})
+        """
+        let text = await withCheckedContinuation { continuation in
+            Self.queue.async { continuation.resume(returning: Self.runPython(source) ?? "{\"error\":\"python\"}") }
+        }
+        // Kết quả chỉ gồm khóa cố định, số và tên lớp lỗi; không có địa chỉ IP hay URL.
+        StreamProbeLog.write("PythonNet " + text)
+    }
+
     private static func runResolve(videoID: String) -> YtdlpResolveResult {
-        guard let frameworks = Bundle.main.privateFrameworksPath,
-              let handle = dlopen(frameworks + "/Python.framework/Python", RTLD_NOW | RTLD_GLOBAL) else {
-            return .failure("pythonMissing")
-        }
-        guard let isInitialized = symbol(handle, "Py_IsInitialized", as: IntFn.self),
-              let initialize = symbol(handle, "Py_Initialize", as: VoidFn.self),
-              let saveThread = symbol(handle, "PyEval_SaveThread", as: PtrFn.self),
-              let gilEnsure = symbol(handle, "PyGILState_Ensure", as: IntFn.self),
-              let gilRelease = symbol(handle, "PyGILState_Release", as: ReleaseFn.self),
-              let addModule = symbol(handle, "PyImport_AddModule", as: AddModuleFn.self),
-              let getDict = symbol(handle, "PyModule_GetDict", as: GetDictFn.self),
-              let runString = symbol(handle, "PyRun_StringFlags", as: RunStringFn.self),
-              let asUTF8 = symbol(handle, "PyUnicode_AsUTF8", as: AsUTF8Fn.self),
-              let decRef = symbol(handle, "Py_DecRef", as: DecRefFn.self),
-              let printError = symbol(handle, "PyErr_Print", as: VoidFn.self) else {
-            return .failure("pythonSymbols")
-        }
-        if isInitialized() == 0 {
-            Self.configureEnvironment()
-            initialize()
-            _ = saveThread()
-        }
         let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
             .appendingPathComponent("yt-dlp", isDirectory: true).path ?? ""
         guard let cacheLiteral = Self.pythonStringLiteral(caches) else { return .failure("cachePath") }
@@ -102,23 +97,53 @@ enum PythonStreamResolver {
             __oto_r.pop('log', None)
             __oto_result = __oto_json.dumps({'ok': True, **__oto_r})
         except Exception as __oto_e:
-            __oto_result = __oto_json.dumps({'ok': False, 'error': type(__oto_e).__name__})
+            from oto_resolve import classify as __oto_classify, last_error_label as __oto_last
+            __oto_result = __oto_json.dumps({'ok': False, 'error': type(__oto_e).__name__,
+                                             'label': __oto_classify(str(__oto_e)), 'lastLog': __oto_last()})
         """
+        guard let text = Self.runPython(source) else { return .failure("python") }
+        return Self.parse(text)
+    }
+
+    /// Chạy `source` trong `__main__` và trả về chuỗi trong biến `__oto_result`. Chỉ gọi trên `queue`.
+    private static func runPython(_ source: String) -> String? {
+        guard let frameworks = Bundle.main.privateFrameworksPath,
+              let handle = dlopen(frameworks + "/Python.framework/Python", RTLD_NOW | RTLD_GLOBAL) else {
+            return nil
+        }
+        guard let isInitialized = symbol(handle, "Py_IsInitialized", as: IntFn.self),
+              let initialize = symbol(handle, "Py_Initialize", as: VoidFn.self),
+              let saveThread = symbol(handle, "PyEval_SaveThread", as: PtrFn.self),
+              let gilEnsure = symbol(handle, "PyGILState_Ensure", as: IntFn.self),
+              let gilRelease = symbol(handle, "PyGILState_Release", as: ReleaseFn.self),
+              let addModule = symbol(handle, "PyImport_AddModule", as: AddModuleFn.self),
+              let getDict = symbol(handle, "PyModule_GetDict", as: GetDictFn.self),
+              let runString = symbol(handle, "PyRun_StringFlags", as: RunStringFn.self),
+              let asUTF8 = symbol(handle, "PyUnicode_AsUTF8", as: AsUTF8Fn.self),
+              let decRef = symbol(handle, "Py_DecRef", as: DecRefFn.self),
+              let printError = symbol(handle, "PyErr_Print", as: VoidFn.self) else {
+            return nil
+        }
+        if isInitialized() == 0 {
+            Self.configureEnvironment()
+            initialize()
+            _ = saveThread()
+        }
         let state = gilEnsure()
         defer { gilRelease(state) }
-        guard let main = addModule("__main__"), let globals = getDict(main) else { return .failure("pythonMain") }
+        guard let main = addModule("__main__"), let globals = getDict(main) else { return nil }
         guard let executed = runString(source, Self.pyFileInput, globals, globals, nil) else {
             printError()
-            return .failure("pythonException")
+            return nil
         }
         decRef(executed)
         guard let value = runString("__oto_result", Self.pyEvalInput, globals, globals, nil) else {
             printError()
-            return .failure("pythonResult")
+            return nil
         }
         defer { decRef(value) }
-        guard let text = asUTF8(value) else { return .failure("pythonResult") }
-        return Self.parse(String(cString: text))
+        guard let text = asUTF8(value) else { return nil }
+        return String(cString: text)
     }
 
     private static func configureEnvironment() {
@@ -141,8 +166,14 @@ enum PythonStreamResolver {
         }
         guard object["ok"] as? Bool == true else {
             let allowed = ["DownloadError", "ExtractorError", "ValueError", "OSError", "ImportError"]
-            let name = object["error"] as? String
-            return .failure(name.flatMap { allowed.contains($0) ? $0 : "other" } ?? "unknown")
+            let name = (object["error"] as? String).flatMap { allowed.contains($0) ? $0 : "other" } ?? "unknown"
+            // Nhãn do oto_resolve.classify tạo từ danh sách cố định; lọc lại cho chắc chỉ là chữ thường/hoa.
+            let safe = { (value: Any?) -> String in
+                guard let text = value as? String, text.count <= 20, text.allSatisfy({ $0.isLetter || $0.isNumber })
+                else { return "other" }
+                return text
+            }
+            return .failure("\(name):\(safe(object["label"]))/\(safe(object["lastLog"]))")
         }
         let url = (object["url"] as? String).flatMap(URL.init(string:)).flatMap { $0.scheme == "https" ? $0 : nil }
         let expire = object["expire"] as? Int

@@ -33,6 +33,9 @@ struct OtoApp: App {
                 if let url = result.url { _ = await StreamProbeSection.fetchCheck(url) }
             }
         }
+        if ProcessInfo.processInfo.environment["OTO_PROBE_NETCHECK"] != nil {
+            Task { await PythonStreamResolver.netcheck() }
+        }
         // Khảo sát: phát hàng đợi thử, Next sau 20 giây, Pause sau 40 giây.
         if let ids = ProcessInfo.processInfo.environment["OTO_PROBE_AUTOPLAY"]?.split(separator: ",").map(String.init),
            ids.allSatisfy(YTMusicClient.isValidVideoID) {

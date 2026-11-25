@@ -185,6 +185,9 @@ extension PlayerViewModel {
             Playback pause intent t=\(ProcessInfo.processInfo.systemUptime) \
             source=\(reason, privacy: .public) gen=\(self.stateMachine.currentGeneration)
             """)
+        #if DEBUG && OTO_STREAM_PROBE
+        StreamProbeLog.write("StreamProbe vm pause source=\(reason) t=\(ProcessInfo.processInfo.systemUptime)")
+        #endif
         cancelPendingCollectionLoads()
         cancelLoadingWatchdog()
         applyEffects(stateMachine.userPause())

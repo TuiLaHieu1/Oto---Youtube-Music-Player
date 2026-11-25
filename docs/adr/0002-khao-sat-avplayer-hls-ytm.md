@@ -47,3 +47,10 @@ Chủ dự án đã đọc các điều khoản trên, hiểu rủi ro và chọ
 - Trên Mac (chỉ JavaScriptCore, không node/deno): lấy được itag 140 `audio/mp4` mp4a.40.2 khoảng 130 kbps trong khoảng 7 giây, tải thử 64 KB trả 206 `audio/mp4`.
 - **Bước 1 trên iPhone 13 Pro Max (không cookie):** `YtdlpProbe outcome=ok format=140 abr=130 expiresIn=21595 hasN=true seconds=6.6–9.1`; `YtdlpFetch status=206 bytes=65536 type=audio/mp4 seconds=0.3`. Đạt: yt-dlp chạy được trong app iOS và URL tải được từ IP của iPhone.
 - Bước 2 (AVPlayer, Pause → Home → Play từ Control Center/AirPods) và bước 3 (lấy URL khi app ở nền) chưa đo.
+
+### 2026-11-25 · Bước 2 và phát mọi bài qua AVPlayer
+- **Bước 2 trên iPhone (chủ dự án thao tác):** Pause, về Home, sau 47,2 giây bấm Play trong Control Center khi `appState=2`; AVPlayer vào trạng thái phát sau 0,15 giây, vị trí tăng 18,09 → 21,01 khi app vẫn ở nền. Chủ dự án xác nhận Pause lâu rồi Play phát tiếp được. `DEVICE VERIFIED` cho ca này.
+- Router bản khảo sát giờ phát mọi bài YouTube Music bằng AVPlayer, lấy trước URL bài kế, lấy URL mới khi Play sau lúc URL gần hết hạn, quay về WebKit khi lỗi. Cờ `OTO_STREAM_PROBE` bật sẵn cho cấu hình Debug trên nhánh khảo sát.
+- Lượt thử tự động 2 bài (iPhone, không cookie): bài 1 lấy URL 5,9–7,1 giây; bài 2 lấy trước 4,0–5,2 giây; Next dùng URL đã lấy trước (`cached=1`). AVPlayer cần thêm khoảng 4–6 giây để có tiếng sau khi tạo item. Thử tắt `automaticallyWaitsToMinimizeStalling` thì có tiếng ngay nhưng bị đứng khoảng 5 giây giữa bài, nên giữ mặc định.
+- Một lượt gặp lỗi DNS tạm thời trong Python (`gaierror`, yt-dlp báo `apiPage`); đo lại ngay sau đó DNS/TCP/HTTPS của Python đều bình thường. Python không đi qua URLSession nên nhạy hơn với mạng chập chờn; khi lỗi, bài quay về WebKit.
+- Chưa đo: tự chuyển bài khi màn hình tắt, Next/Previous từ Lock Screen/AirPods, Pause trên 6 giờ, ca mở app sau Pause.

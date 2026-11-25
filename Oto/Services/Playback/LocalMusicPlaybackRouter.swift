@@ -5,8 +5,8 @@ import UIKit
 #endif
 
 /// Định tuyến file local và nhạc web qua cùng phiên điều khiển.
-/// Bản khảo sát (`OTO_STREAM_PROBE`) phát mọi bài YouTube Music bằng AVPlayer với URL từ yt-dlp,
-/// và quay về WebKit cho bài đó nếu không lấy được URL hoặc AVPlayer báo lỗi.
+/// Bản khảo sát (`OTO_STREAM_PROBE`) phát mọi bài YouTube Music bằng AVPlayer với URL từ yt-dlp;
+/// không dùng WebKit, lỗi lấy URL được báo qua `onError`.
 @MainActor
 final class LocalMusicPlaybackRouter: PlaybackBackend {
     var onTrackActivated: ((String, Int) -> Void)?
@@ -18,7 +18,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     var onRecoveryRequired: (() -> Void)?
 
     private let web: any PlaybackBackend
-    private let localPlayer = AVPlayer()
+    private var localPlayer = AVPlayer()
     private var localID: String?
     private var localGeneration = 0
     private var monitor: Task<Void, Never>?
@@ -36,15 +36,14 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     private var pendingStartSeconds: TimeInterval = 0
     private var lastProbeSecond = -1
     private var didPrefetchNearEnd = false
-    /// Bài đang phát bằng WebKit vì lần lấy URL trước lỗi, cùng vị trí cuối WebKit báo.
-    private var webFallback: WebFallback?
-    private struct WebFallback {
-        let id: String
-        let generation: Int
-        var position: TimeInterval
-    }
-    /// Quá thời gian này mà chưa có URL thì phát bài bằng WebKit; yt-dlp vẫn chạy tiếp để lần sau dùng.
-    private static let resolveTimeout: Duration = .seconds(20)
+    private var didRetryFailedItem = false
+    /// AVPlayer thứ hai giữ sẵn item của bài kế để nạp bộ đệm trước, luôn tắt tiếng.
+    /// Khi chuyển sang bài đó thì đổi vai hai player, vì một AVPlayerItem không được gắn sang player khác.
+    private var preloadPlayer = AVPlayer()
+    private var preloaded: (id: String, item: AVPlayerItem)?
+    private var preloadStatusObserver: NSKeyValueObservation?
+    /// Quá thời gian này mà chưa có URL thì báo lỗi rõ ràng thay vì quay mãi.
+    private static let resolveTimeout: Duration = .seconds(40)
     #endif
 
     init(web: any PlaybackBackend) {
@@ -59,11 +58,6 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         }
         web.onPositionUpdate = { [weak self] position, duration, generation, id in
             guard let self, self.localID == nil else { return }
-            #if DEBUG && OTO_STREAM_PROBE
-            if let fallback = self.webFallback, fallback.id == id, fallback.generation == generation {
-                self.webFallback?.position = position
-            }
-            #endif
             self.onPositionUpdate?(position, duration, generation, id)
         }
         web.onTrackEnded = { [weak self] generation, id in
@@ -88,7 +82,6 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         let wasLocal = localID != nil
         stopLocal()
         #if DEBUG && OTO_STREAM_PROBE
-        self.webFallback = nil
         if !id.hasPrefix(LocalMusicStore.idPrefix), YTMusicClient.isValidVideoID(id) {
             self.loadStream(id: id, startSeconds: startSeconds, generation: generation,
                             shouldPlay: shouldPlay, wasLocal: wasLocal)
@@ -110,9 +103,12 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         self.startItem(url: file, id: id, generation: generation, startSeconds: startSeconds, shouldPlay: shouldPlay)
     }
 
-    private func startItem(url: URL, id: String, generation: Int, startSeconds: TimeInterval, shouldPlay: Bool) {
-        let item = AVPlayerItem(url: url)
-        localPlayer.replaceCurrentItem(with: item)
+    private func startItem(
+        url: URL, id: String, generation: Int, startSeconds: TimeInterval, shouldPlay: Bool,
+        prepared: AVPlayerItem? = nil
+    ) {
+        let item = prepared ?? AVPlayerItem(url: url)
+        if localPlayer.currentItem !== item { localPlayer.replaceCurrentItem(with: item) }
         wantsPlayback = shouldPlay
         didEnd = false
         lastState = nil
@@ -139,17 +135,6 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     }
 
     func play() {
-        #if DEBUG && OTO_STREAM_PROBE
-        if localID == nil, let fallback = self.webFallback, self.streamCache.freshURL(for: fallback.id) != nil {
-            // Bài đang ở WebKit vì lần lấy URL trước lỗi; nay đã có URL thì chuyển sang AVPlayer.
-            self.webFallback = nil
-            self.web.pause()
-            self.loadStream(id: fallback.id, startSeconds: fallback.position, generation: fallback.generation,
-                            shouldPlay: true, wasLocal: false)
-            self.probeTrace("retryFromWeb")
-            return
-        }
-        #endif
         guard localID != nil else { web.play(); return }
         #if DEBUG && OTO_STREAM_PROBE
         self.probeTrace("play")
@@ -219,7 +204,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         if item.status == .failed {
             #if DEBUG && OTO_STREAM_PROBE
             if self.isProbeStream {
-                self.fallBackToWeb(id: id, generation: generation, reason: "itemFailed")
+                self.recoverFailedItem(id: id, generation: generation)
                 return false
             }
             #endif
@@ -239,7 +224,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         if lastState != state {
             #if DEBUG && OTO_STREAM_PROBE
             self.probeTrace("state=\(state)")
-            if state == 1 { self.streamCache.prefetch(self.upcomingTrackIDs?() ?? []) }
+            if state == 1 { self.prefetchUpcoming() }
             #endif
             lastState = state
             onPlaybackStateChange?(state, generation, id)
@@ -250,7 +235,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
 
 #if DEBUG && OTO_STREAM_PROBE
 extension LocalMusicPlaybackRouter {
-    /// Bài YouTube Music: dùng URL còn hạn nếu có, không thì chạy yt-dlp; lỗi thì phát bài đó bằng WebKit.
+    /// Bài YouTube Music: dùng item nạp sẵn hoặc URL còn hạn nếu có, không thì chạy yt-dlp.
     fileprivate func loadStream(
         id: String, startSeconds: TimeInterval, generation: Int, shouldPlay: Bool, wasLocal: Bool
     ) {
@@ -259,73 +244,119 @@ extension LocalMusicPlaybackRouter {
         self.isProbeStream = true
         self.lastProbeSecond = -1
         self.didPrefetchNearEnd = false
+        self.didRetryFailedItem = false
         self.wantsPlayback = shouldPlay
         self.lastState = nil
         if !wasLocal { self.web.pause() }
         if let url = self.streamCache.freshURL(for: id) {
-            self.probeTrace("load cached=1")
-            self.startItem(url: url, id: id, generation: generation, startSeconds: startSeconds, shouldPlay: shouldPlay)
+            let prepared = self.takePreloaded(id)
+            self.probeTrace("load cached=1 preloaded=\(prepared != nil ? 1 : 0)")
+            self.startItem(url: url, id: id, generation: generation, startSeconds: startSeconds,
+                           shouldPlay: shouldPlay, prepared: prepared)
             return
         }
         self.probeTrace("load cached=0")
+        self.resolveAndStart(id: id, generation: generation, startSeconds: startSeconds, reason: "load")
+    }
+
+    private func resolveAndStart(id: String, generation: Int, startSeconds: TimeInterval, reason: String) {
         self.isResolving = true
         self.pendingStartSeconds = startSeconds
-        self.onPlaybackStateChange?(shouldPlay ? 3 : 2, generation, id)
+        self.onPlaybackStateChange?(self.wantsPlayback ? 3 : 2, generation, id)
         Task { @MainActor [weak self] in
             try? await Task.sleep(for: Self.resolveTimeout)
             guard let self, self.localID == id, self.localGeneration == generation, self.isResolving else { return }
-            self.fallBackToWeb(id: id, generation: generation, reason: "resolveTimeout")
+            self.isResolving = false
+            self.probeTrace("error reason=timeout")
+            self.onError?(-1001, generation, id)
         }
         Task { @MainActor [weak self] in
-            let url = await self?.streamCache.url(for: id, reason: "load")
+            guard let resolution = await self?.streamCache.resolve(id, reason: reason) else { return }
             guard let self, self.localID == id, self.localGeneration == generation, self.isResolving else { return }
             self.isResolving = false
-            guard let url else {
-                self.fallBackToWeb(id: id, generation: generation, reason: "resolveFailed")
-                return
+            switch resolution {
+            case .url(let url):
+                if let endObserver = self.endObserver { NotificationCenter.default.removeObserver(endObserver) }
+                self.endObserver = nil
+                self.startItem(url: url, id: id, generation: generation,
+                               startSeconds: self.pendingStartSeconds, shouldPlay: self.wantsPlayback)
+            case .failed(let unavailable):
+                // 150: bài không phát được, PlayerViewModel tự chuyển bài nếu còn bài kế. -1009: lỗi mạng.
+                self.probeTrace("error reason=\(unavailable ? "unavailable" : "network")")
+                self.onError?(unavailable ? 150 : -1009, generation, id)
             }
-            self.startItem(url: url, id: id, generation: generation,
-                           startSeconds: self.pendingStartSeconds, shouldPlay: self.wantsPlayback)
         }
     }
 
     /// Play sau khi Pause lâu mà URL đã (sắp) hết hạn: lấy URL mới rồi phát tiếp đúng vị trí.
     fileprivate func refreshExpiredStream(id: String) {
-        let generation = self.localGeneration
         let position = self.localPlayer.currentTime().seconds
-        self.isResolving = true
-        self.pendingStartSeconds = position.isFinite ? position : 0
         self.probeTrace("refresh")
-        self.onPlaybackStateChange?(3, generation, id)
-        Task { @MainActor [weak self] in
-            let url = await self?.streamCache.url(for: id, reason: "refresh")
-            guard let self, self.localID == id, self.localGeneration == generation, self.isResolving else { return }
-            self.isResolving = false
-            guard let url else {
-                self.fallBackToWeb(id: id, generation: generation, reason: "refreshFailed")
-                return
-            }
-            if let endObserver = self.endObserver { NotificationCenter.default.removeObserver(endObserver) }
-            self.endObserver = nil
-            self.startItem(url: url, id: id, generation: generation,
-                           startSeconds: self.pendingStartSeconds, shouldPlay: self.wantsPlayback)
+        self.resolveAndStart(id: id, generation: self.localGeneration,
+                             startSeconds: position.isFinite ? position : 0, reason: "refresh")
+    }
+
+    /// AVPlayer báo lỗi (URL bị từ chối hoặc hết hạn): lấy URL mới một lần tại vị trí hiện tại, rồi mới báo lỗi.
+    fileprivate func recoverFailedItem(id: String, generation: Int) {
+        self.streamCache.invalidate(id)
+        guard !self.didRetryFailedItem else {
+            self.probeTrace("error reason=itemFailed")
+            self.onError?(-1, generation, id)
+            return
+        }
+        self.didRetryFailedItem = true
+        let position = self.localPlayer.currentTime().seconds
+        self.probeTrace("retry reason=itemFailed")
+        self.resolveAndStart(id: id, generation: generation,
+                             startSeconds: position.isFinite ? position : 0, reason: "retry")
+    }
+
+    // MARK: - Lấy trước và nạp sẵn bài kế
+
+    fileprivate func prefetchUpcoming() {
+        let upcoming = self.upcomingTrackIDs?() ?? []
+        self.streamCache.prefetch(upcoming) { [weak self] videoID in
+            guard let self, videoID == upcoming.first else { return }
+            self.preload(videoID)
         }
     }
 
-    /// Không phát được bằng AVPlayer: chuyển đúng bài này sang WebKit tại vị trí hiện tại.
-    fileprivate func fallBackToWeb(id: String, generation: Int, reason: String) {
-        let position = self.isResolving ? self.pendingStartSeconds : self.localPlayer.currentTime().seconds
-        let shouldPlay = self.wantsPlayback
-        self.probeTrace("fallback reason=\(reason)")
-        if reason != "resolveTimeout" { self.streamCache.invalidate(id) }
-        self.stopLocal()
-        self.isProbeStream = false
-        let resumeAt = position.isFinite ? max(0, position) : 0
-        self.webFallback = WebFallback(id: id, generation: generation, position: resumeAt)
-        self.web.loadVideo(
-            id: id, startSeconds: position.isFinite ? max(0, position) : 0,
-            generation: generation, shouldPlay: shouldPlay
-        )
+    /// Gắn item của bài kế vào AVPlayer phụ để nó nạp sẵn bộ đệm. Không phát tiếng.
+    private func preload(_ videoID: String) {
+        guard self.preloaded?.id != videoID, videoID != self.localID,
+              let url = self.streamCache.freshURL(for: videoID) else { return }
+        let item = AVPlayerItem(url: url)
+        self.preloaded = (videoID, item)
+        self.preloadPlayer.isMuted = true
+        self.preloadPlayer.replaceCurrentItem(with: item)
+        self.preloadStatusObserver = item.observe(\.status, options: [.new]) { @Sendable [weak self] item, _ in
+            guard item.status == .readyToPlay else { return }
+            Task { @MainActor in
+                guard let self, self.preloaded?.item === item else { return }
+                self.preloadPlayer.preroll(atRate: 1) { _ in }
+            }
+        }
+        self.probeTrace("preload")
+    }
+
+    /// Lấy item đã nạp sẵn cho đúng bài bằng cách đổi vai: player phụ (đang giữ item) thành player chính.
+    /// Item không bị tách khỏi player của nó. Bài khác thì bỏ item nạp sẵn đi.
+    private func takePreloaded(_ videoID: String) -> AVPlayerItem? {
+        guard let preloaded = self.preloaded else { return nil }
+        self.preloaded = nil
+        self.preloadStatusObserver = nil
+        self.preloadPlayer.cancelPendingPrerolls()
+        guard preloaded.id == videoID, preloaded.item.status != .failed,
+              self.preloadPlayer.currentItem === preloaded.item else {
+            self.preloadPlayer.replaceCurrentItem(with: nil)
+            return nil
+        }
+        self.localPlayer.pause()
+        self.localPlayer.replaceCurrentItem(with: nil)
+        swap(&self.localPlayer, &self.preloadPlayer)
+        self.localPlayer.isMuted = false
+        self.preloadPlayer.isMuted = true
+        return preloaded.item
     }
 
     fileprivate func observeProbeProgress(position: Double, duration: Double) {
@@ -337,7 +368,7 @@ extension LocalMusicPlaybackRouter {
         // Lấy trước bài kế khi gần hết bài (hàng đợi Radio có thể chỉ có sau khi bài bắt đầu).
         if !self.didPrefetchNearEnd, duration.isFinite, duration > 0, duration - position < 45 {
             self.didPrefetchNearEnd = true
-            self.streamCache.prefetch(self.upcomingTrackIDs?() ?? [])
+            self.prefetchUpcoming()
         }
     }
 

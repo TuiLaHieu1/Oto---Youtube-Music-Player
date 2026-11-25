@@ -81,7 +81,9 @@ public final class SessionStore {
 
         // 2. Tạm dừng và reset WebKit engine về trang blank
         playerVM?.pause()
+        #if !(DEBUG && OTO_STREAM_PROBE)
         SingletonPlayerWebView.shared.resetForSignOut()
+        #endif
 
         // 3. Xóa bộ nhớ đệm lời bài hát trong RAM
         await MultiSourceLyricsService.otoShared.clearCache()

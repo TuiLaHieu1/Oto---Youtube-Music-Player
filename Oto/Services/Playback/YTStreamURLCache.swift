@@ -2,6 +2,13 @@
 import Foundation
 import UIKit
 
+/// Kết quả lấy URL cho một bài.
+enum YTStreamResolution: Sendable {
+    case url(URL)
+    /// `unavailable`: lỗi do chính bài (bị chặn, không có định dạng phát được), nên bỏ qua bài.
+    case failed(unavailable: Bool)
+}
+
 /// Bộ nhớ URL audio đã lấy bằng yt-dlp, theo hạn dùng của từng URL. Chỉ trong bộ nhớ, giới hạn số mục.
 /// Gộp các yêu cầu trùng cho cùng một bài để một bài không chạy yt-dlp hai lần cùng lúc.
 @MainActor
@@ -18,7 +25,7 @@ final class YTStreamURLCache {
 
     private var entries: [String: Entry] = [:]
     private var order: [String] = []
-    private var inFlight: [String: Task<URL?, Never>] = [:]
+    private var inFlight: [String: Task<YTStreamResolution, Never>] = [:]
 
     func freshURL(for videoID: String, now: Date = Date()) -> URL? {
         guard let entry = self.entries[videoID], entry.expiresAt.timeIntervalSince(now) > Self.refreshMargin else {
@@ -32,11 +39,11 @@ final class YTStreamURLCache {
         self.order.removeAll { $0 == videoID }
     }
 
-    /// Trả URL còn hạn nếu có; nếu không thì chạy yt-dlp (gộp yêu cầu trùng). Nil khi không lấy được.
-    func url(for videoID: String, reason: String) async -> URL? {
-        if let url = self.freshURL(for: videoID) { return url }
+    /// Trả URL còn hạn nếu có; nếu không thì chạy yt-dlp (gộp yêu cầu trùng).
+    func resolve(_ videoID: String, reason: String) async -> YTStreamResolution {
+        if let url = self.freshURL(for: videoID) { return .url(url) }
         if let task = self.inFlight[videoID] { return await task.value }
-        let task = Task { @MainActor [weak self] () -> URL? in
+        let task = Task { @MainActor [weak self] () -> YTStreamResolution in
             // Xin thêm thời gian chạy khi app ở nền (ví dụ Next từ Lock Screen sau khi Pause lâu).
             let backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "oto.stream-resolve")
             defer {
@@ -45,23 +52,30 @@ final class YTStreamURLCache {
             let result = await PythonStreamResolver.resolve(videoID: videoID)
             StreamProbeLog.write(
                 "StreamProbe resolve reason=\(reason) appState=\(UIApplication.shared.applicationState.rawValue) "
-                    + "ok=\(result.url != nil)"
+                    + "ok=\(result.url != nil) label=\(result.errorLabel ?? "none")"
             )
-            guard let url = result.url else { return nil }
+            guard let url = result.url else { return .failed(unavailable: result.isTrackUnavailable) }
             let lifetime = TimeInterval(result.secondsUntilExpiry ?? 0)
             self?.store(url, for: videoID, expiresAt: Date().addingTimeInterval(lifetime))
-            return url
+            return .url(url)
         }
         self.inFlight[videoID] = task
-        let url = await task.value
+        let result = await task.value
         self.inFlight[videoID] = nil
-        return url
+        return result
     }
 
-    func prefetch(_ videoIDs: [String]) {
+    /// Lấy trước URL; gọi `completion` cho từng bài lấy được để router nạp sẵn bộ đệm.
+    func prefetch(_ videoIDs: [String], completion: @escaping @MainActor (String) -> Void) {
         for videoID in videoIDs where YTMusicClient.isValidVideoID(videoID) {
-            guard self.freshURL(for: videoID) == nil, self.inFlight[videoID] == nil else { continue }
-            Task { _ = await self.url(for: videoID, reason: "prefetch") }
+            if self.freshURL(for: videoID) != nil {
+                completion(videoID)
+                continue
+            }
+            guard self.inFlight[videoID] == nil else { continue }
+            Task {
+                if case .url = await self.resolve(videoID, reason: "prefetch") { completion(videoID) }
+            }
         }
     }
 
@@ -74,5 +88,25 @@ final class YTStreamURLCache {
             self.entries[oldest] = nil
         }
     }
+}
+
+/// Backend rỗng thay cho WebKit trong bản khảo sát: mọi bài YouTube Music đi qua AVPlayer.
+@MainActor
+final class NoopPlaybackBackend: PlaybackBackend {
+    var onTrackActivated: ((String, Int) -> Void)?
+    var onPlaybackStateChange: ((Int, Int, String) -> Void)?
+    var onPositionUpdate: ((TimeInterval, TimeInterval, Int, String) -> Void)?
+    var onTrackEnded: ((Int, String) -> Void)?
+    var onError: ((Int, Int, String) -> Void)?
+    var onRemoteCommand: ((PlaybackRemoteCommand) -> Void)?
+    var onRecoveryRequired: (() -> Void)?
+
+    func loadVideo(id: String, startSeconds: TimeInterval, generation: Int, shouldPlay: Bool) {
+        self.onError?(-1, generation, id)
+    }
+    func play() {}
+    func pause() {}
+    func seek(to position: TimeInterval) {}
+    func resetForSignOut() {}
 }
 #endif

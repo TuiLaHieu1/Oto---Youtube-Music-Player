@@ -52,7 +52,12 @@ public final class PlayerViewModel {
     ) {
         self.queueManager = queueManager
         self.clock = clock
+        #if DEBUG && OTO_STREAM_PROBE
+        // Bản khảo sát không dùng WebKit để phát: mọi bài YouTube Music đi qua AVPlayer với URL từ yt-dlp.
+        self.backend = backend ?? LocalMusicPlaybackRouter(web: NoopPlaybackBackend())
+        #else
         self.backend = backend ?? LocalMusicPlaybackRouter(web: SingletonPlayerWebView.shared)
+        #endif
         self.audioSession = audioSession
         self.catalog = catalog
         self.updatesSystemNowPlaying = updatesSystemNowPlaying
@@ -70,8 +75,8 @@ public final class PlayerViewModel {
         if let router = self.backend as? LocalMusicPlaybackRouter {
             router.upcomingTrackIDs = { [queueManager] in
                 let snapshot = queueManager.snapshot()
-                guard let index = snapshot.currentIndex, snapshot.items.indices.contains(index + 1) else { return [] }
-                return [snapshot.items[index + 1].song.id]
+                guard let index = snapshot.currentIndex else { return [] }
+                return snapshot.items.dropFirst(index + 1).prefix(2).map(\.song.id)
             }
         }
         #endif
@@ -327,7 +332,7 @@ extension PlayerViewModel {
     private func setupNowPlayingCommands() {
         let mgr = NowPlayingManager.shared
         mgr.onPlayCommand = { [weak self] in Task { @MainActor in self?.resume() } }
-        mgr.onPauseCommand = { [weak self] in Task { @MainActor in self?.pause() } }
+        mgr.onPauseCommand = { [weak self] in Task { @MainActor in self?.pause(reason: "remotePause") } }
         mgr.onTogglePlayPauseCommand = { [weak self] in Task { @MainActor in self?.togglePlayPause() } }
         mgr.onNextCommand = { [weak self] in Task { @MainActor in self?.next() } }
         mgr.onPreviousCommand = { [weak self] in Task { @MainActor in self?.previous() } }

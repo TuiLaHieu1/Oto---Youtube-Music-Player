@@ -38,10 +38,16 @@ class _QuietLogger:
         self._keep('ERR ', msg)
 
 
-def _borrow(cache_dir):
+# Đo trên Mac 2026-11-25: chỉ client visionos lấy M4A trong 3,8–4,0 giây, cấu hình mặc định 9,8–16,4 giây.
+# Thử visionos trước; nếu lỗi mới dùng cấu hình mặc định của yt-dlp.
+_PROFILES = {'fast': {'youtube': {'player_client': ['visionos']}}, 'default': {}}
+
+
+def _borrow(cache_dir, profile):
+    key = (cache_dir, profile)
     with _POOL_LOCK:
-        for index, (ydl, directory) in enumerate(_POOL):
-            if directory == cache_dir:
+        for index, (ydl, existing) in enumerate(_POOL):
+            if existing == key:
                 return _POOL.pop(index)[0]
     import yt_dlp
     options = {
@@ -56,15 +62,24 @@ def _borrow(cache_dir):
         'socket_timeout': 8,
         'retries': 1,
         'extractor_retries': 1,
+        'extractor_args': _PROFILES[profile],
     }
     with _CREATE_LOCK:
         return yt_dlp.YoutubeDL(options)
 
 
-def _give_back(ydl, cache_dir):
+def _give_back(ydl, cache_dir, profile):
     with _POOL_LOCK:
-        if len(_POOL) < 3:
-            _POOL.append((ydl, cache_dir))
+        if len(_POOL) < 4:
+            _POOL.append((ydl, (cache_dir, profile)))
+
+
+def warm(cache_dir: str | None = None) -> dict:
+    """Nạp yt-dlp và tạo sẵn một YoutubeDL lúc mở app để bài đầu tiên không phải chờ phần này."""
+    started = time.monotonic()
+    ydl = _borrow(cache_dir, 'fast')
+    _give_back(ydl, cache_dir, 'fast')
+    return {'seconds': round(time.monotonic() - started, 2)}
 
 
 _ERROR_LABELS = [
@@ -100,13 +115,22 @@ def resolve(video_id: str, cache_dir: str | None = None) -> dict:
     if not re.fullmatch(r'[A-Za-z0-9_-]{11}', video_id):
         raise ValueError('video id không hợp lệ')
     started = time.monotonic()
-    ydl = _borrow(cache_dir)
-    _LAST.ydl = ydl
-    try:
-        info = ydl.extract_info('https://music.youtube.com/watch?v=' + video_id, download=False)
-    finally:
-        _give_back(ydl, cache_dir)
-    url = info.get('url') or ''
+    info = None
+    profile_used = 'fast'
+    for profile in ('fast', 'default'):
+        ydl = _borrow(cache_dir, profile)
+        _LAST.ydl = ydl
+        try:
+            info = ydl.extract_info('https://music.youtube.com/watch?v=' + video_id, download=False)
+            profile_used = profile
+            if info and info.get('url'):
+                break
+        except Exception:
+            if profile == 'default':
+                raise
+        finally:
+            _give_back(ydl, cache_dir, profile)
+    url = (info or {}).get('url') or ''
     match = re.search(r'[?&/]expire[=/](\d+)', url)
     return {
         'url': url,
@@ -116,7 +140,8 @@ def resolve(video_id: str, cache_dir: str | None = None) -> dict:
         'abr': info.get('abr'),
         'expire': int(match.group(1)) if match else None,
         'seconds': round(time.monotonic() - started, 2),
-        'log': list(ydl.params['logger'].lines[-12:]),
+        'profile': profile_used,
+        'log': list(_LAST.ydl.params['logger'].lines[-12:]),
     }
 
 

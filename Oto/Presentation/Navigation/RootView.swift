@@ -30,12 +30,14 @@ public struct RootView: View {
 
     public var body: some View {
         ZStack {
+            #if !(DEBUG && OTO_STREAM_PROBE)
             // Gắn SingletonPlayerWebView vào view hierarchy nền để WebKit luôn duy trì render âm thanh
             PlayerWebViewContainer()
                 .frame(width: 320, height: 240)
                 .allowsHitTesting(false)
                 .accessibilityHidden(true)
                 .zIndex(-1)
+            #endif
 
             mainContentView
         }
@@ -48,7 +50,9 @@ public struct RootView: View {
         .sheet(isPresented: $playerVM.showAuth) {
             AuthView {
                 Task { @MainActor in
+                    #if !(DEBUG && OTO_STREAM_PROBE)
                     SingletonPlayerWebView.shared.reloadAfterLogin()
+                    #endif
                 }
             }
         }

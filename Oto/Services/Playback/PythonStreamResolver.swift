@@ -11,6 +11,9 @@ struct YtdlpResolveResult: Sendable {
     let hasNParameter: Bool
     let seconds: Double?
     let errorKind: String?
+    /// Nhãn lỗi cố định từ oto_resolve.classify (ví dụ videoUnavailable, timeout, apiPage).
+    var errorLabel: String?
+    var profile: String?
 
     var logLine: String {
         let abr = self.averageBitrate.map { String(Int($0.rounded())) } ?? "nil"
@@ -18,14 +21,21 @@ struct YtdlpResolveResult: Sendable {
         let took = self.seconds.map { String(format: "%.1f", $0) } ?? "nil"
         let outcome = self.url != nil ? "ok" : "error(\(self.errorKind ?? "unknown"))"
         return "YtdlpProbe outcome=\(outcome) format=\(self.formatID ?? "nil") abr=\(abr) "
-            + "expiresIn=\(expiry) hasN=\(self.hasNParameter) seconds=\(took)"
+            + "expiresIn=\(expiry) hasN=\(self.hasNParameter) seconds=\(took) profile=\(self.profile ?? "nil")"
     }
 
-    static func failure(_ kind: String) -> YtdlpResolveResult {
-        YtdlpResolveResult(
+    static func failure(_ kind: String, label: String? = nil) -> YtdlpResolveResult {
+        var result = YtdlpResolveResult(
             url: nil, formatID: nil, averageBitrate: nil, secondsUntilExpiry: nil,
             hasNParameter: false, seconds: nil, errorKind: kind
         )
+        result.errorLabel = label
+        return result
+    }
+
+    /// Lỗi do chính bài (bị chặn, không có định dạng phát được) thì nên bỏ qua bài; lỗi mạng thì không.
+    var isTrackUnavailable: Bool {
+        ["videoUnavailable", "noFormat", "signIn", "botCheck", "http403"].contains(self.errorLabel ?? "")
     }
 }
 
@@ -79,6 +89,28 @@ enum PythonStreamResolver {
         return unsafeBitCast(pointer, to: type)
     }
 
+    /// Nạp yt-dlp và tạo sẵn YoutubeDL lúc mở app, để bài đầu tiên không phải chờ phần này.
+    static func warm() async {
+        guard let cacheLiteral = Self.pythonStringLiteral(Self.cachePath) else { return }
+        let source = """
+        import json as __oto_json
+        try:
+            from oto_resolve import warm as __oto_warm
+            __oto_result = __oto_json.dumps(__oto_warm(cache_dir=\(cacheLiteral)))
+        except Exception as __oto_e:
+            __oto_result = __oto_json.dumps({'error': type(__oto_e).__name__})
+        """
+        let text = await withCheckedContinuation { continuation in
+            Self.queue.async { continuation.resume(returning: Self.runPython(source) ?? "{}") }
+        }
+        StreamProbeLog.write("YtdlpWarm " + text)
+    }
+
+    private static var cachePath: String {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("yt-dlp", isDirectory: true).path ?? ""
+    }
+
     /// Đo mạng của Python trong app (DNS, TCP, HTTPS). Chỉ ghi số đo và nhãn lỗi.
     static func netcheck() async {
         let source = """
@@ -97,9 +129,7 @@ enum PythonStreamResolver {
     }
 
     private static func runResolve(videoID: String) -> YtdlpResolveResult {
-        let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
-            .appendingPathComponent("yt-dlp", isDirectory: true).path ?? ""
-        guard let cacheLiteral = Self.pythonStringLiteral(caches) else { return .failure("cachePath") }
+        guard let cacheLiteral = Self.pythonStringLiteral(Self.cachePath) else { return .failure("cachePath") }
         // videoID đã được kiểm tra chỉ gồm [A-Za-z0-9_-]; đường dẫn cache được mã hóa thành chuỗi JSON.
         let source = """
         import json as __oto_json, re as __oto_re
@@ -189,12 +219,13 @@ enum PythonStreamResolver {
                 else { return "other" }
                 return text
             }
-            return .failure("\(name):\(safe(object["label"]))/\(safe(object["lastLog"]))")
+            let label = safe(object["label"]) == "other" ? safe(object["lastLog"]) : safe(object["label"])
+            return .failure("\(name):\(safe(object["label"]))/\(safe(object["lastLog"]))", label: label)
         }
         let url = (object["url"] as? String).flatMap(URL.init(string:)).flatMap { $0.scheme == "https" ? $0 : nil }
         let expire = object["expire"] as? Int
         let query = url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false)?.queryItems } ?? []
-        return YtdlpResolveResult(
+        var result = YtdlpResolveResult(
             url: url,
             formatID: (object["format_id"] as? String).map { String($0.prefix(8)) },
             averageBitrate: object["abr"] as? Double,
@@ -203,6 +234,9 @@ enum PythonStreamResolver {
             seconds: object["seconds"] as? Double,
             errorKind: url == nil ? "noURL" : nil
         )
+        let profile = object["profile"] as? String
+        result.profile = ["fast", "default"].contains(profile ?? "") ? profile : nil
+        return result
     }
 }
 

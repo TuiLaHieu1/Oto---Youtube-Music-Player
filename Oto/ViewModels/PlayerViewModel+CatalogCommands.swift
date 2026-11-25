@@ -204,7 +204,7 @@ extension PlayerViewModel {
         backend.pause()
     }
     public func togglePlayPause() {
-        if shouldShowPauseButton { pause() } else { resume() }
+        if shouldShowPauseButton { pause(reason: "toggle") } else { resume() }
     }
     public func next() { advanceQueue(userInitiated: true) }
 

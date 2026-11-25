@@ -66,6 +66,15 @@ public final class PlayerViewModel {
         setupPlayerBridge()
         setupAudioSessionObserver()
         if updatesSystemNowPlaying { setupNowPlayingCommands() }
+        #if DEBUG && OTO_STREAM_PROBE
+        if let router = self.backend as? LocalMusicPlaybackRouter {
+            router.upcomingTrackIDs = { [queueManager] in
+                let snapshot = queueManager.snapshot()
+                guard let index = snapshot.currentIndex, snapshot.items.indices.contains(index + 1) else { return [] }
+                return [snapshot.items[index + 1].song.id]
+            }
+        }
+        #endif
     }
 
     public var currentSong: Song? { playbackState.currentSong ?? queueManager.currentSong }

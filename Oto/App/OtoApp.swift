@@ -33,6 +33,18 @@ struct OtoApp: App {
                 if let url = result.url { _ = await StreamProbeSection.fetchCheck(url) }
             }
         }
+        // Khảo sát: phát hàng đợi thử, Next sau 20 giây, Pause sau 40 giây.
+        if let ids = ProcessInfo.processInfo.environment["OTO_PROBE_AUTOPLAY"]?.split(separator: ",").map(String.init),
+           ids.allSatisfy(YTMusicClient.isValidVideoID) {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(3))
+                vm.playQueue(songs: ids.enumerated().map { Song(id: $1, title: "Probe \($0 + 1)", artist: "Probe") })
+                try? await Task.sleep(for: .seconds(20))
+                vm.next()
+                try? await Task.sleep(for: .seconds(20))
+                vm.pause()
+            }
+        }
         #endif
     }
 

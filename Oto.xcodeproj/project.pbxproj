@@ -99,6 +99,7 @@
 		C50900000000000000000001 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50900000000000000000002 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift */; };
 		C51000000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51100000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift */; };
 		C51000000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51100000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift */; };
+		5350524F4245000900000001 /* Oto/Services/Playback/YTStreamURLCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5350524F4245000900000002 /* Oto/Services/Playback/YTStreamURLCache.swift */; };
 		5350524F4245000800000001 /* Oto/Services/Playback/PythonStreamResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5350524F4245000800000002 /* Oto/Services/Playback/PythonStreamResolver.swift */; };
 		C51000000000000000000003 /* Oto/Presentation/Library/LocalMusicView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C51100000000000000000003 /* Oto/Presentation/Library/LocalMusicView.swift */; };
 /* End PBXBuildFile section */
@@ -207,6 +208,7 @@
 		C50900000000000000000002 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Presentation/Settings/NativeHapticsProbeView.swift"; sourceTree = SOURCE_ROOT; };
 		C51100000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/Playback/LocalMusicStore.swift"; sourceTree = SOURCE_ROOT; };
 		C51100000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/Playback/LocalMusicPlaybackRouter.swift"; sourceTree = SOURCE_ROOT; };
+		5350524F4245000900000002 /* Oto/Services/Playback/YTStreamURLCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/Playback/YTStreamURLCache.swift; sourceTree = SOURCE_ROOT; };
 		5350524F4245000800000002 /* Oto/Services/Playback/PythonStreamResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Services/Playback/PythonStreamResolver.swift; sourceTree = SOURCE_ROOT; };
 		C51100000000000000000003 /* Oto/Presentation/Library/LocalMusicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Presentation/Library/LocalMusicView.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
@@ -346,6 +348,7 @@
 			isa = PBXGroup;
 			children = (
 				C51100000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift */,
+				5350524F4245000900000002 /* Oto/Services/Playback/YTStreamURLCache.swift */,
 				5350524F4245000800000002 /* Oto/Services/Playback/PythonStreamResolver.swift */,
 				C51100000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift */,
 				C50500000000000000000002 /* Oto/Services/API/YTMusicClient+Library.swift */,
@@ -521,6 +524,7 @@
 			files = (
 				C51000000000000000000003 /* Oto/Presentation/Library/LocalMusicView.swift in Sources */,
 				C51000000000000000000002 /* Oto/Services/Playback/LocalMusicPlaybackRouter.swift in Sources */,
+				5350524F4245000900000001 /* Oto/Services/Playback/YTStreamURLCache.swift in Sources */,
 				5350524F4245000800000001 /* Oto/Services/Playback/PythonStreamResolver.swift in Sources */,
 				C51000000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift in Sources */,
 				C50900000000000000000001 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift in Sources */,

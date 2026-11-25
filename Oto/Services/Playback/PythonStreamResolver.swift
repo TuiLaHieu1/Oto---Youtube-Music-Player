@@ -167,12 +167,4 @@ enum StreamProbeLog {
     }
 }
 
-/// URL phát thử cho từng bài, chỉ trong bộ nhớ. Router dùng để phát bài đó bằng AVPlayer thay vì WebKit.
-@MainActor
-enum StreamProbeOverride {
-    private(set) static var urls: [String: URL] = [:]
-
-    static func set(_ url: URL, for videoID: String) { Self.urls[videoID] = url }
-    static func clear() { Self.urls.removeAll() }
-}
 #endif

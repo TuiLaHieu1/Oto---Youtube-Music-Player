@@ -47,7 +47,7 @@ extension YTMusicParsers {
             throw YTMusicError.invalidResponse
         }
 
-        let renderers = collectRenderers(named: "playlistPanelVideoRenderer", in: json)
+        let renderers = upNextRenderers(in: json)
         guard !renderers.isEmpty else {
             return []
         }
@@ -95,6 +95,26 @@ extension YTMusicParsers {
             results.append(song)
         }
         return results
+    }
+
+    /// Lấy đúng một renderer cho mỗi mục trong hàng đợi, theo thứ tự.
+    /// Với tài khoản có nút chuyển Bài hát/Video, mỗi mục được bọc trong `playlistPanelVideoWrapperRenderer`:
+    /// `primaryRenderer` là bản đang chọn, `counterpart` là bản còn lại (audio hoặc MV). Chỉ lấy bản chính,
+    /// nếu không một bài có MV sẽ hiện hai lần.
+    private static func upNextRenderers(in json: [String: Any]) -> [[String: Any]] {
+        let panels = collectRenderers(named: "playlistPanelRenderer", in: json)
+        guard !panels.isEmpty else {
+            return collectRenderers(named: "playlistPanelVideoRenderer", in: json)
+        }
+        return panels.flatMap { panel -> [[String: Any]] in
+            let items = panel["contents"] as? [[String: Any]] ?? []
+            return items.compactMap { item in
+                if let renderer = item["playlistPanelVideoRenderer"] as? [String: Any] { return renderer }
+                let wrapper = item["playlistPanelVideoWrapperRenderer"] as? [String: Any]
+                let primary = wrapper?["primaryRenderer"] as? [String: Any]
+                return primary?["playlistPanelVideoRenderer"] as? [String: Any]
+            }
+        }
     }
 
     // MARK: - Two-Row Item

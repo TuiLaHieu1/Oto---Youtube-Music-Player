@@ -356,11 +356,92 @@ def audio_shape(entries):
     return counts
 
 
+def radio_queue_shape(document, seed_id=None):
+    """Đếm cấu trúc hàng đợi Radio: mục thường, mục bọc audio/MV và loại media. Không xuất ID hay tiêu đề."""
+    def media_type(renderer):
+        endpoint = renderer.get("navigationEndpoint", {}).get("watchEndpoint", {})
+        config = endpoint.get("watchEndpointMusicSupportedConfigs", {}).get("watchEndpointMusicConfig", {})
+        return config.get("musicVideoType", "unknown")
+
+    def bump(counts, key):
+        counts[key] = counts.get(key, 0) + 1
+
+    counts = {"panels": 0, "items": 0, "plain": 0, "wrapper": 0, "other": 0,
+              "primary_types": {}, "counterpart_types": {}, "plain_types": {},
+              "counterparts_per_wrapper": {}, "all_renderers_recursive": 0, "unique_ids_recursive": 0,
+              "unique_ids_primary_only": 0}
+    panels = []
+
+    def find_panels(node):
+        if isinstance(node, dict):
+            if isinstance(node.get("playlistPanelRenderer"), dict):
+                panels.append(node["playlistPanelRenderer"])
+            for child in node.values():
+                find_panels(child)
+        elif isinstance(node, list):
+            for child in node:
+                find_panels(child)
+    find_panels(document)
+    counts["panels"] = len(panels)
+    primary_ids = []
+    for panel in panels:
+        for item in panel.get("contents", []):
+            counts["items"] += 1
+            if "playlistPanelVideoRenderer" in item:
+                counts["plain"] += 1
+                renderer = item["playlistPanelVideoRenderer"]
+                bump(counts["plain_types"], media_type(renderer))
+                primary_ids.append(renderer.get("videoId"))
+            elif "playlistPanelVideoWrapperRenderer" in item:
+                counts["wrapper"] += 1
+                wrapper = item["playlistPanelVideoWrapperRenderer"]
+                primary = wrapper.get("primaryRenderer", {}).get("playlistPanelVideoRenderer", {})
+                bump(counts["primary_types"], media_type(primary))
+                primary_ids.append(primary.get("videoId"))
+                parts = wrapper.get("counterpart", [])
+                bump(counts["counterparts_per_wrapper"], str(len(parts)))
+                for part in parts:
+                    other = part.get("counterpartRenderer", {}).get("playlistPanelVideoRenderer", {})
+                    bump(counts["counterpart_types"], media_type(other))
+            else:
+                counts["other"] += 1
+    all_ids = []
+
+    def walk(node):
+        if isinstance(node, dict):
+            renderer = node.get("playlistPanelVideoRenderer")
+            if isinstance(renderer, dict):
+                all_ids.append(renderer.get("videoId"))
+            for child in node.values():
+                walk(child)
+        elif isinstance(node, list):
+            for child in node:
+                walk(child)
+    walk(document)
+    counts["all_renderers_recursive"] = len(all_ids)
+    counts["unique_ids_recursive"] = len(set(all_ids))
+    counts["unique_ids_primary_only"] = len(set(primary_ids))
+    counts["first_item_is_seed"] = bool(primary_ids) and primary_ids[0] == seed_id
+    counts["seed_in_queue"] = seed_id in primary_ids
+    # Cặp mục khác ID nhưng cùng tiêu đề + nghệ sĩ (thường là bản audio và bản MV của cùng bài).
+    keys = {}
+    for panel in panels:
+        for item in panel.get("contents", []):
+            renderer = item.get("playlistPanelVideoRenderer") or item.get(
+                "playlistPanelVideoWrapperRenderer", {}).get("primaryRenderer", {}).get("playlistPanelVideoRenderer", {})
+            title = "".join(r.get("text", "") for r in renderer.get("title", {}).get("runs", [])).strip().lower()
+            byline = renderer.get("longBylineText", {}).get("runs", [])
+            artist = byline[0].get("text", "").strip().lower() if byline else ""
+            keys.setdefault((title, artist), set()).add(renderer.get("videoId"))
+    counts["same_title_artist_groups"] = sum(1 for ids in keys.values() if len(ids) > 1)
+    return counts
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--client-version")
     parser.add_argument("--library-shape-input", type=Path)
-    parser.add_argument("--operation", choices=["home", "home-continuation", "search", "artist", "artist-runs", "library-albums", "library-artists", "lyrics-next", "lyrics-browse", "recording-code-player", "recording-code-release", "playability"], default="home")
+    parser.add_argument("--operation", choices=["home", "home-continuation", "search", "artist", "artist-runs", "library-albums", "library-artists", "lyrics-next", "lyrics-browse", "recording-code-player", "recording-code-release", "playability", "radio-queue"], default="home")
     parser.add_argument("--video-types", action="store_true")
     parser.add_argument("--album-artist-shape", action="store_true")
     parser.add_argument("--artist-radio", action="store_true")
@@ -406,6 +487,12 @@ def main():
         operation = "player"
         payload.pop("browseId")
         payload["videoId"] = args.video_id
+    elif args.operation == "radio-queue":
+        if not args.video_id or len(args.video_id) != 11 or not args.video_id.replace("-", "").replace("_", "").isalnum():
+            parser.error("--video-id phải là YouTube video ID hợp lệ")
+        operation = "next"
+        payload.pop("browseId")
+        payload.update({"videoId": args.video_id, "playlistId": "RDAMVM" + args.video_id, "isAudioOnly": True})
     elif args.operation in ("lyrics-next", "lyrics-browse"):
         if not args.video_id or not args.video_id.replace("-", "").replace("_", "").isalnum():
             parser.error("--video-id phải là YouTube video ID hợp lệ")
@@ -431,6 +518,8 @@ def main():
     counts = {}
     if args.operation == "playability":
         counts = playability_summary(document, args.video_id)
+    elif args.operation == "radio-queue":
+        counts = radio_queue_shape(document, args.video_id)
     elif args.operation == "recording-code-player":
         collect(document.get("microformat"), counts)
         collect(document.get("videoDetails"), counts)

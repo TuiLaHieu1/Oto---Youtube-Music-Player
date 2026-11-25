@@ -159,3 +159,42 @@ struct MusicSearchTests {
         ]]
     }
 }
+
+@Suite("Hàng đợi Up Next không lặp bài có MV")
+struct UpNextWrapperTests {
+    private static func video(_ id: String, _ title: String, type: String) -> [String: Any] {
+        [
+            "videoId": id,
+            "title": ["runs": [["text": title]]],
+            "longBylineText": ["runs": [["text": "Nghệ sĩ"]]],
+            "lengthText": ["runs": [["text": "3:30"]]],
+            "navigationEndpoint": ["watchEndpoint": [
+                "videoId": id,
+                "watchEndpointMusicSupportedConfigs": ["watchEndpointMusicConfig": ["musicVideoType": type]]
+            ]]
+        ]
+    }
+
+    @Test("Mục bọc audio/MV chỉ lấy bản chính, giữ thứ tự và mục thường")
+    func wrapperKeepsPrimaryOnly() throws {
+        let wrapped: [String: Any] = ["playlistPanelVideoWrapperRenderer": [
+            "primaryRenderer": [
+                "playlistPanelVideoRenderer": Self.video("audio_2", "Bài hai", type: "MUSIC_VIDEO_TYPE_ATV")
+            ],
+            "counterpart": [[
+                "counterpartRenderer": [
+                    "playlistPanelVideoRenderer": Self.video("mv_2", "Bài hai", type: "MUSIC_VIDEO_TYPE_OMV")
+                ]
+            ]]
+        ]]
+        let fixture: [String: Any] = ["contents": ["singleColumnMusicWatchNextResultsRenderer": [
+            "playlist": ["playlistPanelRenderer": ["contents": [
+                ["playlistPanelVideoRenderer": Self.video("audio_1", "Bài một", type: "MUSIC_VIDEO_TYPE_ATV")],
+                wrapped,
+                ["playlistPanelVideoRenderer": Self.video("audio_3", "Bài ba", type: "MUSIC_VIDEO_TYPE_ATV")]
+            ]]]
+        ]]]
+        let songs = try YTMusicParsers.parseUpNextQueue(from: JSONSerialization.data(withJSONObject: fixture))
+        #expect(songs.map(\.id) == ["audio_1", "audio_2", "audio_3"])
+    }
+}

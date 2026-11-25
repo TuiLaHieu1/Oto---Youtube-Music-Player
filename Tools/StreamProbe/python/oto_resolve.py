@@ -135,6 +135,7 @@ def resolve(video_id: str, cache_dir: str | None = None) -> dict:
     # Manifest HLS (hình H.264 + nhóm tiếng AAC) có sẵn trong cùng phản hồi; dùng cho chế độ Video bằng AVPlayer.
     hls = next((f.get('manifest_url') for f in (info or {}).get('formats') or []
                 if str(f.get('protocol', '')).startswith('m3u8') and f.get('manifest_url')), '')
+    info = info or {}
     return {
         'url': url,
         'hls': hls,

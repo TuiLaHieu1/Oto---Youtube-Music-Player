@@ -31,7 +31,8 @@ final class ProbePreloader {
         self.statusObserver = item.observe(\.status, options: [.new]) { @Sendable [weak self] item, _ in
             guard item.status == .readyToPlay else { return }
             Task { @MainActor in
-                guard let self, self.preloaded?.item === item else { return }
+                // preroll yêu cầu player đã sẵn sàng, nếu không AVFoundation có thể ném exception.
+                guard let self, self.preloaded?.item === item, self.player.status == .readyToPlay else { return }
                 self.player.preroll(atRate: 1) { _ in }
             }
         }

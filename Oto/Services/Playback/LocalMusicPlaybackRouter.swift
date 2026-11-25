@@ -37,11 +37,12 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     private var lastProbeSecond = -1
     private var didPrefetchNearEnd = false
     private var didRetryFailedItem = false
-    /// AVPlayer thứ hai giữ sẵn item của bài kế để nạp bộ đệm trước, luôn tắt tiếng.
-    /// Khi chuyển sang bài đó thì đổi vai hai player, vì một AVPlayerItem không được gắn sang player khác.
-    private var preloadPlayer = AVPlayer()
-    private var preloaded: (id: String, item: AVPlayerItem)?
-    private var preloadStatusObserver: NSKeyValueObservation?
+    private let preloader = ProbePreloader()
+    /// Player đang phát manifest HLS có hình cho màn hình Video; nil khi phát audio.
+    let videoOutput = ProbeVideoOutput()
+    /// Luồng đang phát là manifest HLS có hình (giữ tới hết bài kể cả khi người dùng tắt Video).
+    private var isVideoItem = false
+    private var videoSwitchToken = 0
     /// Quá thời gian này mà chưa có URL thì báo lỗi rõ ràng thay vì quay mãi.
     private static let resolveTimeout: Duration = .seconds(40)
     #endif
@@ -105,14 +106,15 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
 
     private func startItem(
         url: URL, id: String, generation: Int, startSeconds: TimeInterval, shouldPlay: Bool,
-        prepared: AVPlayerItem? = nil
+        prepared: AVPlayerItem? = nil, activates: Bool = true
     ) {
         let item = prepared ?? AVPlayerItem(url: url)
         if localPlayer.currentItem !== item { localPlayer.replaceCurrentItem(with: item) }
         wantsPlayback = shouldPlay
         didEnd = false
         lastState = nil
-        onTrackActivated?(id, generation)
+        if activates { onTrackActivated?(id, generation) }
+        if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
         endObserver = NotificationCenter.default.addObserver(
             forName: AVPlayerItem.didPlayToEndTimeNotification, object: item, queue: nil
         ) { @Sendable [weak self] _ in
@@ -247,6 +249,7 @@ extension LocalMusicPlaybackRouter {
         self.didRetryFailedItem = false
         self.wantsPlayback = shouldPlay
         self.lastState = nil
+        self.leaveVideoMode()
         if !wasLocal { self.web.pause() }
         if let url = self.streamCache.freshURL(for: id) {
             let prepared = self.takePreloaded(id)
@@ -276,8 +279,7 @@ extension LocalMusicPlaybackRouter {
             self.isResolving = false
             switch resolution {
             case .url(let url):
-                if let endObserver = self.endObserver { NotificationCenter.default.removeObserver(endObserver) }
-                self.endObserver = nil
+                self.leaveVideoMode()
                 self.startItem(url: url, id: id, generation: generation,
                                startSeconds: self.pendingStartSeconds, shouldPlay: self.wantsPlayback)
             case .failed(let unavailable):
@@ -311,52 +313,61 @@ extension LocalMusicPlaybackRouter {
                              startSeconds: position.isFinite ? position : 0, reason: "retry")
     }
 
+    // MARK: - Chế độ Video
+
+    /// Bật Video: chuyển sang manifest HLS có hình của cùng bài, giữ vị trí và trạng thái phát.
+    /// Tắt Video: chỉ gỡ hình, phát tiếp HLS (có tiếng) tới hết bài để không ngắt tiếng khi nạp lại audio.
+    func setVideoMode(_ wantsVideo: Bool) {
+        guard self.isProbeStream, let id = self.localID else { return }
+        self.videoOutput.failed = false
+        self.videoSwitchToken += 1
+        guard wantsVideo, !self.isVideoItem else {
+            self.videoOutput.player = wantsVideo ? self.localPlayer : nil
+            return
+        }
+        let token = self.videoSwitchToken
+        let generation = self.localGeneration
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let videoURL = await self.streamCache.videoURL(for: id)
+            guard self.videoSwitchToken == token, self.localID == id, self.localGeneration == generation,
+                  !self.isResolving, !self.isVideoItem else { return }
+            guard let url = videoURL else {
+                self.probeTrace("video unavailable")
+                self.videoOutput.failed = true
+                return
+            }
+            let position = self.localPlayer.currentTime().seconds
+            self.isVideoItem = true
+            self.startItem(url: url, id: id, generation: generation,
+                           startSeconds: position.isFinite ? position : 0, shouldPlay: self.wantsPlayback,
+                           activates: false)
+            self.videoOutput.player = self.localPlayer
+            self.probeTrace("video mode=1")
+        }
+    }
+
+    /// Bài mới hoặc URL mới luôn là audio; bỏ trạng thái Video của bài trước.
+    private func leaveVideoMode() {
+        self.videoSwitchToken += 1
+        self.isVideoItem = false
+        self.videoOutput.player = nil
+        self.videoOutput.failed = false
+    }
+
     // MARK: - Lấy trước và nạp sẵn bài kế
 
     fileprivate func prefetchUpcoming() {
-        let upcoming = self.upcomingTrackIDs?() ?? []
-        self.streamCache.prefetch(upcoming) { [weak self] videoID in
-            guard let self, videoID == upcoming.first else { return }
-            self.preload(videoID)
+        self.preloader.prefetch(self.upcomingTrackIDs?() ?? [], cache: self.streamCache) { [weak self] in
+            self?.localID
         }
     }
 
-    /// Gắn item của bài kế vào AVPlayer phụ để nó nạp sẵn bộ đệm. Không phát tiếng.
-    private func preload(_ videoID: String) {
-        guard self.preloaded?.id != videoID, videoID != self.localID,
-              let url = self.streamCache.freshURL(for: videoID) else { return }
-        let item = AVPlayerItem(url: url)
-        self.preloaded = (videoID, item)
-        self.preloadPlayer.isMuted = true
-        self.preloadPlayer.replaceCurrentItem(with: item)
-        self.preloadStatusObserver = item.observe(\.status, options: [.new]) { @Sendable [weak self] item, _ in
-            guard item.status == .readyToPlay else { return }
-            Task { @MainActor in
-                guard let self, self.preloaded?.item === item else { return }
-                self.preloadPlayer.preroll(atRate: 1) { _ in }
-            }
-        }
-        self.probeTrace("preload")
-    }
-
-    /// Lấy item đã nạp sẵn cho đúng bài bằng cách đổi vai: player phụ (đang giữ item) thành player chính.
-    /// Item không bị tách khỏi player của nó. Bài khác thì bỏ item nạp sẵn đi.
+    /// Lấy item nạp sẵn của đúng bài; player phụ đang giữ item trở thành player chính.
     private func takePreloaded(_ videoID: String) -> AVPlayerItem? {
-        guard let preloaded = self.preloaded else { return nil }
-        self.preloaded = nil
-        self.preloadStatusObserver = nil
-        self.preloadPlayer.cancelPendingPrerolls()
-        guard preloaded.id == videoID, preloaded.item.status != .failed,
-              self.preloadPlayer.currentItem === preloaded.item else {
-            self.preloadPlayer.replaceCurrentItem(with: nil)
-            return nil
-        }
-        self.localPlayer.pause()
-        self.localPlayer.replaceCurrentItem(with: nil)
-        swap(&self.localPlayer, &self.preloadPlayer)
-        self.localPlayer.isMuted = false
-        self.preloadPlayer.isMuted = true
-        return preloaded.item
+        guard let handoff = self.preloader.take(videoID, replacing: self.localPlayer) else { return nil }
+        self.localPlayer = handoff.player
+        return handoff.item
     }
 
     fileprivate func observeProbeProgress(position: Double, duration: Double) {

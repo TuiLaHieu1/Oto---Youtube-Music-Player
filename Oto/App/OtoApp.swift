@@ -44,7 +44,16 @@ struct OtoApp: App {
             Task { @MainActor in
                 try? await Task.sleep(for: .seconds(3))
                 vm.playQueue(songs: ids.enumerated().map { Song(id: $1, title: "Probe \($0 + 1)", artist: "Probe") })
-                try? await Task.sleep(for: .seconds(20))
+                if ProcessInfo.processInfo.environment["OTO_PROBE_VIDEO"] != nil {
+                    // Khảo sát chế độ Video: sang manifest HLS rồi về audio, giữ vị trí.
+                    try? await Task.sleep(for: .seconds(12))
+                    vm.setProbeVideoMode(true)
+                    try? await Task.sleep(for: .seconds(12))
+                    vm.setProbeVideoMode(false)
+                    try? await Task.sleep(for: .seconds(6))
+                } else {
+                    try? await Task.sleep(for: .seconds(20))
+                }
                 vm.next()
                 try? await Task.sleep(for: .seconds(25))
                 vm.next()

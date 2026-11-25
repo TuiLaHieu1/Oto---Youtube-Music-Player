@@ -239,12 +239,8 @@ struct WideLyricsPanel: View {
 
 /// Chỉ hiện nút Video khi endpoint khớp ID đang phát và có loại video rõ ràng.
 enum PlayerVideoAvailability {
-    /// Mặt video dùng WebKit. Bản khảo sát chỉ phát audio qua AVPlayer, không có WebKit, nên tắt chế độ Video.
-    #if DEBUG && OTO_STREAM_PROBE
-    static let hasVideoSurface = false
-    #else
+    /// Có mặt hiển thị video: WebKit ở bản thường, AVPlayerLayer + manifest HLS ở bản khảo sát.
     static let hasVideoSurface = true
-    #endif
 
     static func availableID(for song: Song?) async -> String? {
         guard hasVideoSurface, let song, !song.isLocal,
@@ -267,5 +263,20 @@ enum PlayerArtistLinks {
         return song.artists.filter {
             $0.browseId.hasPrefix("UC") && !$0.name.isEmpty && seen.insert($0.id).inserted
         }
+    }
+}
+
+extension View {
+    /// Bản khảo sát: đổi luồng AVPlayer theo chế độ Bài hát/Video và cấp player cho mặt video.
+    /// Đóng trình phát toàn màn hình thì gỡ hình; tiếng vẫn phát liền mạch.
+    @ViewBuilder
+    func probeVideoMode(_ playerVM: PlayerViewModel, showsVideo: Bool) -> some View {
+        #if DEBUG && OTO_STREAM_PROBE
+        self.environment(playerVM.probeVideoOutput)
+            .onChange(of: showsVideo) { _, wantsVideo in playerVM.setProbeVideoMode(wantsVideo) }
+            .onDisappear { playerVM.setProbeVideoMode(false) }
+        #else
+        self
+        #endif
     }
 }

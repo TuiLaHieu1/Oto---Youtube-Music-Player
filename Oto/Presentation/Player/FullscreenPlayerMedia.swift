@@ -63,15 +63,29 @@ private struct PlayerVideoSurface: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let url: URL?
     @State private var ready: Bool?
+    #if DEBUG && OTO_STREAM_PROBE
+    @Environment(ProbeVideoOutput.self) private var probeOutput: ProbeVideoOutput?
+    #endif
 
     var body: some View {
         ZStack(alignment: .bottom) {
+            #if DEBUG && OTO_STREAM_PROBE
+            // Bản khảo sát: AVPlayerLayer gắn vào player đang phát manifest HLS; chưa có khung hình thì hiện ảnh bìa.
+            if let player = probeOutput?.player {
+                ProbeVideoLayer(player: player) { isReady in
+                    withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { ready = isReady ? true : nil }
+                }
+                .accessibilityHidden(true)
+            }
+            let ready: Bool? = probeOutput?.failed == true ? false : (probeOutput?.player == nil ? nil : self.ready)
+            #else
             if ready != false {
                 PlayerWebViewContainer { result in
                     withAnimation(reduceMotion ? nil : .easeOut(duration: 0.18)) { ready = result }
                 }
                     .accessibilityHidden(true)
             }
+            #endif
             if ready != true {
                 PlayerCoverImage(url: url)
                     .accessibilityHidden(true)

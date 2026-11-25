@@ -132,8 +132,12 @@ def resolve(video_id: str, cache_dir: str | None = None) -> dict:
             _give_back(ydl, cache_dir, profile)
     url = (info or {}).get('url') or ''
     match = re.search(r'[?&/]expire[=/](\d+)', url)
+    # Manifest HLS (hình H.264 + nhóm tiếng AAC) có sẵn trong cùng phản hồi; dùng cho chế độ Video bằng AVPlayer.
+    hls = next((f.get('manifest_url') for f in (info or {}).get('formats') or []
+                if str(f.get('protocol', '')).startswith('m3u8') and f.get('manifest_url')), '')
     return {
         'url': url,
+        'hls': hls,
         'format_id': info.get('format_id'),
         'ext': info.get('ext'),
         'acodec': info.get('acodec'),

@@ -29,7 +29,7 @@ public struct FullscreenPlayerView: View {
                 compactPlayerLayout(geo: geo).transition(layoutTransition)
             }
         }
-        .accessibilityHidden(videoIsExpanded)
+        .accessibilityHidden(videoIsExpanded).probeVideoMode(playerVM, showsVideo: showsVideo)
         .overlayPreferenceValue(PlayerVideoAnchor.self) { anchor in
             if showsVideo, let anchor {
                 PlayerVideoOverlay(anchor: anchor, url: playerVM.currentSong?.artworkURL, expanded: videoIsExpanded) {

@@ -14,6 +14,8 @@ struct YtdlpResolveResult: Sendable {
     /// Nhãn lỗi cố định từ oto_resolve.classify (ví dụ videoUnavailable, timeout, apiPage).
     var errorLabel: String?
     var profile: String?
+    /// Manifest HLS có hình cho chế độ Video; chỉ giữ trong bộ nhớ.
+    var hlsURL: URL?
 
     var logLine: String {
         let abr = self.averageBitrate.map { String(Int($0.rounded())) } ?? "nil"
@@ -21,7 +23,8 @@ struct YtdlpResolveResult: Sendable {
         let took = self.seconds.map { String(format: "%.1f", $0) } ?? "nil"
         let outcome = self.url != nil ? "ok" : "error(\(self.errorKind ?? "unknown"))"
         return "YtdlpProbe outcome=\(outcome) format=\(self.formatID ?? "nil") abr=\(abr) "
-            + "expiresIn=\(expiry) hasN=\(self.hasNParameter) seconds=\(took) profile=\(self.profile ?? "nil")"
+            + "expiresIn=\(expiry) hasN=\(self.hasNParameter) seconds=\(took) profile=\(self.profile ?? "nil") "
+            + "hasHLS=\(self.hlsURL != nil)"
     }
 
     static func failure(_ kind: String, label: String? = nil) -> YtdlpResolveResult {
@@ -236,6 +239,8 @@ enum PythonStreamResolver {
         )
         let profile = object["profile"] as? String
         result.profile = ["fast", "default"].contains(profile ?? "") ? profile : nil
+        result.hlsURL = (object["hls"] as? String).flatMap(URL.init(string:))
+            .flatMap { $0.scheme == "https" ? $0 : nil }
         return result
     }
 }

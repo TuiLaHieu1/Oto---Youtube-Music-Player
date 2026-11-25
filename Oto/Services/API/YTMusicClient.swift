@@ -199,7 +199,7 @@ public final class YTMusicClient: Sendable {
         request.httpBody = try? JSONSerialization.data(withJSONObject: bodyPayload)
 
         let data = try await perform(request, operation: "up-next")
-        return try YTMusicParsers.parseUpNextQueue(from: data)
+        return try YTMusicParsers.parseUpNextQueue(from: data, seedID: trimmed)
     }
 
     /// Chặn callback của phiên cũ và hủy request đang chạy trước khi xóa thông tin đăng nhập.

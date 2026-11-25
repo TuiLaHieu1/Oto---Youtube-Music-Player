@@ -239,8 +239,15 @@ struct WideLyricsPanel: View {
 
 /// Chỉ hiện nút Video khi endpoint khớp ID đang phát và có loại video rõ ràng.
 enum PlayerVideoAvailability {
+    /// Mặt video dùng WebKit. Bản khảo sát chỉ phát audio qua AVPlayer, không có WebKit, nên tắt chế độ Video.
+    #if DEBUG && OTO_STREAM_PROBE
+    static let hasVideoSurface = false
+    #else
+    static let hasVideoSurface = true
+    #endif
+
     static func availableID(for song: Song?) async -> String? {
-        guard let song, !song.isLocal,
+        guard hasVideoSurface, let song, !song.isLocal,
               let data = try? await YTMusicClient.shared.fetchLyricsNext(videoId: song.id),
               YTMusicParsers.supportsVideo(in: data, id: song.id) else { return nil }
         return song.id

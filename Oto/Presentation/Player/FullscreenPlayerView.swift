@@ -246,7 +246,7 @@ private extension FullscreenPlayerView {
     }
 
     private var canShowVideo: Bool {
-        guard let id = playerVM.currentSong?.id else { return false }
+        guard PlayerVideoAvailability.hasVideoSurface, let id = playerVM.currentSong?.id else { return false }
         return videoAvailableID == id || playerVM.confirmedVideoSelectionID == id
     }
 

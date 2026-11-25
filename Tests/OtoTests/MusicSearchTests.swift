@@ -197,4 +197,27 @@ struct UpNextWrapperTests {
         let songs = try YTMusicParsers.parseUpNextQueue(from: JSONSerialization.data(withJSONObject: fixture))
         #expect(songs.map(\.id) == ["audio_1", "audio_2", "audio_3"])
     }
+
+    @Test("Bài đang phát là MV: mục bọc có bản còn lại là bài đó thì lấy đúng ID bài đang phát")
+    func wrapperPrefersSeedCounterpart() throws {
+        let seedPair: [String: Any] = ["playlistPanelVideoWrapperRenderer": [
+            "primaryRenderer": [
+                "playlistPanelVideoRenderer": Self.video("audio_1", "Bài một", type: "MUSIC_VIDEO_TYPE_ATV")
+            ],
+            "counterpart": [[
+                "counterpartRenderer": [
+                    "playlistPanelVideoRenderer": Self.video("mv_1", "Bài một", type: "MUSIC_VIDEO_TYPE_OMV")
+                ]
+            ]]
+        ]]
+        let fixture: [String: Any] = ["contents": ["singleColumnMusicWatchNextResultsRenderer": [
+            "playlist": ["playlistPanelRenderer": ["contents": [
+                seedPair,
+                ["playlistPanelVideoRenderer": Self.video("audio_2", "Bài hai", type: "MUSIC_VIDEO_TYPE_ATV")]
+            ]]]
+        ]]]
+        let data = try JSONSerialization.data(withJSONObject: fixture)
+        #expect(try YTMusicParsers.parseUpNextQueue(from: data, seedID: "mv_1").map(\.id) == ["mv_1", "audio_2"])
+        #expect(try YTMusicParsers.parseUpNextQueue(from: data).map(\.id) == ["audio_1", "audio_2"])
+    }
 }

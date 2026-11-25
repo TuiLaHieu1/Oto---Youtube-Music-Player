@@ -42,12 +42,14 @@ extension YTMusicParsers {
     // MARK: - Up Next / Radio Queue
 
     /// Phân tích danh sách hàng đợi phát tiếp theo (Up Next / Radio) từ YouTube Music.
-    public static func parseUpNextQueue(from data: Data) throws -> [Song] {
+    /// `seedID` là bài đang phát: nếu một mục bọc có bản còn lại chính là bài này thì lấy bản đó,
+    /// để bộ lọc theo ID bỏ được mục trùng với bài đang phát.
+    public static func parseUpNextQueue(from data: Data, seedID: String? = nil) throws -> [Song] {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
             throw YTMusicError.invalidResponse
         }
 
-        let renderers = upNextRenderers(in: json)
+        let renderers = upNextRenderers(in: json, seedID: seedID)
         guard !renderers.isEmpty else {
             return []
         }
@@ -101,20 +103,50 @@ extension YTMusicParsers {
     /// Với tài khoản có nút chuyển Bài hát/Video, mỗi mục được bọc trong `playlistPanelVideoWrapperRenderer`:
     /// `primaryRenderer` là bản đang chọn, `counterpart` là bản còn lại (audio hoặc MV). Chỉ lấy bản chính,
     /// nếu không một bài có MV sẽ hiện hai lần.
-    private static func upNextRenderers(in json: [String: Any]) -> [[String: Any]] {
+    private static func upNextRenderers(in json: [String: Any], seedID: String?) -> [[String: Any]] {
         let panels = collectRenderers(named: "playlistPanelRenderer", in: json)
         guard !panels.isEmpty else {
             return collectRenderers(named: "playlistPanelVideoRenderer", in: json)
         }
-        return panels.flatMap { panel -> [[String: Any]] in
+        var trace = UpNextTrace()
+        let renderers = panels.flatMap { panel -> [[String: Any]] in
             let items = panel["contents"] as? [[String: Any]] ?? []
             return items.compactMap { item in
-                if let renderer = item["playlistPanelVideoRenderer"] as? [String: Any] { return renderer }
+                if let renderer = item["playlistPanelVideoRenderer"] as? [String: Any] {
+                    trace.plain += 1
+                    if seedID != nil, renderer["videoId"] as? String == seedID { trace.seedPlain += 1 }
+                    return renderer
+                }
                 let wrapper = item["playlistPanelVideoWrapperRenderer"] as? [String: Any]
-                let primary = wrapper?["primaryRenderer"] as? [String: Any]
-                return primary?["playlistPanelVideoRenderer"] as? [String: Any]
+                let primary = (wrapper?["primaryRenderer"] as? [String: Any])?["playlistPanelVideoRenderer"]
+                    as? [String: Any]
+                let counterparts = (wrapper?["counterpart"] as? [[String: Any]] ?? []).compactMap {
+                    ($0["counterpartRenderer"] as? [String: Any])?["playlistPanelVideoRenderer"] as? [String: Any]
+                }
+                guard let primary else { return nil }
+                trace.wrapped += 1
+                if seedID != nil, primary["videoId"] as? String == seedID { trace.seedPrimary += 1 }
+                if let seedID, let seed = counterparts.first(where: { $0["videoId"] as? String == seedID }) {
+                    trace.seedCounterpart += 1
+                    return seed
+                }
+                return primary
             }
         }
+        #if DEBUG && OTO_STREAM_PROBE
+        StreamProbeLog.write("StreamProbe upnext plain=\(trace.plain) wrapped=\(trace.wrapped) "
+            + "seedPlain=\(trace.seedPlain) seedPrimary=\(trace.seedPrimary) seedCounterpart=\(trace.seedCounterpart)")
+        #endif
+        return renderers
+    }
+
+    /// Số đếm cấu trúc hàng đợi cho trace khảo sát; không chứa ID hay tiêu đề.
+    private struct UpNextTrace {
+        var plain = 0
+        var wrapped = 0
+        var seedPlain = 0
+        var seedPrimary = 0
+        var seedCounterpart = 0
     }
 
     // MARK: - Two-Row Item

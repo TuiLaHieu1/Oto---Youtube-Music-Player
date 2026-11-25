@@ -36,6 +36,15 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     private var pendingStartSeconds: TimeInterval = 0
     private var lastProbeSecond = -1
     private var didPrefetchNearEnd = false
+    /// Bài đang phát bằng WebKit vì lần lấy URL trước lỗi, cùng vị trí cuối WebKit báo.
+    private var webFallback: WebFallback?
+    private struct WebFallback {
+        let id: String
+        let generation: Int
+        var position: TimeInterval
+    }
+    /// Quá thời gian này mà chưa có URL thì phát bài bằng WebKit; yt-dlp vẫn chạy tiếp để lần sau dùng.
+    private static let resolveTimeout: Duration = .seconds(20)
     #endif
 
     init(web: any PlaybackBackend) {
@@ -50,6 +59,11 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         }
         web.onPositionUpdate = { [weak self] position, duration, generation, id in
             guard let self, self.localID == nil else { return }
+            #if DEBUG && OTO_STREAM_PROBE
+            if let fallback = self.webFallback, fallback.id == id, fallback.generation == generation {
+                self.webFallback?.position = position
+            }
+            #endif
             self.onPositionUpdate?(position, duration, generation, id)
         }
         web.onTrackEnded = { [weak self] generation, id in
@@ -74,6 +88,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         let wasLocal = localID != nil
         stopLocal()
         #if DEBUG && OTO_STREAM_PROBE
+        self.webFallback = nil
         if !id.hasPrefix(LocalMusicStore.idPrefix), YTMusicClient.isValidVideoID(id) {
             self.loadStream(id: id, startSeconds: startSeconds, generation: generation,
                             shouldPlay: shouldPlay, wasLocal: wasLocal)
@@ -124,6 +139,17 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     }
 
     func play() {
+        #if DEBUG && OTO_STREAM_PROBE
+        if localID == nil, let fallback = self.webFallback, self.streamCache.freshURL(for: fallback.id) != nil {
+            // Bài đang ở WebKit vì lần lấy URL trước lỗi; nay đã có URL thì chuyển sang AVPlayer.
+            self.webFallback = nil
+            self.web.pause()
+            self.loadStream(id: fallback.id, startSeconds: fallback.position, generation: fallback.generation,
+                            shouldPlay: true, wasLocal: false)
+            self.probeTrace("retryFromWeb")
+            return
+        }
+        #endif
         guard localID != nil else { web.play(); return }
         #if DEBUG && OTO_STREAM_PROBE
         self.probeTrace("play")
@@ -246,6 +272,11 @@ extension LocalMusicPlaybackRouter {
         self.pendingStartSeconds = startSeconds
         self.onPlaybackStateChange?(shouldPlay ? 3 : 2, generation, id)
         Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.resolveTimeout)
+            guard let self, self.localID == id, self.localGeneration == generation, self.isResolving else { return }
+            self.fallBackToWeb(id: id, generation: generation, reason: "resolveTimeout")
+        }
+        Task { @MainActor [weak self] in
             let url = await self?.streamCache.url(for: id, reason: "load")
             guard let self, self.localID == id, self.localGeneration == generation, self.isResolving else { return }
             self.isResolving = false
@@ -286,9 +317,11 @@ extension LocalMusicPlaybackRouter {
         let position = self.isResolving ? self.pendingStartSeconds : self.localPlayer.currentTime().seconds
         let shouldPlay = self.wantsPlayback
         self.probeTrace("fallback reason=\(reason)")
-        self.streamCache.invalidate(id)
+        if reason != "resolveTimeout" { self.streamCache.invalidate(id) }
         self.stopLocal()
         self.isProbeStream = false
+        let resumeAt = position.isFinite ? max(0, position) : 0
+        self.webFallback = WebFallback(id: id, generation: generation, position: resumeAt)
         self.web.loadVideo(
             id: id, startSeconds: position.isFinite ? max(0, position) : 0,
             generation: generation, shouldPlay: shouldPlay

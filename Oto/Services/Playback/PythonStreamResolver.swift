@@ -32,9 +32,14 @@ struct YtdlpResolveResult: Sendable {
 /// Chạy yt-dlp nhúng trong app để lấy URL M4A. Python được nạp bằng `dlopen` chỉ khi có cờ khảo sát,
 /// nên bản build bình thường không link Python. Mọi lệnh gọi Python chạy tuần tự trên một hàng đợi riêng.
 enum PythonStreamResolver {
-    private static let queue = DispatchQueue(label: "com.oto.music.stream-probe.python", qos: .userInitiated)
+    /// Hàng đợi song song: một lần lấy URL bị treo vì mạng không chặn các bài khác.
+    /// Mỗi lần gọi giữ GIL riêng và dùng dict biến riêng; Python nhả GIL trong lúc chờ mạng.
+    private static let queue = DispatchQueue(
+        label: "com.oto.music.stream-probe.python", qos: .userInitiated, attributes: .concurrent
+    )
+    /// Khởi tạo Python đúng một lần dù nhiều luồng cùng gọi.
+    private static let initLock = NSLock()
     private static let pyFileInput: Int32 = 257
-    private static let pyEvalInput: Int32 = 258
 
     static func resolve(videoID: String) async -> YtdlpResolveResult {
         guard YTMusicClient.isValidVideoID(videoID) else { return .failure("invalidInput") }
@@ -60,6 +65,13 @@ enum PythonStreamResolver {
     ) -> UnsafeMutableRawPointer?
     private typealias AsUTF8Fn = @convention(c) (UnsafeMutableRawPointer?) -> UnsafePointer<CChar>?
     private typealias DecRefFn = @convention(c) (UnsafeMutableRawPointer?) -> Void
+    private typealias NewDictFn = @convention(c) () -> UnsafeMutableRawPointer?
+    private typealias SetItemFn = @convention(c) (
+        UnsafeMutableRawPointer?, UnsafePointer<CChar>, UnsafeMutableRawPointer?
+    ) -> Int32
+    private typealias GetItemFn = @convention(c) (
+        UnsafeMutableRawPointer?, UnsafePointer<CChar>
+    ) -> UnsafeMutableRawPointer?
 
     /// `dlsym` trả về con trỏ thô; ép sang kiểu hàm C là cách duy nhất để gọi từ Swift.
     private static func symbol<T>(_ handle: UnsafeMutableRawPointer, _ name: String, as type: T.Type) -> T? {
@@ -118,31 +130,35 @@ enum PythonStreamResolver {
               let gilRelease = symbol(handle, "PyGILState_Release", as: ReleaseFn.self),
               let addModule = symbol(handle, "PyImport_AddModule", as: AddModuleFn.self),
               let getDict = symbol(handle, "PyModule_GetDict", as: GetDictFn.self),
+              let newDict = symbol(handle, "PyDict_New", as: NewDictFn.self),
+              let setItem = symbol(handle, "PyDict_SetItemString", as: SetItemFn.self),
+              let getItem = symbol(handle, "PyDict_GetItemString", as: GetItemFn.self),
               let runString = symbol(handle, "PyRun_StringFlags", as: RunStringFn.self),
               let asUTF8 = symbol(handle, "PyUnicode_AsUTF8", as: AsUTF8Fn.self),
               let decRef = symbol(handle, "Py_DecRef", as: DecRefFn.self),
               let printError = symbol(handle, "PyErr_Print", as: VoidFn.self) else {
             return nil
         }
+        Self.initLock.lock()
         if isInitialized() == 0 {
             Self.configureEnvironment()
             initialize()
             _ = saveThread()
         }
+        Self.initLock.unlock()
         let state = gilEnsure()
         defer { gilRelease(state) }
-        guard let main = addModule("__main__"), let globals = getDict(main) else { return nil }
+        // Dict biến riêng cho mỗi lần gọi, có __builtins__ lấy từ __main__.
+        guard let main = addModule("__main__"), let mainGlobals = getDict(main),
+              let builtins = getItem(mainGlobals, "__builtins__"), let globals = newDict() else { return nil }
+        defer { decRef(globals) }
+        guard setItem(globals, "__builtins__", builtins) == 0 else { return nil }
         guard let executed = runString(source, Self.pyFileInput, globals, globals, nil) else {
             printError()
             return nil
         }
         decRef(executed)
-        guard let value = runString("__oto_result", Self.pyEvalInput, globals, globals, nil) else {
-            printError()
-            return nil
-        }
-        defer { decRef(value) }
-        guard let text = asUTF8(value) else { return nil }
+        guard let value = getItem(globals, "__oto_result"), let text = asUTF8(value) else { return nil }
         return String(cString: text)
     }
 

@@ -6,10 +6,15 @@ Trả về dict: url (chỉ dùng trong bộ nhớ), format_id, abr, expire, sec
 from __future__ import annotations
 
 import re
+import threading
 import time
 
-_YDL = None
-_YDL_CACHE_DIR = None
+# Nhóm YoutubeDL dùng lại: mỗi lần gọi mượn một cái đang rảnh, xong thì trả lại.
+# YoutubeDL không an toàn khi hai luồng dùng cùng lúc; tạo mới cũng nạp plugin vào registry chung.
+_POOL = []
+_POOL_LOCK = threading.Lock()
+_CREATE_LOCK = threading.Lock()
+_LAST = threading.local()
 
 
 class _QuietLogger:
@@ -33,10 +38,11 @@ class _QuietLogger:
         self._keep('ERR ', msg)
 
 
-def _ydl(cache_dir):
-    global _YDL, _YDL_CACHE_DIR
-    if _YDL is not None and _YDL_CACHE_DIR == cache_dir:
-        return _YDL
+def _borrow(cache_dir):
+    with _POOL_LOCK:
+        for index, (ydl, directory) in enumerate(_POOL):
+            if directory == cache_dir:
+                return _POOL.pop(index)[0]
     import yt_dlp
     options = {
         'format': 'bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]',
@@ -47,13 +53,18 @@ def _ydl(cache_dir):
         'js_runtimes': {},  # tắt node/deno/bun; chỉ còn provider oto-jsc
         'cachedir': cache_dir or False,
         # Mạng điện thoại có lúc chập chờn; giới hạn thời gian chờ để lỗi rõ ràng thay vì treo.
-        'socket_timeout': 15,
-        'retries': 2,
-        'extractor_retries': 2,
+        'socket_timeout': 8,
+        'retries': 1,
+        'extractor_retries': 1,
     }
-    _YDL = yt_dlp.YoutubeDL(options)
-    _YDL_CACHE_DIR = cache_dir
-    return _YDL
+    with _CREATE_LOCK:
+        return yt_dlp.YoutubeDL(options)
+
+
+def _give_back(ydl, cache_dir):
+    with _POOL_LOCK:
+        if len(_POOL) < 3:
+            _POOL.append((ydl, cache_dir))
 
 
 _ERROR_LABELS = [
@@ -77,7 +88,8 @@ def classify(message: str) -> str:
 
 
 def last_error_label() -> str:
-    lines = _YDL.params['logger'].lines if _YDL is not None else []
+    ydl = getattr(_LAST, 'ydl', None)
+    lines = ydl.params['logger'].lines if ydl is not None else []
     for line in reversed(lines):
         if line.startswith('ERR ') or line.startswith('WARN '):
             return classify(line)
@@ -88,8 +100,12 @@ def resolve(video_id: str, cache_dir: str | None = None) -> dict:
     if not re.fullmatch(r'[A-Za-z0-9_-]{11}', video_id):
         raise ValueError('video id không hợp lệ')
     started = time.monotonic()
-    ydl = _ydl(cache_dir)
-    info = ydl.extract_info('https://music.youtube.com/watch?v=' + video_id, download=False)
+    ydl = _borrow(cache_dir)
+    _LAST.ydl = ydl
+    try:
+        info = ydl.extract_info('https://music.youtube.com/watch?v=' + video_id, download=False)
+    finally:
+        _give_back(ydl, cache_dir)
     url = info.get('url') or ''
     match = re.search(r'[?&/]expire[=/](\d+)', url)
     return {

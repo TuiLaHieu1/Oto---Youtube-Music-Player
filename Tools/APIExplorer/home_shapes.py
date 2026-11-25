@@ -207,6 +207,22 @@ def search_result_types(value):
                     for endpoint in ("watchEndpoint", "browseEndpoint"):
                         if isinstance(tap.get(endpoint), dict):
                             counts["top_card_direct_" + endpoint] = 1
+                subtitle = card.get("subtitle")
+                if isinstance(subtitle, dict):
+                    if isinstance(subtitle.get("simpleText"), str):
+                        counts["top_card_subtitle_simple_text"] = 1
+                    runs = subtitle.get("runs")
+                    for run in runs if isinstance(runs, list) else []:
+                        if not isinstance(run, dict) or not isinstance(run.get("text"), str):
+                            continue
+                        navigation = run.get("navigationEndpoint")
+                        browse = navigation.get("browseEndpoint") if isinstance(navigation, dict) else None
+                        browse_id = browse.get("browseId") if isinstance(browse, dict) else None
+                        kind = "artist_link" if isinstance(browse_id, str) and browse_id.startswith("UC") else (
+                            "other_link" if navigation else "plain"
+                        )
+                        key = "top_card_subtitle_run_" + kind
+                        counts[key] = counts.get(key, 0) + 1
                 for field in ("onTap", "title"):
                     value = card.get(field)
                     if find_renderer(value, "watchEndpoint"):

@@ -68,6 +68,55 @@ struct MusicSearchTests {
         #expect(page.results.isEmpty)
     }
 
+    @Test("Thẻ bài hát giữ tên nghệ sĩ dù phụ đề không có liên kết")
+    func topResultWithPlainArtist() throws {
+        let card: [String: Any] = [
+            "title": ["runs": [["text": "Bài hát mẫu"]]],
+            "onTap": ["watchEndpoint": ["videoId": "mock-track"]],
+            "subtitle": ["runs": [["text": "Song"], ["text": " • "], ["text": "Nghệ sĩ mẫu"]]]
+        ]
+        let page = try YTMusicParsers.parseMusicSearch(from: Self.firstPage([], card: card), scope: .all)
+        guard case .song(let song) = page.topResult else {
+            Issue.record("Thiếu bài hát hàng đầu")
+            return
+        }
+        #expect(song.artist == "Nghệ sĩ mẫu")
+        #expect(song.artists.isEmpty)
+    }
+
+    @Test("Thẻ Video bổ sung nghệ sĩ và bỏ dòng trùng cùng ID")
+    func topResultFillsMissingRowArtist() throws {
+        let endpoint = ["watchEndpoint": [
+            "videoId": "mock-video",
+            "watchEndpointMusicSupportedConfigs": [
+                "watchEndpointMusicConfig": ["musicVideoType": "MUSIC_VIDEO_TYPE_OMV"]
+            ]
+        ]] as [String: Any]
+        let card: [String: Any] = [
+            "title": ["runs": [["text": "Video mẫu"]]],
+            "onTap": endpoint,
+            "subtitle": ["runs": [[
+                "text": "Nghệ sĩ mẫu",
+                "navigationEndpoint": ["browseEndpoint": ["browseId": "UC_artist"]]
+            ]]]
+        ]
+        let row: [String: Any] = [
+            "musicResponsiveListItemRenderer": [
+                "navigationEndpoint": endpoint,
+                "flexColumns": [Self.column("Video mẫu"), Self.column("Video")]
+            ]
+        ]
+        let page = try YTMusicParsers.parseMusicSearch(from: Self.firstPage([row], card: card), scope: .all)
+        guard case .video(let song) = page.topResult else {
+            Issue.record("Thiếu video hàng đầu")
+            return
+        }
+        #expect(song.artist == "Nghệ sĩ mẫu")
+        #expect(song.id == "mock-video")
+        #expect(song.artists.map(\.browseId) == ["UC_artist"])
+        #expect(page.results.isEmpty)
+    }
+
     @Test("Search Video giữ ID trên endpoint của hàng và hỗ trợ trang kế")
     func videoSearchAndPagination() throws {
         let clip: [String: Any] = [

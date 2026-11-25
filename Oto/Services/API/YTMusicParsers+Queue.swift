@@ -261,9 +261,19 @@ extension YTMusicParsers {
         let artwork = Self.extractThumbnailURL(from: card["thumbnail"] as? [String: Any])
         if let watch = navigation?["watchEndpoint"] as? [String: Any],
            let id = watch["videoId"] as? String, !id.isEmpty {
-            if let result = results.first(where: { $0.id == "song:" + id }) { return result }
             let artists = Self.extractArtists(from: subtitle)
-            let artist = artists.map(\.name).joined(separator: ", ")
+            let artist = artists.isEmpty ? Self.extractArtist(from: subtitle, fallback: "")
+                : artists.map(\.name).joined(separator: ", ")
+            if let result = results.first(where: { $0.id == "song:" + id }) {
+                switch result {
+                case .song(let song):
+                    return .song(Self.fillMissingSearchCredit(in: song, artist: artist, artists: artists))
+                case .video(let song):
+                    return .video(Self.fillMissingSearchCredit(in: song, artist: artist, artists: artists))
+                default:
+                    return result
+                }
+            }
             let song = Song(id: id, title: name, artist: artist, artists: artists, artworkURL: artwork)
             return Self.containsVideo(card, id: id) ? .video(song) : .song(song)
         }
@@ -272,6 +282,17 @@ extension YTMusicParsers {
         let subtitleRuns = subtitle?["runs"] as? [[String: Any]]
         let description = subtitleRuns?.compactMap { $0["text"] as? String }.joined() ?? ""
         return Self.musicBrowseResult(id: id, title: name, subtitle: description, artwork: artwork, scope: .all)
+    }
+
+    private static func fillMissingSearchCredit(
+        in song: Song, artist: String, artists: [ArtistReference]
+    ) -> Song {
+        guard song.artists.isEmpty, song.artist.isEmpty || Self.isNonArtistLabel(song.artist),
+              !artist.isEmpty else { return song }
+        return Song(
+            id: song.id, title: song.title, artist: artist, artists: artists, album: song.album,
+            duration: song.duration, artworkURL: song.artworkURL, isExplicit: song.isExplicit
+        )
     }
 
     private static func musicSearchResult(from row: [String: Any], scope: SearchScope) -> MusicSearchResult? {

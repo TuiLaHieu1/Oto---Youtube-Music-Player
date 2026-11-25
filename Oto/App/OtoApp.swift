@@ -25,6 +25,15 @@ struct OtoApp: App {
             await WebKitManager.shared.restoreSession()
             await vm.preparePlaybackResumePoint()
         }
+        #if DEBUG && OTO_STREAM_PROBE
+        // Khảo sát: chạy bước 1 một lần khi app được mở kèm biến môi trường (chỉ bản Debug có cờ).
+        if let videoID = ProcessInfo.processInfo.environment["OTO_PROBE_AUTORUN_VIDEO"] {
+            Task {
+                let result = await PythonStreamResolver.resolve(videoID: videoID)
+                if let url = result.url { _ = await StreamProbeSection.fetchCheck(url) }
+            }
+        }
+        #endif
     }
 
     var body: some Scene {

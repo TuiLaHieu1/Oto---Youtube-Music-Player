@@ -1,5 +1,9 @@
 import AVFoundation
 import Foundation
+#if DEBUG && OTO_STREAM_PROBE
+import OSLog
+import UIKit
+#endif
 
 /// Định tuyến file local và nhạc web qua cùng phiên điều khiển.
 @MainActor
@@ -22,6 +26,10 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     private var didEnd = false
     private var pendingSeek: UUID?
     private var endObserver: (any NSObjectProtocol)?
+    #if DEBUG && OTO_STREAM_PROBE
+    private var isProbeStream = false
+    private var lastProbeSecond = -1
+    #endif
 
     init(web: any PlaybackBackend) {
         self.web = web
@@ -58,14 +66,22 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     func loadVideo(id: String, startSeconds: TimeInterval, generation: Int, shouldPlay: Bool) {
         let wasLocal = localID != nil
         stopLocal()
-        guard id.hasPrefix(LocalMusicStore.idPrefix) else {
+        #if DEBUG && OTO_STREAM_PROBE
+        // Khảo sát: bài có URL thử thì phát bằng AVPlayer như nhạc import, WebKit dừng hẳn.
+        let probeURL = StreamProbeOverride.urls[id]
+        self.isProbeStream = probeURL != nil
+        self.lastProbeSecond = -1
+        #else
+        let probeURL: URL? = nil
+        #endif
+        guard id.hasPrefix(LocalMusicStore.idPrefix) || probeURL != nil else {
             web.loadVideo(id: id, startSeconds: startSeconds, generation: generation, shouldPlay: shouldPlay)
             return
         }
         localID = id
         localGeneration = generation
         if !wasLocal { web.pause() }
-        guard let file = LocalMusicStore.file(for: id) else {
+        guard let file = probeURL ?? LocalMusicStore.file(for: id) else {
             onError?(-1, generation, id)
             return
         }
@@ -98,12 +114,18 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
 
     func play() {
         guard localID != nil else { web.play(); return }
+        #if DEBUG && OTO_STREAM_PROBE
+        self.probeTrace("play")
+        #endif
         wantsPlayback = true
         if pendingSeek == nil { localPlayer.play() }
     }
 
     func pause() {
         guard localID != nil else { web.pause(); return }
+        #if DEBUG && OTO_STREAM_PROBE
+        self.probeTrace("pause")
+        #endif
         wantsPlayback = false
         localPlayer.pause()
     }
@@ -148,6 +170,12 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         }
         let position = localPlayer.currentTime().seconds
         let duration = item.duration.seconds
+        #if DEBUG && OTO_STREAM_PROBE
+        if self.isProbeStream, position.isFinite, Int(position) != self.lastProbeSecond {
+            self.lastProbeSecond = Int(position)
+            self.probeTrace("tick")
+        }
+        #endif
         if position.isFinite && duration.isFinite && duration > 0 {
             onPositionUpdate?(position, duration, generation, id)
 
@@ -155,9 +183,28 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         guard !didEnd else { return true }
         let state = localPlayer.timeControlStatus == .playing ? 1 : (wantsPlayback ? 3 : 2)
         if lastState != state {
+            #if DEBUG && OTO_STREAM_PROBE
+            if self.isProbeStream { self.probeTrace("state=\(state)") }
+            #endif
             lastState = state
             onPlaybackStateChange?(state, generation, id)
         }
         return true
     }
 }
+
+#if DEBUG && OTO_STREAM_PROBE
+extension LocalMusicPlaybackRouter {
+    /// Trace đo phép thử một bài: thời điểm, trạng thái app, vị trí media thật và timeControlStatus.
+    fileprivate func probeTrace(_ event: String) {
+        guard self.isProbeStream else { return }
+        let position = self.localPlayer.currentTime().seconds
+        let line = String(
+            format: "StreamProbe avplayer event=%@ t=%.3f appState=%d position=%.2f control=%d wants=%d",
+            event, ProcessInfo.processInfo.systemUptime, UIApplication.shared.applicationState.rawValue,
+            position.isFinite ? position : -1, self.localPlayer.timeControlStatus.rawValue, self.wantsPlayback ? 1 : 0
+        )
+        StreamProbeLog.write(line)
+    }
+}
+#endif

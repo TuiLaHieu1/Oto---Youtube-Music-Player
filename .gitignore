@@ -14,3 +14,6 @@ tmp/
 *.mp4
 *.mov
 Documentation.docc/Resources/
+
+# Khảo sát stream: Python cho iOS và gói tải về, không commit
+/Vendor/

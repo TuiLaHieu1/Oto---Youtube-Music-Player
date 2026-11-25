@@ -40,3 +40,10 @@ Chủ dự án đã đọc các điều khoản trên, hiểu rủi ro và chọ
 1. **Server dùng yt-dlp** (như source tham khảo `vibe-music`): yt-dlp giải mã và chọn client; Oto phát URL của server bằng AVPlayer. Cần server chạy khi nghe.
 2. **Đổi quy tắc, cho phép giải mã trong app** (chạy JS player của YouTube bằng JavaScriptCore như plugin `yt-dlp-apple-webkit-jsi`): không cần server, nhưng tự bảo trì khi YouTube đổi.
 3. **Giữ WebKit**, ghi giới hạn "Pause lâu phải mở Oto", có thể thêm nút mở app rồi phát.
+
+### 2026-11-25 · Hướng yt-dlp nhúng trong app (chủ dự án duyệt)
+- Nhúng Python 3.14 (BeeWare b14, sha256 đã kiểm), yt-dlp 2026.11.23, yt-dlp-ejs 0.8.0 và certifi vào bản Debug có cờ; tải bằng `Tools/StreamProbe/fetch_vendor.sh` vào `Vendor/` (gitignore). Bản không cờ không có Python.
+- Plugin `yt-dlp-apple-webkit-jsi` chạy JS trong **WKWebView** và chờ trên run loop chính, nên sẽ bị treo khi app ở nền như backend hiện tại. Không dùng. Thay bằng provider `oto-jsc` (`Tools/StreamProbe/python/yt_dlp_plugins/extractor/oto_jsc.py`) gọi C API của JavaScriptCore qua ctypes, chạy trong tiến trình app. Provider chỉ chạy script do yt-dlp-ejs dựng.
+- Trên Mac (chỉ JavaScriptCore, không node/deno): lấy được itag 140 `audio/mp4` mp4a.40.2 khoảng 130 kbps trong khoảng 7 giây, tải thử 64 KB trả 206 `audio/mp4`.
+- **Bước 1 trên iPhone 13 Pro Max (không cookie):** `YtdlpProbe outcome=ok format=140 abr=130 expiresIn=21595 hasN=true seconds=6.6–9.1`; `YtdlpFetch status=206 bytes=65536 type=audio/mp4 seconds=0.3`. Đạt: yt-dlp chạy được trong app iOS và URL tải được từ IP của iPhone.
+- Bước 2 (AVPlayer, Pause → Home → Play từ Control Center/AirPods) và bước 3 (lấy URL khi app ở nền) chưa đo.

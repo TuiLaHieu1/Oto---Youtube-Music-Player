@@ -237,6 +237,7 @@ final class ProbeVideoLayerView: UIView {
         self.playerLayer?.player = UIApplication.shared.applicationState == .background ? nil : player
         self.readyObserver = self.playerLayer?.observe(\.isReadyForDisplay, options: [.initial, .new]) { [weak self] layer, _ in
             let ready = layer.isReadyForDisplay
+            guard let self else { return }
             Task { @MainActor [weak self] in
                 StreamProbeLog.write("StreamProbe video layer ready=\(ready ? 1 : 0)")
                 self?.onReady?(ready)

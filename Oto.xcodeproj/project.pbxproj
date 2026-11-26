@@ -24,6 +24,7 @@
 		A101000C2CE0000100000001 /* Oto/Services/Audio/AudioSessionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A102000C2CE0000100000001 /* Oto/Services/Audio/AudioSessionCoordinator.swift */; };
 		A101000D2CE0000100000001 /* Oto/Services/Audio/NowPlayingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A102000D2CE0000100000001 /* Oto/Services/Audio/NowPlayingManager.swift */; };
 		A101000E2CE0000100000001 /* OtoCore in Frameworks */ = {isa = PBXBuildFile; productRef = A10400012CE0000100000001 /* OtoCore */; };
+		C50D00000000000000000001 /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = C50D000000000000000000003 /* GoogleSignIn */; };
 		A10100102CE0000100000001 /* Oto/Services/WebKit/CookieStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200102CE0000100000001 /* Oto/Services/WebKit/CookieStorage.swift */; };
 		A10100112CE0000100000001 /* Oto/Services/WebKit/WebKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200112CE0000100000001 /* Oto/Services/WebKit/WebKitManager.swift */; };
 		A10100122CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10200122CE0000100000001 /* Oto/Services/WebKit/SingletonPlayerWebView.swift */; };
@@ -92,6 +93,7 @@
 		C50400000000000000000001 /* Oto/Presentation/Settings/SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50400000000000000000002 /* Oto/Presentation/Settings/SettingsView.swift */; };
 		5350524F4245000400000001 /* Oto/Presentation/Settings/StreamProbeSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5350524F4245000400000002 /* Oto/Presentation/Settings/StreamProbeSection.swift */; };
 		C50500000000000000000001 /* Oto/Services/API/YTMusicClient+Library.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50500000000000000000002 /* Oto/Services/API/YTMusicClient+Library.swift */; };
+		C50C00000000000000000001 /* Oto/Services/API/YouTubePlaylistClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50C00000000000000000002 /* Oto/Services/API/YouTubePlaylistClient.swift */; };
 		C50600000000000000000001 /* Tests/OtoTests/PlaybackRepairTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50600000000000000000002 /* Tests/OtoTests/PlaybackRepairTests.swift */; };
 		C50700000000000000000001 /* Tests/OtoTests/LibraryCollectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50700000000000000000002 /* Tests/OtoTests/LibraryCollectionTests.swift */; };
 		C50800000000000000000001 /* Tests/OtoTests/MusicSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C50800000000000000000002 /* Tests/OtoTests/MusicSearchTests.swift */; };
@@ -203,6 +205,7 @@
 		C50400000000000000000002 /* Oto/Presentation/Settings/SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Presentation/Settings/SettingsView.swift"; sourceTree = SOURCE_ROOT; };
 		5350524F4245000400000002 /* Oto/Presentation/Settings/StreamProbeSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Oto/Presentation/Settings/StreamProbeSection.swift; sourceTree = SOURCE_ROOT; };
 		C50500000000000000000002 /* Oto/Services/API/YTMusicClient+Library.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YTMusicClient+Library.swift"; sourceTree = SOURCE_ROOT; };
+		C50C00000000000000000002 /* Oto/Services/API/YouTubePlaylistClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Oto/Services/API/YouTubePlaylistClient.swift"; sourceTree = SOURCE_ROOT; };
 		C50600000000000000000002 /* Tests/OtoTests/PlaybackRepairTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/OtoTests/PlaybackRepairTests.swift"; sourceTree = SOURCE_ROOT; };
 		C50700000000000000000002 /* Tests/OtoTests/LibraryCollectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/OtoTests/LibraryCollectionTests.swift"; sourceTree = SOURCE_ROOT; };
 		C50800000000000000000002 /* Tests/OtoTests/MusicSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Tests/OtoTests/MusicSearchTests.swift"; sourceTree = SOURCE_ROOT; };
@@ -223,6 +226,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A101000E2CE0000100000001 /* OtoCore in Frameworks */,
+				C50D00000000000000000001 /* GoogleSignIn in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -358,6 +362,7 @@
 				5350524F4245000800000002 /* Oto/Services/Playback/PythonStreamResolver.swift */,
 				C51100000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift */,
 				C50500000000000000000002 /* Oto/Services/API/YTMusicClient+Library.swift */,
+				C50C00000000000000000002 /* Oto/Services/API/YouTubePlaylistClient.swift */,
 				A102000C2CE0000100000001 /* Oto/Services/Audio/AudioSessionCoordinator.swift */,
 				A10200382CE0000100000001 /* Oto/Services/Audio/AudioSessionObserver.swift */,
 				A102000D2CE0000100000001 /* Oto/Services/Audio/NowPlayingManager.swift */,
@@ -428,6 +433,7 @@
 			name = Oto;
 			packageProductDependencies = (
 				A10400012CE0000100000001 /* OtoCore */,
+				C50D00000000000000000003 /* GoogleSignIn */,
 			);
 			productName = Oto;
 			productReference = A10200002CE0000100000001 /* Oto.app */;
@@ -485,6 +491,7 @@
 			mainGroup = A10500002CE0000100000001;
 			packageReferences = (
 				A10A00012CE0000100000001 /* XCLocalSwiftPackageReference "Packages/OtoCore" */,
+				C50D00000000000000000002 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 			);
 			productRefGroup = A10500062CE0000100000001 /* Products */;
 			projectDirPath = "";
@@ -537,6 +544,7 @@
 				C51000000000000000000001 /* Oto/Services/Playback/LocalMusicStore.swift in Sources */,
 				C50900000000000000000001 /* Oto/Presentation/Settings/NativeHapticsProbeView.swift in Sources */,
 				C50500000000000000000001 /* Oto/Services/API/YTMusicClient+Library.swift in Sources */,
+				C50C00000000000000000001 /* Oto/Services/API/YouTubePlaylistClient.swift in Sources */,
 				C50400000000000000000001 /* Oto/Presentation/Settings/SettingsView.swift in Sources */,
 				5350524F4245000400000001 /* Oto/Presentation/Settings/StreamProbeSection.swift in Sources */,
 				C50100000000000000000001 /* Oto/App/AppLanguage.swift in Sources */,
@@ -895,11 +903,24 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		C50D00000000000000000002 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/google/GoogleSignIn-iOS";
+			requirement = {kind = upToNextMajorVersion; minimumVersion = 9.0.0; };
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		A10400012CE0000100000001 /* OtoCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = A10A00012CE0000100000001 /* XCLocalSwiftPackageReference "Packages/OtoCore" */;
 			productName = OtoCore;
+		};
+		C50D00000000000000000003 /* GoogleSignIn */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = C50D00000000000000000002 /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
+			productName = GoogleSignIn;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

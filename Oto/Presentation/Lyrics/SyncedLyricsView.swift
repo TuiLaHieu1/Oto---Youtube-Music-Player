@@ -34,6 +34,21 @@ public struct SyncedLyricsView: View {
                 syncedScrollArea(proxy: proxy, edgeSpace: geometry.size.height * 0.5)
             }
         }
+        .safeAreaInset(edge: .top) {
+            HStack {
+                Spacer()
+                Menu {
+                    Button("Lời sớm hơn 0,5 giây") { self.lyricsVM.setUserOffset(self.lyricsVM.userOffset - 0.5) }
+                    Button("Lời trễ hơn 0,5 giây") { self.lyricsVM.setUserOffset(self.lyricsVM.userOffset + 0.5) }
+                    Button("Đặt lại độ lệch") { self.lyricsVM.setUserOffset(0) }
+                } label: {
+                    Label("Độ lệch lời", systemImage: "timer")
+                    Text(self.lyricsVM.userOffset, format: .number.precision(.fractionLength(1)))
+                }
+                .frame(minHeight: OtoTheme.minTouchTarget)
+                .padding(.horizontal, OtoTheme.spacing16)
+            }
+        }
     }
 
     private func syncedScrollArea(proxy: ScrollViewProxy, edgeSpace: CGFloat) -> some View {
@@ -160,7 +175,7 @@ public struct SyncedLyricsView: View {
             #if os(iOS)
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
             #endif
-            onSeek(line.startTime)
+            onSeek(self.lyricsVM.seekTime(for: line))
         } label: {
             Text(line.text)
                 .font(.system(.title, design: .rounded, weight: .bold))

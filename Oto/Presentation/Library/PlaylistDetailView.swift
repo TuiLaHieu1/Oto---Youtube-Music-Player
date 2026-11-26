@@ -10,6 +10,7 @@ public struct PlaylistDetailView: View {
     @State private var songs: [Song] = []
     @State private var isLoading: Bool = true
     @State private var errorMessage: String?
+    @State private var playlistSong: Song?
 
     public init(playlist: Playlist, playerVM: PlayerViewModel) {
         self.playlist = playlist
@@ -37,6 +38,9 @@ public struct PlaylistDetailView: View {
         .toolbar(.visible, for: .navigationBar)
         .task {
             await loadSongs()
+        }
+        .sheet(item: $playlistSong) { song in
+            YouTubePlaylistPicker(song: song)
         }
     }
 
@@ -174,7 +178,13 @@ public struct PlaylistDetailView: View {
         LazyVStack(spacing: OtoTheme.spacing4) {
             ForEach(Array(songs.enumerated()), id: \.element.id) { index, song in
                 let isCurrent = playerVM.currentSong?.id == song.id && playerVM.isPlaying
-                OtoSongRow(song: song, isPlaying: isCurrent) {
+                OtoSongRow(
+                    song: song,
+                    isPlaying: isCurrent,
+                    playNext: { playerVM.queueManager.insertNext(song: song) },
+                    addToQueue: { playerVM.queueManager.append(song: song) },
+                    addToPlaylist: { playlistSong = song }
+                ) {
                     #if os(iOS)
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                     #endif

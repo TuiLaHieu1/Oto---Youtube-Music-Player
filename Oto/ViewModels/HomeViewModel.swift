@@ -39,7 +39,6 @@ public final class HomeViewModel {
     public var sections: [HomeSection] = []
     public var quickPicks: [Song] = []
     public var listenAgain: [Song] = []
-    public var recentlyPlayed: [Song] = []
     public var isLoading: Bool = false
     public var errorMessage: String?
     private(set) var refreshIncomplete = false
@@ -93,7 +92,6 @@ public final class HomeViewModel {
         self.sections = cached.sections
         self.quickPicks = cached.quickPicks
         self.listenAgain = cached.listenAgain
-        self.recentlyPlayed = []
     }
 
     /// Gọi khi tab Home xuất hiện lại. Chỉ đọc cache nếu chưa có dữ liệu,
@@ -122,7 +120,6 @@ public final class HomeViewModel {
         self.sections = []
         self.quickPicks = []
         self.listenAgain = []
-        self.recentlyPlayed = []
         self.errorMessage = nil
         refreshIncomplete = false
         moreRecommendationsUnavailable = false

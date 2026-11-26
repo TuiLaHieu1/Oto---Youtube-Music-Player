@@ -153,9 +153,7 @@ public struct OtoMiniPlayer: View {
     @ViewBuilder
     private var artworkThumbnail: some View {
         if let song = song {
-            AsyncImage(url: OtoArtworkURL.forDisplay(song.artworkURL, points: 42, scale: displayScale)) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
+            OtoTrackArtwork(url: OtoArtworkURL.forDisplay(song.artworkURL, points: 42, scale: displayScale)) {
                 ZStack {
                     RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous)
                         .fill(OtoTheme.secondaryText.opacity(0.12))

@@ -308,6 +308,7 @@ extension PlayerViewModel {
         let generation = session.sessionGeneration
         let scope = await HomeCache.shared.accountScopeKey()
         guard !Task.isCancelled, generation == session.sessionGeneration else { return }
+        self.loadRecentlyPlayed(scopeKey: scope)
         let key = "oto.playback.resume.v1.\(scope)"
         if let previousKey = self.playbackResumeStorageKey, previousKey != key {
             self.clearPlaybackResumePoint()

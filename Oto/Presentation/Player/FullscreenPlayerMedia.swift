@@ -46,9 +46,7 @@ private struct PlayerCoverImage: View {
     let url: URL?
 
     var body: some View {
-        AsyncImage(url: url) { image in
-            image.resizable().scaledToFill()
-        } placeholder: {
+        OtoTrackArtwork(url: url) {
             OtoTheme.surface.overlay {
                 Image(systemName: "music.note")
                     .font(.system(size: 72))

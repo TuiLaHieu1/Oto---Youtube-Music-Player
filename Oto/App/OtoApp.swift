@@ -1,5 +1,6 @@
 import SwiftUI
 import OtoCore
+import GoogleSignIn
 
 /// Điểm khởi nhập chính của ứng dụng Oto (音).
 @main
@@ -16,6 +17,7 @@ struct OtoApp: App {
         SessionStore.shared.registerResetHandler { [weak vm] in
             vm?.clearPlaybackResumePoint()
             vm?.clearForSignOut()
+            GIDSignIn.sharedInstance.signOut()
         }
         SessionStore.shared.registerSignInHandler { [weak vm] in
             Task { @MainActor [weak vm] in await vm?.preparePlaybackResumePoint() }
@@ -68,6 +70,9 @@ struct OtoApp: App {
         WindowGroup {
             RootView(playerVM: playerVM)
                 .preferredColorScheme((AppAppearance(rawValue: appearance) ?? .system).colorScheme)
+                .onOpenURL { url in
+                    _ = GIDSignIn.sharedInstance.handle(url)
+                }
         }
     }
 }

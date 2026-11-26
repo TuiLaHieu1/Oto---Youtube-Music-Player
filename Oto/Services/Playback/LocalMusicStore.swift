@@ -1,10 +1,28 @@
 import AVFoundation
 import Foundation
+import ImageIO
 import OtoCore
+import UniformTypeIdentifiers
 
 actor LocalMusicStore {
     static let shared = LocalMusicStore()
     static let idPrefix = Song.localIDPrefix
+
+    private struct Metadata: Codable {
+        let title: String
+        let artist: String
+        let artworkID: UUID?
+
+        func artworkURL(in folder: URL) -> URL? {
+            self.artworkID.map { folder.appendingPathComponent(".cover-\($0.uuidString).jpg") }
+        }
+    }
+
+    private static func metadata(in folder: URL) -> Metadata? {
+        (try? Data(contentsOf: folder.appendingPathComponent(".metadata.json"))).flatMap {
+            try? JSONDecoder().decode(Metadata.self, from: $0)
+        }
+    }
 
     nonisolated static func folder(for id: UUID) throws -> URL {
         try FileManager.default.url(
@@ -35,7 +53,9 @@ actor LocalMusicStore {
             guard let id = UUID(uuidString: folder.lastPathComponent) else { return nil }
             let songID = Self.idPrefix + id.uuidString
             guard let file = Self.file(for: songID) else { return nil }
-            return Song(id: songID, title: file.deletingPathExtension().lastPathComponent, artist: "")
+            let metadata = Self.metadata(in: folder)
+            return Song(id: songID, title: metadata?.title ?? file.deletingPathExtension().lastPathComponent,
+                        artist: metadata?.artist ?? "", artworkURL: metadata?.artworkURL(in: folder))
         }
         .sorted { $0.title.localizedStandardCompare($1.title) == .orderedAscending }
     }
@@ -77,5 +97,44 @@ actor LocalMusicStore {
     func remove(_ songID: String) throws {
         guard let file = Self.file(for: songID) else { return }
         try FileManager.default.removeItem(at: file.deletingLastPathComponent())
+    }
+
+    func update(_ songID: String, title: String, artist: String, artwork source: URL?) throws -> Song {
+        guard let file = Self.file(for: songID) else { throw CocoaError(.fileNoSuchFile) }
+        let folder = file.deletingLastPathComponent()
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { throw CocoaError(.fileWriteInvalidFileName) }
+        let previous = Self.metadata(in: folder)
+        let artist = artist.trimmingCharacters(in: .whitespacesAndNewlines)
+        let metadata = Metadata(title: title, artist: artist, artworkID: source == nil ? previous?.artworkID : UUID())
+        let artwork = metadata.artworkURL(in: folder)
+        if let source, let artwork {
+            let scoped = source.startAccessingSecurityScopedResource()
+            defer { if scoped { source.stopAccessingSecurityScopedResource() } }
+            let options = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: 768
+            ] as CFDictionary
+            let jpeg = NSMutableData()
+            guard let input = CGImageSourceCreateWithURL(source as CFURL, nil),
+                  let image = CGImageSourceCreateThumbnailAtIndex(input, 0, options),
+                  let output = CGImageDestinationCreateWithData(jpeg, UTType.jpeg.identifier as CFString, 1, nil)
+            else { throw CocoaError(.fileReadCorruptFile) }
+            CGImageDestinationAddImage(output, image, nil)
+            guard CGImageDestinationFinalize(output) else { throw CocoaError(.fileWriteUnknown) }
+            try (jpeg as Data).write(to: artwork, options: .atomic)
+        }
+        do {
+            try JSONEncoder().encode(metadata)
+                .write(to: folder.appendingPathComponent(".metadata.json"), options: .atomic)
+        } catch {
+            if source != nil, let artwork { try? FileManager.default.removeItem(at: artwork) }
+            throw error
+        }
+        if let previousArtwork = previous?.artworkURL(in: folder), previousArtwork != artwork {
+            try? FileManager.default.removeItem(at: previousArtwork)
+        }
+        return Song(id: songID, title: title, artist: artist, artworkURL: artwork)
     }
 }

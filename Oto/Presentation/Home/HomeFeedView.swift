@@ -33,11 +33,11 @@ public struct HomeFeedView: View {
                 .accessibilityHidden(true)
 
                 Group {
-                    if homeVM.isLoading && !homeVM.hasVisibleContent {
+                    if homeVM.isLoading && !hasVisibleContent {
                         OtoLoadingSkeleton()
-                    } else if let error = homeVM.errorMessage, !homeVM.hasVisibleContent {
+                    } else if let error = homeVM.errorMessage, !hasVisibleContent {
                         OtoErrorState(message: error) { Task { await homeVM.refresh() } }
-                    } else if !homeVM.hasVisibleContent {
+                    } else if !hasVisibleContent {
                         OtoEmptyState(
                             title: "Chưa có gợi ý âm nhạc",
                             message: "Vuốt xuống để tải lại từ YouTube Music hoặc mở tab Tìm kiếm để chọn bài hát.",
@@ -64,6 +64,8 @@ public struct HomeFeedView: View {
 }
 
 private extension HomeFeedView {
+    private var hasVisibleContent: Bool { self.homeVM.hasVisibleContent || !self.playerVM.recentlyPlayed.isEmpty }
+
     // MARK: - Feed Content
 
     private var feedScrollView: some View {
@@ -103,7 +105,7 @@ private extension HomeFeedView {
                         }
                         .buttonStyle(.plain)
                     }
-                    if let song = homeVM.quickPicks.first ?? homeVM.recentlyPlayed.first {
+                    if let song = homeVM.quickPicks.first ?? playerVM.recentlyPlayed.first {
                         featuredSong(song).contextMenu { pinAction(SpeedDialItem(song: song)) }
                     }
                 }
@@ -144,15 +146,15 @@ private extension HomeFeedView {
                 }
 
                 if homeVM.moreRecommendationsUnavailable { HomeRecommendationsTail() }
-                if !homeVM.recentlyPlayed.isEmpty {
+                if !playerVM.recentlyPlayed.isEmpty {
                     VStack(alignment: .leading, spacing: OtoTheme.spacing12) {
                         OtoSectionHeader(title: "Đã phát gần đây")
 
                         VStack(spacing: OtoTheme.spacing8) {
-                            ForEach(homeVM.recentlyPlayed) { song in
+                            ForEach(playerVM.recentlyPlayed) { song in
                                 let isCurrent = (playerVM.currentSong?.id == song.id) && playerVM.isPlaying
                                 OtoSongRow(song: song, isPlaying: isCurrent) {
-                                    play(song, in: homeVM.recentlyPlayed, sourceTitle: "Đã phát gần đây")
+                                    play(song, in: playerVM.recentlyPlayed, sourceTitle: "Đã phát gần đây")
                                 }
                             }
                         }
@@ -209,7 +211,7 @@ private extension HomeFeedView {
 
     private func featuredSong(_ song: Song) -> some View {
         Button {
-            let songs = homeVM.quickPicks.isEmpty ? homeVM.recentlyPlayed : homeVM.quickPicks
+            let songs = homeVM.quickPicks.isEmpty ? playerVM.recentlyPlayed : homeVM.quickPicks
             play(song, in: songs, sourceTitle: "Dành cho bạn")
         } label: {
             HStack(spacing: OtoTheme.spacing16) {
@@ -226,9 +228,7 @@ private extension HomeFeedView {
                         .padding(.top, OtoTheme.spacing4)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                AsyncImage(url: song.artworkURL) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
+                OtoTrackArtwork(url: song.artworkURL) {
                     OtoTheme.surface.overlay(Image(systemName: "music.note"))
                 }
                 .frame(width: 116, height: 116)

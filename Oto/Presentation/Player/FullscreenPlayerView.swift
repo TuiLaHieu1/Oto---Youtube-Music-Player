@@ -1,5 +1,6 @@
 import SwiftUI
 import OtoCore
+import GoogleSignIn
 
 /// Màn hình phát nhạc toàn màn hình (Fullscreen Player) giao thoa Atelier Light × Spectrum Dark.
 public struct FullscreenPlayerView: View {
@@ -14,6 +15,7 @@ public struct FullscreenPlayerView: View {
     @State private var videoAvailableID: String?
     @State private var selectedVideoID: String?
     @State private var videoIsExpanded = false
+    @State private var playlistSong: Song?
     @GestureState(resetTransaction: Transaction(animation: .easeOut(duration: 0.22)))
     private var artworkDragOffset: CGFloat = 0
     public init(playerVM: PlayerViewModel) {
@@ -93,6 +95,9 @@ public struct FullscreenPlayerView: View {
                         }
                     }
             }
+        }
+        .sheet(item: $playlistSong) { song in
+            YouTubePlaylistPicker(song: song)
         }
     }
 
@@ -216,7 +221,11 @@ public struct FullscreenPlayerView: View {
                     playerVM.queueManager.append(song: song)
                 }
                 Button("Hàng đợi", systemImage: "list.bullet") { playerVM.showQueue = true }
+                self.sleepTimerMenu
                 if !song.isLocal {
+                    Button("Thêm vào playlist YouTube", systemImage: "text.badge.plus") {
+                        self.playlistSong = song
+                    }
                     if let url = URL(string: "https://music.youtube.com/watch?v=" + song.id) {
                         ShareLink(item: url) { Label("Chia sẻ bài hát", systemImage: "square.and.arrow.up") }
                     }
@@ -228,6 +237,28 @@ public struct FullscreenPlayerView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var sleepTimerMenu: some View {
+        Menu {
+            switch self.playerVM.sleepTimer {
+            case .minutes(let minutes, _):
+                Text("Đã đặt hẹn giờ \(minutes) phút")
+            case .endOfTrack:
+                Text("Sẽ dừng khi hết bài")
+            case nil:
+                EmptyView()
+            }
+            Button("15 phút") { self.playerVM.startSleepTimer(minutes: 15) }
+            Button("30 phút") { self.playerVM.startSleepTimer(minutes: 30) }
+            Button("60 phút") { self.playerVM.startSleepTimer(minutes: 60) }
+            Button("Hết bài hiện tại") { self.playerVM.stopAfterCurrentTrack() }
+            if self.playerVM.sleepTimer != nil {
+                Button("Tắt hẹn giờ") { self.playerVM.cancelSleepTimer() }
+            }
+        } label: {
+            Label("Hẹn giờ ngủ", systemImage: self.playerVM.sleepTimer == nil ? "moon" : "moon.fill")
         }
     }
 }
@@ -395,6 +426,149 @@ private extension FullscreenPlayerView {
             icon: hidesWideLyrics ? "sidebar.right" : "rectangle"
         ) {
             withAnimation(reduceMotion ? nil : OtoTheme.smoothSpring) { hidesWideLyrics.toggle() }
+        }
+    }
+}
+
+/// Hộp chọn playlist YouTube dùng phiên OAuth riêng cho thao tác ghi.
+struct YouTubePlaylistPicker: View {
+    let song: Song
+    @Environment(\.dismiss) private var dismiss
+    @State private var playlists: [YouTubePlaylistClient.EditablePlaylist] = []
+    @State private var errorMessage: String?
+    @State private var isBusy = false
+    @State private var isConnected = false
+    @State private var nextPageToken: String?
+
+    private let client = YouTubePlaylistClient()
+    private let scope = "https://www.googleapis.com/auth/youtube.force-ssl"
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if let errorMessage {
+                    Text(LocalizedStringKey(errorMessage)).foregroundStyle(.red)
+                }
+                if !isConnected {
+                    Button("Kết nối Google để chọn playlist") {
+                        Task { await self.connect() }
+                    }
+                } else {
+                    ForEach(self.playlists) { playlist in
+                        Button(playlist.snippet.title) {
+                            Task { await self.add(to: playlist.id) }
+                        }
+                        .disabled(self.isBusy)
+                    }
+                    if self.nextPageToken != nil {
+                        Button("Tải thêm playlist") {
+                            Task { await self.loadPlaylists() }
+                        }
+                        .disabled(self.isBusy)
+                    }
+                    if self.playlists.isEmpty && !self.isBusy && self.errorMessage == nil {
+                        Text("Tài khoản Google này chưa có playlist có thể chỉnh sửa")
+                    }
+                }
+            }
+            .overlay { if self.isBusy { ProgressView() } }
+            .navigationTitle("Thêm vào playlist YouTube")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if self.isConnected {
+                    Button("Ngắt kết nối Google") {
+                        GIDSignIn.sharedInstance.signOut()
+                        self.isConnected = false
+                        self.playlists = []
+                        self.nextPageToken = nil
+                    }
+                }
+                Button("Đóng") { self.dismiss() }
+            }
+            .task { await self.restore() }
+        }
+    }
+
+    private func presenter() -> UIViewController? {
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows)
+            .first(where: \.isKeyWindow)?.rootViewController
+    }
+
+    private func restore() async {
+        guard GIDSignIn.sharedInstance.hasPreviousSignIn() else { return }
+        self.isBusy = true
+        defer { self.isBusy = false }
+        do {
+            let user = try await GIDSignIn.sharedInstance.restorePreviousSignIn()
+            self.isConnected = user.grantedScopes?.contains(self.scope) == true
+            if self.isConnected { await self.loadPlaylists() }
+        } catch {
+            self.errorMessage = "Không thể khôi phục kết nối Google. Hãy kết nối lại."
+        }
+    }
+
+    private func connect() async {
+        guard let controller = self.presenter() else {
+            self.errorMessage = "Không thể mở đăng nhập Google lúc này."
+            return
+        }
+        self.isBusy = true
+        defer { self.isBusy = false }
+        do {
+            let result = try await GIDSignIn.sharedInstance.signIn(withPresenting: controller)
+            let user: GIDGoogleUser
+            if result.user.grantedScopes?.contains(self.scope) == true {
+                user = result.user
+            } else {
+                let consent = try await result.user.addScopes([self.scope], presenting: controller)
+                user = consent.user
+            }
+            self.isConnected = user.grantedScopes?.contains(self.scope) == true
+            guard self.isConnected else {
+                self.errorMessage = "Tài khoản chưa cấp quyền quản lý playlist YouTube."
+                return
+            }
+            self.errorMessage = nil
+            await self.loadPlaylists()
+        } catch {
+            self.errorMessage = "Không thể kết nối Google hoặc quyền truy cập đã bị từ chối."
+        }
+    }
+
+    private func accessToken() async throws -> String {
+        guard let user = GIDSignIn.sharedInstance.currentUser,
+              user.grantedScopes?.contains(self.scope) == true else {
+            throw YouTubePlaylistClient.Failure.permissionDenied
+        }
+        let refreshed = try await user.refreshTokensIfNeeded()
+        return refreshed.accessToken.tokenString
+    }
+
+    private func loadPlaylists() async {
+        self.isBusy = true
+        defer { self.isBusy = false }
+        do {
+            let token = try await self.accessToken()
+            let page = try await self.client.ownedPlaylists(accessToken: token, pageToken: self.nextPageToken)
+            self.playlists.append(contentsOf: page.items)
+            self.nextPageToken = page.nextPageToken
+            self.errorMessage = nil
+        } catch {
+            self.errorMessage = "Không thể tải playlist YouTube. Kiểm tra quyền truy cập rồi thử lại."
+        }
+    }
+
+    private func add(to playlistID: String) async {
+        self.isBusy = true
+        defer { self.isBusy = false }
+        do {
+            let token = try await self.accessToken()
+            try await self.client.add(videoID: self.song.id, to: playlistID, accessToken: token)
+            self.dismiss()
+        } catch {
+            self.errorMessage = "Không thể thêm bài vào playlist này."
         }
     }
 }

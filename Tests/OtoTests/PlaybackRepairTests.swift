@@ -55,6 +55,60 @@ struct PlaybackRepairTests {
     let first = Song(id: "first", title: "First", artist: "Artist", duration: 180)
     let second = Song(id: "second", title: "Second", artist: "Other Artist", duration: 200)
 
+    @Test("Hẹn giờ hết bài chặn chuyển bài và có thể phát lại")
+    func sleepTimerStopsAtTrackEnd() async throws {
+        let backend = MockPlaybackBackend()
+        let player = PlayerViewModel(backend: backend, audioSession: TestAudioSession(), updatesSystemNowPlaying: false)
+        player.playQueue(songs: [self.first, self.second])
+        await player.waitForPendingAudioOperation()
+        let load = try #require(backend.loadCalls.last)
+        backend.onPlaybackStateChange?(1, load.generation, self.first.id)
+        player.stopAfterCurrentTrack()
+        backend.onTrackEnded?(load.generation, self.first.id)
+        backend.onTrackEnded?(load.generation, self.first.id)
+
+        #expect(player.sleepTimer == nil)
+        #expect(player.currentSong?.id == self.first.id)
+        #expect(player.stateMachine.userIntent == .paused)
+        #expect(backend.loadCalls.count == 1)
+
+        player.resume()
+        await player.waitForPendingAudioOperation()
+        let replay = try #require(backend.loadCalls.last)
+        #expect(replay.generation != load.generation)
+        backend.onPlaybackStateChange?(1, replay.generation, self.first.id)
+        backend.onTrackEnded?(replay.generation, self.first.id)
+        await player.waitForPendingAudioOperation()
+        #expect(player.currentSong?.id == self.second.id)
+    }
+
+    @Test("Lịch sử ghi khi phát và tách dữ liệu theo phiên")
+    func recentHistoryIsScopedAndRequiresPlayback() async throws {
+        let suite = "oto.tests.history.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let backend = MockPlaybackBackend()
+        let player = PlayerViewModel(
+            backend: backend, audioSession: TestAudioSession(), updatesSystemNowPlaying: false, historyDefaults: defaults
+        )
+        player.loadRecentlyPlayed(scopeKey: "first-scope")
+        player.play(song: self.first)
+        await player.waitForPendingAudioOperation()
+        let load = try #require(backend.loadCalls.last)
+        #expect(player.recentlyPlayed.isEmpty)
+        backend.onPlaybackStateChange?(1, load.generation, self.first.id)
+        backend.onPlaybackStateChange?(1, load.generation, self.first.id)
+        #expect(player.recentlyPlayed.map(\.id) == [self.first.id])
+        player.loadRecentlyPlayed(scopeKey: "second-scope")
+        backend.onPlaybackStateChange?(1, load.generation, self.first.id)
+        #expect(player.recentlyPlayed.isEmpty)
+        player.loadRecentlyPlayed(scopeKey: "first-scope")
+        #expect(player.recentlyPlayed.map(\.id) == [self.first.id])
+        player.clearForSignOut()
+        player.loadRecentlyPlayed(scopeKey: "first-scope")
+        #expect(player.recentlyPlayed.isEmpty)
+    }
+
     @Test("Mốc WebKit đến trễ không làm đồng hồ đang phát nhảy lùi")
     func delayedPositionUpdateKeepsDisplayStable() async {
         let backend = MockPlaybackBackend()

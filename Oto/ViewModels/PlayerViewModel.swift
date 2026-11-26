@@ -7,6 +7,17 @@ import os
 @MainActor
 @Observable
 public final class PlayerViewModel {
+    enum SleepTimer: Equatable {
+        case minutes(Int, deadline: ContinuousClock.Instant)
+        case endOfTrack(generation: Int)
+    }
+
+    private(set) var sleepTimer: SleepTimer?
+    @ObservationIgnored private var sleepTimerTask: Task<Void, Never>?
+    private(set) var recentlyPlayed: [Song] = []
+    @ObservationIgnored private let historyDefaults: UserDefaults
+    @ObservationIgnored private var historyKey: String?
+    @ObservationIgnored private var recordedGeneration: Int?
     public var playbackState: PlaybackState = .idle
     public var currentPosition: TimeInterval = 0
     public var isExpanded: Bool = false
@@ -48,7 +59,8 @@ public final class PlayerViewModel {
         backend: (any PlaybackBackend)? = nil,
         audioSession: any PlaybackAudioSession = AudioSessionCoordinator.shared,
         catalog: any PlaybackCatalog = YTMusicClient.shared,
-        updatesSystemNowPlaying: Bool = true
+        updatesSystemNowPlaying: Bool = true,
+        historyDefaults: UserDefaults = .standard
     ) {
         self.queueManager = queueManager
         self.clock = clock
@@ -61,6 +73,7 @@ public final class PlayerViewModel {
         self.audioSession = audioSession
         self.catalog = catalog
         self.updatesSystemNowPlaying = updatesSystemNowPlaying
+        self.historyDefaults = historyDefaults
         let previousQueueObserver = queueManager.onQueueChanged
         queueManager.onQueueChanged = { [weak self] in
             previousQueueObserver?()
@@ -122,6 +135,11 @@ public final class PlayerViewModel {
     }
 
     public func clearForSignOut() {
+        self.cancelSleepTimer()
+        if let key = self.historyKey { self.historyDefaults.removeObject(forKey: key) }
+        self.historyKey = nil
+        self.recordedGeneration = nil
+        self.recentlyPlayed = []
         activationTask?.cancel()
         activationTask = nil
         pendingEngineLoad = nil
@@ -146,8 +164,80 @@ public final class PlayerViewModel {
 
 // MARK: - Internal Engine Bridge & Synchronization
 extension PlayerViewModel {
+    func replaceSavedLocalSong(_ song: Song) {
+        self.updateSavedLocalSong(id: song.id, replacement: song)
+    }
+
+    func removeSavedLocalSong(id: String) {
+        self.updateSavedLocalSong(id: id, replacement: nil)
+    }
+
+    private func updateSavedLocalSong(id: String, replacement: Song?) {
+        let update: ([Song]) -> [Song] = { songs in
+            songs.compactMap { $0.id == id ? replacement : $0 }
+        }
+        self.recentlyPlayed = update(self.recentlyPlayed)
+        self.saveRecentlyPlayed()
+    }
+
+    func startSleepTimer(minutes: Int) {
+        self.cancelSleepTimer()
+        let clock = ContinuousClock()
+        let deadline = clock.now + .seconds(minutes * 60)
+        self.sleepTimer = .minutes(minutes, deadline: deadline)
+        self.sleepTimerTask = Task { [weak self] in
+            do { try await clock.sleep(until: deadline) } catch { return }
+            guard let self, self.sleepTimer == .minutes(minutes, deadline: deadline) else { return }
+            self.cancelSleepTimer()
+            self.pause(reason: "sleepTimer")
+        }
+    }
+
+    func stopAfterCurrentTrack() {
+        guard self.stateMachine.currentSong != nil else { return }
+        self.cancelSleepTimer()
+        self.sleepTimer = .endOfTrack(generation: self.stateMachine.currentGeneration)
+    }
+
+    func cancelSleepTimer() {
+        self.sleepTimerTask?.cancel()
+        self.sleepTimerTask = nil
+        self.sleepTimer = nil
+    }
+
+    func loadRecentlyPlayed(scopeKey: String) {
+        let key = "oto.history.v1." + scopeKey
+        guard self.historyKey != key else { return }
+        let isFirstScope = self.historyKey == nil
+        self.historyKey = key
+        self.recordedGeneration = isFirstScope ? nil : self.stateMachine.currentGeneration
+        self.recentlyPlayed = self.historyDefaults.data(forKey: key).flatMap {
+            try? JSONDecoder().decode([Song].self, from: $0)
+        }.map { Array($0.prefix(30)) } ?? []
+        if isFirstScope, self.stateMachine.engineState == .playing, self.stateMachine.userIntent == .playing {
+            self.recordRecentlyPlayed(generation: self.stateMachine.currentGeneration)
+        }
+    }
+
+    private func recordRecentlyPlayed(generation: Int) {
+        guard self.historyKey != nil, self.recordedGeneration != generation,
+              let song = self.stateMachine.currentSong else { return }
+        self.recordedGeneration = generation
+        self.recentlyPlayed = [song] + Array(self.recentlyPlayed.lazy.filter { $0.id != song.id }.prefix(29))
+        self.saveRecentlyPlayed()
+    }
+
+    private func saveRecentlyPlayed() {
+        if let key = self.historyKey, let data = try? JSONEncoder().encode(self.recentlyPlayed) {
+            self.historyDefaults.set(data, forKey: key)
+        }
+    }
+
     func applyEffects(_ effects: PlaybackEffects) {
         if let payload = effects.shouldStartEngine {
+            if case .endOfTrack(let generation) = self.sleepTimer, generation != payload.generation {
+                self.cancelSleepTimer()
+            }
             cancelLoadingWatchdog()
             pendingEngineLoad = payload
             runtimeDuration = nil
@@ -268,6 +358,7 @@ extension PlayerViewModel {
         applyEffects(stateMachine.engineStateChanged(engineState, generation: generation))
 
         if engineState == .playing, stateMachine.userIntent == .playing {
+            self.recordRecentlyPlayed(generation: generation)
             cancelLoadingWatchdog()
             playbackErrorMessage = nil
         } else if engineState == .paused || engineState == .buffering {
@@ -308,7 +399,16 @@ extension PlayerViewModel {
             intent=\(String(describing: self.stateMachine.userIntent), privacy: .public)
             """)
         guard matches else { return }
-        applyEffects(stateMachine.engineTrackEnded(generation: generation))
+        let effects = self.stateMachine.engineTrackEnded(generation: generation)
+        if effects.shouldAdvanceToNextTrack, self.sleepTimer == .endOfTrack(generation: generation),
+           let song = self.stateMachine.currentSong {
+            self.cancelSleepTimer()
+            self.pendingEngineLoad = self.stateMachine.restorePaused(song: song, position: 0)
+            self.clock.pause(at: 0)
+            self.pause(reason: "sleepTimer")
+            return
+        }
+        self.applyEffects(effects)
     }
     private func handleBridgeError(code: Int, generation: Int, trackId: String) {
         guard generation == stateMachine.currentGeneration,

@@ -65,6 +65,36 @@
         }
       }
     },
+    "15 phút" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "15 minutes"
+          }
+        }
+      }
+    },
+    "30 phút" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 minutes"
+          }
+        }
+      }
+    },
+    "60 phút" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "60 minutes"
+          }
+        }
+      }
+    },
     "Album" : {
       "localizations" : {
         "en" : {
@@ -280,6 +310,17 @@
         }
       }
     },
+    "Bỏ yêu thích trên máy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove from on-device favorites"
+          }
+        }
+      }
+    },
     "Các bài hát bạn nhấn Thích trên YouTube Music sẽ xuất hiện tại đây." : {
       "localizations" : {
         "en" : {
@@ -354,6 +395,26 @@
         }
       }
     },
+    "Chỉnh thông tin" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Edit details"
+          }
+        }
+      }
+    },
+    "Chọn ảnh bìa" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose cover art"
+          }
+        }
+      }
+    },
     "Chọn một bài hát để bắt đầu" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -382,6 +443,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "No liked songs yet"
+          }
+        }
+      }
+    },
+    "Chưa có bài trong playlist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This playlist is empty"
+          }
+        }
+      }
+    },
+    "Chưa có bài yêu thích" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No favorites yet"
           }
         }
       }
@@ -510,6 +593,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Signed in and saved the session securely."
+          }
+        }
+      }
+    },
+    "Đã đặt hẹn giờ %lld phút" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Timer set for %lld minutes"
           }
         }
       }
@@ -730,12 +823,32 @@
         }
       }
     },
+    "Đặt lại độ lệch" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reset offset"
+          }
+        }
+      }
+    },
     "Đi tới album" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Go to album"
+          }
+        }
+      }
+    },
+    "Độ lệch lời" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lyrics timing"
           }
         }
       }
@@ -822,6 +935,26 @@
         }
       }
     },
+    "Hẹn giờ ngủ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sleep timer"
+          }
+        }
+      }
+    },
+    "Hết bài hiện tại" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "End of current song"
+          }
+        }
+      }
+    },
     "Hiện ảnh bìa" : {
       "localizations" : {
         "en" : {
@@ -858,6 +991,16 @@
     "Jazz" : {
 
     },
+    "Kết nối Google để chọn playlist" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Connect Google to choose a playlist"
+          }
+        }
+      }
+    },
     "Kết quả hàng đầu" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -890,12 +1033,55 @@
         }
       }
     },
+    "Không lưu được thông tin bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not save song details"
+          }
+        }
+      }
+    },
     "Không thể đọc một số tệp nhạc." : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Some music files could not be read."
+          }
+        }
+      }
+    },
+    "Không thể kết nối Google hoặc quyền truy cập đã bị từ chối." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not connect Google or access was denied."
+          }
+        }
+      }
+    },
+    "Không thể khôi phục kết nối Google. Hãy kết nối lại." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not restore the Google connection. Connect again."
+          }
+        }
+      }
+    },
+    "Không thể mở đăng nhập Google lúc này." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Google sign-in is unavailable right now."
           }
         }
       }
@@ -941,6 +1127,17 @@
         }
       }
     },
+    "Không thể tải playlist YouTube. Kiểm tra quyền truy cập rồi thử lại." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load YouTube playlists. Check access and try again."
+          }
+        }
+      }
+    },
     "Không thể tải thêm kết quả." : {
       "localizations" : {
         "en" : {
@@ -958,6 +1155,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Could not load artist"
+          }
+        }
+      }
+    },
+    "Không thể thêm bài vào playlist này." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not add this song to the playlist."
           }
         }
       }
@@ -1057,6 +1265,26 @@
         }
       }
     },
+    "Lời sớm hơn 0,5 giây" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show lyrics 0.5 seconds earlier"
+          }
+        }
+      }
+    },
+    "Lời trễ hơn 0,5 giây" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Show lyrics 0.5 seconds later"
+          }
+        }
+      }
+    },
     "Lựa chọn nhanh" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1064,6 +1292,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Quick picks"
+          }
+        }
+      }
+    },
+    "Lưu" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Save"
           }
         }
       }
@@ -1095,6 +1333,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "A little space to listen."
+          }
+        }
+      }
+    },
+    "Ngắt kết nối Google" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Disconnect Google"
           }
         }
       }
@@ -1254,7 +1502,6 @@
       }
     },
     "Phát bài hát" : {
-      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1307,6 +1554,17 @@
         }
       }
     },
+    "Playlist trên máy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On-device playlists"
+          }
+        }
+      }
+    },
     "Pop" : {
 
     },
@@ -1322,6 +1580,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Light"
+          }
+        }
+      }
+    },
+    "Sẽ dừng khi hết bài" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Stops when the current song ends"
           }
         }
       }
@@ -1347,6 +1615,27 @@
         }
       }
     },
+    "Tài khoản chưa cấp quyền quản lý playlist YouTube." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This account has not granted YouTube playlist access."
+          }
+        }
+      }
+    },
+    "Tài khoản Google này chưa có playlist có thể chỉnh sửa" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This Google account has no editable playlists"
+          }
+        }
+      }
+    },
     "Tải thêm bài hát" : {
       "localizations" : {
         "en" : {
@@ -1367,12 +1656,44 @@
         }
       }
     },
+    "Tải thêm playlist" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Load more playlists"
+          }
+        }
+      }
+    },
     "Tạm dừng" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Pause"
+          }
+        }
+      }
+    },
+    "Tạo" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create"
+          }
+        }
+      }
+    },
+    "Tạo playlist trên máy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Create on-device playlist"
           }
         }
       }
@@ -1419,6 +1740,16 @@
         }
       }
     },
+    "Tắt hẹn giờ" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off timer"
+          }
+        }
+      }
+    },
     "Tắt lặp lại" : {
       "localizations" : {
         "en" : {
@@ -1439,12 +1770,57 @@
         }
       }
     },
+    "Tên bài hát" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Song title"
+          }
+        }
+      }
+    },
+    "Tên playlist" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Playlist name"
+          }
+        }
+      }
+    },
+    "Thao tác với %@" : {
+
+    },
     "Thêm vào hàng đợi" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add to queue"
+          }
+        }
+      }
+    },
+    "Thêm vào playlist trên máy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to on-device playlist"
+          }
+        }
+      }
+    },
+    "Thêm vào playlist YouTube" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Add to YouTube playlist"
           }
         }
       }
@@ -1817,6 +2193,28 @@
     },
     "Xong" : {
 
+    },
+    "Yêu thích trên máy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On-device favorites"
+          }
+        }
+      }
+    },
+    "Yêu thích và playlist trên máy" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On-device favorites and playlists"
+          }
+        }
+      }
     },
     "YouTube Music" : {
 

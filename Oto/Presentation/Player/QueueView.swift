@@ -179,9 +179,7 @@ public struct QueueView: View {
     }
 
     private func artwork(for song: Song) -> some View {
-        AsyncImage(url: song.artworkURL) { image in
-            image.resizable().scaledToFill()
-        } placeholder: {
+        OtoTrackArtwork(url: song.artworkURL) {
             RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous)
                 .fill(OtoTheme.backgroundSecondary)
                 .overlay(Image(systemName: "music.note").foregroundStyle(OtoTheme.tertiaryText))

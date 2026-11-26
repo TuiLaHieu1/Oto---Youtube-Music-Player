@@ -228,7 +228,7 @@ private extension HomeFeedView {
                         .padding(.top, OtoTheme.spacing4)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                OtoTrackArtwork(url: song.artworkURL) {
+                OtoTrackArtwork(url: song.artworkURL, points: 116) {
                     OtoTheme.surface.overlay(Image(systemName: "music.note"))
                 }
                 .frame(width: 116, height: 116)

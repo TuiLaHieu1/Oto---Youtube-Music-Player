@@ -1,8 +1,6 @@
 import AVFoundation
 import Foundation
-#if DEBUG && OTO_STREAM_PROBE
 import UIKit
-#endif
 
 /// Định tuyến file local và nhạc web qua cùng phiên điều khiển.
 /// Bản khảo sát (`OTO_STREAM_PROBE`) phát mọi bài YouTube Music bằng AVPlayer với URL từ yt-dlp;
@@ -23,10 +21,12 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     var localID: String?
     var localGeneration = 0
     private var monitor: Task<Void, Never>?
+    var requiresFrequentProgress: (() -> Bool)?
     var wantsPlayback = false
     var lastState: Int?
-    private var didEnd = false
+    var didEnd = false
     private var pendingSeek: UUID?
+    var pendingSeekPosition: TimeInterval?
     private var endObserver: (any NSObjectProtocol)?
     #if DEBUG && OTO_STREAM_PROBE
     /// Bài kế tiếp trong hàng đợi để lấy URL trước; PlayerViewModel gán khi có cờ khảo sát.
@@ -42,7 +42,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     let preloader = ProbePreloader()
     /// Player đang phát manifest HLS có hình cho màn hình Video; nil khi phát audio.
     let videoOutput = ProbeVideoOutput()
-    /// Luồng đang phát là manifest HLS có hình (giữ tới hết bài kể cả khi người dùng tắt Video).
+    /// Luồng đang phát là manifest HLS có hình.
     var isVideoItem = false
     /// Lựa chọn Video mới nhất của người dùng cho bài hiện tại; áp lại sau khi lấy URL mới.
     var wantsVideoItem = false
@@ -98,6 +98,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
                             shouldPlay: shouldPlay, wasLocal: wasLocal)
             return
         }
+        self.preloader.clear()
         self.leaveVideoMode()
         self.isProbeStream = false
         #endif
@@ -119,6 +120,8 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         url: URL, id: String, generation: Int, startSeconds: TimeInterval, shouldPlay: Bool,
         prepared: AVPlayerItem? = nil, activates: Bool = true, sourceDuration: TimeInterval? = nil
     ) {
+        self.pendingSeek = nil
+        self.pendingSeekPosition = nil
         let item = prepared ?? AVPlayerItem(url: url)
         #if DEBUG && OTO_STREAM_PROBE
         self.lastReportedProbeDuration = nil
@@ -153,7 +156,10 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
                 if !self.publishLocalProgress(item, id: id, generation: generation, sourceDuration: sourceDuration) {
                     return
                 }
-                do { try await Task.sleep(for: .milliseconds(200)) } catch { return }
+                let interval: Duration = UIApplication.shared.applicationState == .active && self.wantsPlayback
+                    && (self.lastState != 1 || self.requiresFrequentProgress?() != false)
+                    ? .milliseconds(200) : .seconds(1)
+                do { try await Task.sleep(for: interval) } catch { return }
             }
         }
     }
@@ -177,6 +183,8 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         guard localID != nil else { web.pause(); return }
         #if DEBUG && OTO_STREAM_PROBE
         self.probeTrace("pause")
+        self.preloader.clear()
+        self.didPrefetchNearEnd = false
         #endif
         wantsPlayback = false
         localPlayer.pause()
@@ -194,11 +202,13 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         let token = UUID()
         didEnd = false
         pendingSeek = token
+        self.pendingSeekPosition = position
         localPlayer.seek(to: CMTime(seconds: position, preferredTimescale: 600),
                          toleranceBefore: .zero, toleranceAfter: .zero) { @Sendable [weak self] finished in
             Task { @MainActor in
                 guard let self, self.pendingSeek == token else { return }
                 self.pendingSeek = nil
+                self.pendingSeekPosition = nil
                 guard finished else { return }
                 if self.wantsPlayback { self.localPlayer.play() }
             }
@@ -206,6 +216,11 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
     }
 
     func resetForSignOut() {
+        #if DEBUG && OTO_STREAM_PROBE
+        self.preloader.clear()
+        self.streamCache.clear()
+        self.leaveVideoMode()
+        #endif
         stopLocal()
         web.resetForSignOut()
     }
@@ -219,6 +234,7 @@ final class LocalMusicPlaybackRouter: PlaybackBackend {
         localPlayer.replaceCurrentItem(with: nil)
         localID = nil
         pendingSeek = nil
+        self.pendingSeekPosition = nil
         #if DEBUG && OTO_STREAM_PROBE
         self.isResolving = false
         self.resolveRequestID = nil

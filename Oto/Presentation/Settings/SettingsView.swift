@@ -10,6 +10,9 @@ public struct SettingsView: View {
     let libraryVM: LibraryViewModel
     @AppStorage(AppAppearance.storageKey) private var appearance = AppAppearance.system.rawValue
     @AppStorage("app_language") private var selectedLanguage = AppLanguage.system.rawValue
+    #if DEBUG && OTO_STREAM_PROBE
+    @AppStorage(StreamNetworkPolicy.qualityKey) private var streamQuality = "automatic"
+    #endif
     @State private var sessionStore = SessionStore.shared
     @State private var showClearAlert: Bool = false
     @State private var showSignOutAlert: Bool = false
@@ -57,6 +60,18 @@ public struct SettingsView: View {
                 }
                 #endif
                 #if DEBUG && OTO_STREAM_PROBE
+                Section {
+                    Picker("Chất lượng âm thanh", selection: self.$streamQuality) {
+                        Text("Tự động theo mạng").tag("automatic")
+                        Text("Chất lượng cao").tag("best")
+                        Text("Tiết kiệm dữ liệu").tag("economy")
+                    }
+                    .onChange(of: self.streamQuality) { _, _ in
+                        StreamNetworkPolicy.shared.preferencesChanged()
+                    }
+                } footer: {
+                    Text("Áp dụng từ lần tải bài tiếp theo. Tự động tiết kiệm trên mạng di động và Low Data Mode. Chỉ nạp trước bài kế trên mạng không tính phí và không bật Low Data Mode.")
+                }
                 StreamProbeSection(playerVM: self.playerVM)
                 #endif
             }

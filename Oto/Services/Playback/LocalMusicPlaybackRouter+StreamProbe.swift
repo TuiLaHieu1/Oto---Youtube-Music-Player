@@ -26,6 +26,7 @@ extension LocalMusicPlaybackRouter {
                            shouldPlay: shouldPlay, prepared: prepared, sourceDuration: entry.mediaDuration)
             return
         }
+        self.preloader.clear()
         self.probeTrace("load cached=0")
         self.resolveAndStart(id: id, generation: generation, startSeconds: startSeconds, reason: "load")
     }
@@ -72,7 +73,7 @@ extension LocalMusicPlaybackRouter {
 
     /// Play sau khi Pause lâu mà URL đã (sắp) hết hạn: lấy URL mới rồi phát tiếp đúng vị trí.
     func refreshExpiredStream(id: String) {
-        let position = self.localPlayer.currentTime().seconds
+        let position = self.pendingSeekPosition ?? self.localPlayer.currentTime().seconds
         self.probeTrace("refresh")
         self.resolveAndStart(id: id, generation: self.localGeneration,
                              startSeconds: position.isFinite ? position : 0, reason: "refresh")
@@ -104,13 +105,16 @@ extension LocalMusicPlaybackRouter {
     // MARK: - Chế độ Video
 
     /// Bật Video: chuyển sang manifest HLS có hình của cùng bài, giữ vị trí và trạng thái phát.
-    /// Tắt Video: chỉ gỡ hình, phát tiếp HLS (có tiếng) tới hết bài để không ngắt tiếng khi nạp lại audio;
-    /// giới hạn HLS ở mức hình thấp nhất để đỡ tốn mạng. Đang chờ URL thì `resolveAndStart` áp lại yêu cầu.
+    /// Tắt Video: lấy lại audio và giữ vị trí, ý định phát tại thời điểm chuyển.
     func setVideoMode(_ wantsVideo: Bool) {
         guard self.isProbeStream, let id = self.localID else { return }
         self.wantsVideoItem = wantsVideo
         self.videoOutput.failed = false
         self.videoSwitchToken += 1
+        if !wantsVideo, self.isVideoItem, !self.isResolving {
+            self.returnToAudio(id: id)
+            return
+        }
         guard wantsVideo, !self.isVideoItem else {
             self.videoOutput.player = wantsVideo ? self.localPlayer : nil
             self.localPlayer.currentItem?.preferredMaximumResolution = wantsVideo ? .zero : Self.hiddenVideoSize
@@ -122,19 +126,38 @@ extension LocalMusicPlaybackRouter {
             guard let self else { return }
             let videoURL = await self.streamCache.videoURL(for: id)
             guard self.videoSwitchToken == token, self.localID == id, self.localGeneration == generation,
-                  !self.isResolving, !self.isVideoItem else { return }
+                  !self.isResolving, !self.isVideoItem, !self.didEnd else { return }
             guard let url = videoURL else {
                 self.probeTrace("video unavailable")
                 self.videoOutput.failed = true
                 return
             }
-            let position = self.localPlayer.currentTime().seconds
+            let position = self.pendingSeekPosition ?? self.localPlayer.currentTime().seconds
             self.isVideoItem = true
             self.startItem(url: url, id: id, generation: generation,
                            startSeconds: position.isFinite ? position : 0, shouldPlay: self.wantsPlayback,
                            activates: false)
             self.videoOutput.player = self.localPlayer
             self.probeTrace("video mode=1")
+        }
+    }
+
+    private func returnToAudio(id: String) {
+        self.videoOutput.player = nil
+        self.localPlayer.currentItem?.preferredMaximumResolution = Self.hiddenVideoSize
+        let token = self.videoSwitchToken
+        let generation = self.localGeneration
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            let resolution = await self.streamCache.resolve(id, reason: "audio")
+            guard self.videoSwitchToken == token, self.localID == id, self.localGeneration == generation,
+                  !self.isResolving, self.isVideoItem, !self.didEnd else { return }
+            guard case .url(let url, let duration) = resolution else { return }
+            let position = self.pendingSeekPosition ?? self.localPlayer.currentTime().seconds
+            self.leaveVideoMode()
+            self.startItem(url: url, id: id, generation: generation,
+                           startSeconds: position.isFinite ? position : self.lastKnownPosition,
+                           shouldPlay: self.wantsPlayback, activates: false, sourceDuration: duration)
         }
     }
 
@@ -150,8 +173,9 @@ extension LocalMusicPlaybackRouter {
     // MARK: - Lấy trước và nạp sẵn bài kế
 
     func prefetchUpcoming() {
+        guard self.isProbeStream, self.wantsPlayback else { self.preloader.clear(); return }
         self.preloader.prefetch(self.upcomingTrackIDs?() ?? [], cache: self.streamCache) { [weak self] id in
-            guard let self, self.isProbeStream, let currentID = self.localID else { return false }
+            guard let self, self.isProbeStream, self.wantsPlayback, let currentID = self.localID else { return false }
             return id != currentID && id == self.upcomingTrackIDs?().first
         }
     }
@@ -183,6 +207,7 @@ extension LocalMusicPlaybackRouter {
 
     func observeProbeProgress(position: Double, duration: Double) {
         guard self.isProbeStream, position.isFinite else { return }
+        self.preloader.discardUnlessNext(self.upcomingTrackIDs?().first)
         if duration.isFinite, duration > 0,
            abs(duration - (self.lastReportedProbeDuration ?? 0)) >= 1 {
             self.lastReportedProbeDuration = duration

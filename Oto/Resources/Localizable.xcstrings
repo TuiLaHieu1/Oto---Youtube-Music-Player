@@ -137,6 +137,23 @@
         }
       }
     },
+    "Áp dụng từ lần tải bài tiếp theo. Tự động tiết kiệm trên mạng di động và Low Data Mode. Chỉ nạp trước bài kế trên mạng không tính phí và không bật Low Data Mode." : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Applies to the next track load. Automatic saves data on cellular and Low Data Mode. Prefetch is limited to unmetered connections with Low Data Mode off."
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Áp dụng từ lần tải bài tiếp theo. Tự động tiết kiệm trên mạng di động và Low Data Mode. Chỉ nạp trước bài kế trên mạng không tính phí và không bật Low Data Mode."
+          }
+        }
+      }
+    },
     "Bài hát" : {
       "localizations" : {
         "en" : {
@@ -364,6 +381,40 @@
     },
     "Chạm vào thông tin bài hát để mở trình phát toàn màn hình. Vuốt ngang để đổi bài." : {
 
+    },
+    "Chất lượng âm thanh" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Audio quality"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chất lượng âm thanh"
+          }
+        }
+      }
+    },
+    "Chất lượng cao" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "High quality"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Chất lượng cao"
+          }
+        }
+      }
     },
     "Chế độ" : {
       "localizations" : {
@@ -1994,6 +2045,23 @@
         }
       }
     },
+    "Tiết kiệm dữ liệu" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Data saver"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tiết kiệm dữ liệu"
+          }
+        }
+      }
+    },
     "Tìm bài hát tiếp theo" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2083,6 +2151,23 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Shuffle off"
+          }
+        }
+      }
+    },
+    "Tự động theo mạng" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Automatic for network"
+          }
+        },
+        "vi" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tự động theo mạng"
           }
         }
       }

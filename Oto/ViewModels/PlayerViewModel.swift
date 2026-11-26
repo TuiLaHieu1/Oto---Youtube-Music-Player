@@ -81,6 +81,9 @@ public final class PlayerViewModel {
                 self?.queueRevision &+= 1
             }
         }
+        (self.backend as? LocalMusicPlaybackRouter)?.requiresFrequentProgress = { [weak self] in
+            self?.isExpanded == true
+        }
         setupPlayerBridge()
         setupAudioSessionObserver()
         if updatesSystemNowPlaying { setupNowPlayingCommands() }
@@ -375,7 +378,7 @@ extension PlayerViewModel {
         guard generation == stateMachine.currentGeneration, trackId == stateMachine.currentSong?.id else { return }
         guard current.isFinite, current >= 0 else { return }
 
-        if duration.isFinite, duration > 0 { runtimeDuration = duration }
+        if duration.isFinite, duration > 0, runtimeDuration != duration { runtimeDuration = duration }
         // UI lấy vị trí từ media để không chạy đồng hồ khi engine báo playing nhưng đang đứng.
         let mediaPosition = Self.stableDisplayedPosition(previous: stateMachine.currentPosition, candidate: current)
         stateMachine.engineTimeUpdated(currentTime: mediaPosition, generation: generation)

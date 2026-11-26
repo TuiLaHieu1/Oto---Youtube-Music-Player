@@ -56,11 +56,11 @@ enum PythonStreamResolver {
     private static let initLock = NSLock()
     private static let pyFileInput: Int32 = 257
 
-    static func resolve(videoID: String) async -> YtdlpResolveResult {
+    static func resolve(videoID: String, lowBandwidth: Bool = false) async -> YtdlpResolveResult {
         guard YTMusicClient.isValidVideoID(videoID) else { return .failure("invalidInput") }
         let result = await withCheckedContinuation { continuation in
             Self.queue.async {
-                continuation.resume(returning: Self.runResolve(videoID: videoID))
+                continuation.resume(returning: Self.runResolve(videoID: videoID, lowBandwidth: lowBandwidth))
             }
         }
         StreamProbeLog.write(result.logLine)
@@ -133,14 +133,14 @@ enum PythonStreamResolver {
         StreamProbeLog.write("PythonNet " + text)
     }
 
-    private static func runResolve(videoID: String) -> YtdlpResolveResult {
+    private static func runResolve(videoID: String, lowBandwidth: Bool) -> YtdlpResolveResult {
         guard let cacheLiteral = Self.pythonStringLiteral(Self.cachePath) else { return .failure("cachePath") }
         // videoID đã được kiểm tra chỉ gồm [A-Za-z0-9_-]; đường dẫn cache được mã hóa thành chuỗi JSON.
         let source = """
         import json as __oto_json, re as __oto_re
         try:
             from oto_resolve import resolve as __oto_resolve
-            __oto_r = __oto_resolve('\(videoID)', cache_dir=\(cacheLiteral))
+            __oto_r = __oto_resolve('\(videoID)', cache_dir=\(cacheLiteral), low_bandwidth=\(lowBandwidth ? "True" : "False"))
             __oto_r.pop('log', None)
             __oto_result = __oto_json.dumps({'ok': True, **__oto_r})
         except Exception as __oto_e:

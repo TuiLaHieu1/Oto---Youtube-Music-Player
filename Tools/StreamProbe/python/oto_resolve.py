@@ -43,15 +43,16 @@ class _QuietLogger:
 _PROFILES = {'fast': {'youtube': {'player_client': ['visionos']}}, 'default': {}}
 
 
-def _borrow(cache_dir, profile):
-    key = (cache_dir, profile)
+def _borrow(cache_dir, profile, low_bandwidth=False):
+    key = (cache_dir, profile, low_bandwidth)
     with _POOL_LOCK:
         for index, (ydl, existing) in enumerate(_POOL):
             if existing == key:
                 return _POOL.pop(index)[0]
     import yt_dlp
     options = {
-        'format': 'bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]',
+        'format': ('worstaudio[ext=m4a]/worstaudio[acodec^=mp4a]' if low_bandwidth
+                   else 'bestaudio[ext=m4a]/bestaudio[acodec^=mp4a]'),
         'quiet': True,
         'skip_download': True,
         'noplaylist': True,
@@ -68,10 +69,10 @@ def _borrow(cache_dir, profile):
         return yt_dlp.YoutubeDL(options)
 
 
-def _give_back(ydl, cache_dir, profile):
+def _give_back(ydl, cache_dir, profile, low_bandwidth=False):
     with _POOL_LOCK:
         if len(_POOL) < 4:
-            _POOL.append((ydl, (cache_dir, profile)))
+            _POOL.append((ydl, (cache_dir, profile, low_bandwidth)))
 
 
 def warm(cache_dir: str | None = None) -> dict:
@@ -111,14 +112,14 @@ def last_error_label() -> str:
     return 'none'
 
 
-def resolve(video_id: str, cache_dir: str | None = None) -> dict:
+def resolve(video_id: str, cache_dir: str | None = None, low_bandwidth: bool = False) -> dict:
     if not re.fullmatch(r'[A-Za-z0-9_-]{11}', video_id):
         raise ValueError('video id không hợp lệ')
     started = time.monotonic()
     info = None
     profile_used = 'fast'
     for profile in ('fast', 'default'):
-        ydl = _borrow(cache_dir, profile)
+        ydl = _borrow(cache_dir, profile, low_bandwidth)
         _LAST.ydl = ydl
         try:
             info = ydl.extract_info('https://music.youtube.com/watch?v=' + video_id, download=False)
@@ -129,7 +130,7 @@ def resolve(video_id: str, cache_dir: str | None = None) -> dict:
             if profile == 'default':
                 raise
         finally:
-            _give_back(ydl, cache_dir, profile)
+            _give_back(ydl, cache_dir, profile, low_bandwidth)
     url = (info or {}).get('url') or ''
     match = re.search(r'[?&/]expire[=/](\d+)', url)
     # Manifest HLS (hình H.264 + nhóm tiếng AAC) có sẵn trong cùng phản hồi; dùng cho chế độ Video bằng AVPlayer.

@@ -179,7 +179,7 @@ public struct QueueView: View {
     }
 
     private func artwork(for song: Song) -> some View {
-        OtoTrackArtwork(url: song.artworkURL) {
+        OtoTrackArtwork(url: song.artworkURL, points: 44) {
             RoundedRectangle(cornerRadius: OtoTheme.smallArtworkRadius, style: .continuous)
                 .fill(OtoTheme.backgroundSecondary)
                 .overlay(Image(systemName: "music.note").foregroundStyle(OtoTheme.tertiaryText))
